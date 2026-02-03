@@ -2,12 +2,13 @@
 Starscape: Text Adventure Edition
 A text-based recreation of the Roblox game Starscape by Zolar Keth
 """
-
+import math
 import sys
 import json
 import os
 from pathlib import Path
 from io import StringIO
+from time import sleep
 
 VERSION_CODE = 1
 
@@ -208,12 +209,7 @@ def main_screen(save_name, data):
             print("Not implemented yet")
             input("Press enter to continue...")
         case 1:
-            clear_screen()
-            print("=" * 60)
-            print("  WARP MENU")
-            print("=" * 60)
-            print("Not implemented yet")
-            input("Press enter to continue...")
+            warp_menu(system, save_name, data)
         case 2:
             clear_screen()
             print("=" * 60)
@@ -249,6 +245,53 @@ def main_screen(save_name, data):
             sys.exit(0)
 
 
+def warp_menu(system_data, save_name, data):
+    connected_systems = system_data["Connections"]
+    options = connected_systems + ["Cancel"]
+
+    clear_screen()
+    print("=" * 60)
+    print("  WARP MENU")
+    print("=" * 60)
+    choice = arrow_menu("Select system to warp to", options)
+
+    # If Cancel was selected
+    if choice == len(connected_systems):
+        return
+
+    clear_screen()
+    print("=" * 60)
+    print("|" + " " * 58 + "|")
+    print(f"| Warping to {connected_systems[choice]}...{" " * (58 - len(connected_systems[choice]) - 15)}|")
+    print("|" + " " * 58 + "|")
+    print("=" * 60)
+    sleep(2)
+
+    clear_screen()
+
+    total_padding = 58 - len(connected_systems[choice])
+    spacingL = " " * math.ceil(total_padding / 2)
+    spacingR = " " * math.floor(total_padding / 2)
+
+    print("—" * 60)
+    print("|" + " " * 58 + "|")
+    print("|" + " " * 58 + "|")
+    print("|" + " " * 58 + "|")
+    print("|" + " " * 58 + "|")
+    print("|" + " " * 58 + "|")
+    print("|" + " " * 58 + "|")
+    print(f"|{spacingL}{connected_systems[choice]}{spacingR}|")
+    print("|" + " " * 58 + "|")
+    print("|" + " " * 58 + "|")
+    print("|" + " " * 58 + "|")
+    print("|" + " " * 58 + "|")
+    print("|" + " " * 58 + "|")
+    print("|" + " " * 58 + "|")
+    print("—" * 60)
+
+    data["current_system"] = connected_systems[choice]
+    save_data(save_name, data)
+    sleep(2)
 
 
 def system_data(system_name):
