@@ -245,9 +245,31 @@ def main_screen(save_name, data):
             sys.exit(0)
 
 
-def warp_menu(system_data, save_name, data):
-    connected_systems = system_data["Connections"]
-    options = connected_systems + ["Cancel"]
+def warp_menu(system, save_name, data):
+    CORE_COLOR = "\033[1;32m"     # lime
+    SECURE_COLOR = "\033[36m"     # cyan
+    CONTESTED_COLOR = "\033[33m"  # orange/brown
+    UNSECURE_COLOR = "\033[31m"   # red
+    WILD_COLOR = "\033[35m"       # purple
+    RESET_COLOR = "\033[0m"       # reset
+    connected_systems = system["Connections"]
+    options = connected_systems + [f"{UNSECURE_COLOR}x{RESET_COLOR} Cancel"]
+
+    i = 0
+    for system in connected_systems:
+        security_level = system_data(system)["SecurityLevel"]
+        match security_level:
+            case "Core":
+                options[i] = f"{CORE_COLOR}⬤ {system}{RESET_COLOR}"
+            case "Secure":
+                options[i] = f"{SECURE_COLOR}⬤ {system}{RESET_COLOR}"
+            case "Contested":
+                options[i] = f"{CONTESTED_COLOR}⬤ {system}{RESET_COLOR}"
+            case "Unsecure":
+                options[i] = f"{UNSECURE_COLOR}⬤ {system}{RESET_COLOR}"
+            case "Wild":
+                options[i] = f"{WILD_COLOR}⬤ {system}{RESET_COLOR}"
+        i += 1
 
     clear_screen()
     print("=" * 60)
