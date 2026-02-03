@@ -270,12 +270,78 @@ def load_and_print_save():
 
     input("\nPress Enter to continue...")
 
+
+def delete_save_screen():
+    """List saves and delete the selected one after confirmation"""
+    save_dir = Path.home() / ".starscape_text_adventure" / "saves"
+
+    if not save_dir.exists():
+        clear_screen()
+        print("=" * 60)
+        print("  DELETE SAVE")
+        print("=" * 60)
+        print()
+        print("No saves found!")
+        input("Press Enter to continue...")
+        return
+
+    saves = [folder.name for folder in save_dir.iterdir()
+             if folder.is_dir() and (folder / "save.json").exists()]
+
+    if not saves:
+        clear_screen()
+        print("=" * 60)
+        print("  DELETE SAVE")
+        print("=" * 60)
+        print()
+        print("No saves found!")
+        input("Press Enter to continue...")
+        return
+
+    options = saves + ["Cancel"]
+    choice = arrow_menu("SELECT SAVE TO DELETE", options)
+
+    if choice == len(saves):  # Cancel
+        return
+
+    save_name = saves[choice]
+    save_path = save_dir / save_name
+
+    clear_screen()
+    print("=" * 60)
+    print("  CONFIRM DELETE")
+    print("=" * 60)
+    print()
+    print(f"This will permanently delete the save '{save_name}'.")
+    print(f"Type '{save_name}' to confirm.")
+    print()
+
+    confirmation = input("> ").strip()
+
+    if confirmation != save_name:
+        print("\nConfirmation failed. Save was not deleted.")
+        input("Press Enter to continue...")
+        return
+
+    # Delete save directory and contents
+    for root, dirs, files in os.walk(save_path, topdown=False):
+        for file in files:
+            os.remove(Path(root) / file)
+        for d in dirs:
+            os.rmdir(Path(root) / d)
+    os.rmdir(save_path)
+
+    print(f"\nSave '{save_name}' deleted successfully.")
+    input("Press Enter to continue...")
+
+
 def main():
     """Main debug menu"""
     while True:
         options = [
             "New Game",
             "[DEBUG] Load and Print Save",
+            "Delete Save",
             "Exit"
         ]
 
@@ -286,6 +352,8 @@ def main():
         elif choice == 1:
             load_and_print_save()
         elif choice == 2:
+            delete_save_screen()
+        elif choice == 3:
             clear_screen()
             print("Exiting...")
             break
