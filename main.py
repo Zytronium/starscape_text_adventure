@@ -160,6 +160,7 @@ def new_game():
     print("  NEW GAME")
     print("=" * 60)
     print()
+    print("Pilot, what shall you be called?")
 
     player_name = input("Enter your pilot name: ").strip()
 
@@ -168,12 +169,14 @@ def new_game():
         input("Press Enter to continue...")
         return
 
-    save_name = input("Enter save name: ").strip()
+    # Find unique save name by appending numbers if needed
+    save_name = player_name
+    save_dir = Path.home() / ".starscape_text_adventure" / "saves"
+    counter = 1
 
-    if not save_name:
-        print("\nSave name cannot be empty!")
-        input("Press Enter to continue...")
-        return
+    while (save_dir / save_name / "save.json").exists():
+        save_name = f"{player_name}_{counter}"
+        counter += 1
 
     # Create save with player's name
     data = default_data()
@@ -182,15 +185,14 @@ def new_game():
 
     clear_screen()
     print("=" * 60)
-    print(f"  WELCOME, COMMANDER {player_name.upper()}")
+    print(f"  WELCOME, {player_name.upper()}")
     print("=" * 60)
     print()
     print(f"  Save '{save_name}' created successfully!")
     print()
     print("  You have been assigned:")
-    print("    - Stratos Fighter")
+    print("    - Stratos (Starter Ship)")
     print("    - 5,000 Credits")
-    print("    - Docking clearance at The Citadel")
     print()
     input("Press Enter to continue...")
 
