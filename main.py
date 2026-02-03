@@ -129,6 +129,72 @@ def default_data():
         }
     }
 
+def new_game():
+    """Start a new game with dialogue and player name input"""
+    clear_screen()
+    print("=" * 60)
+    print()
+    print("  The year is 2847. Humanity has spread across the stars,")
+    print("  but the frontier remains wild and dangerous.")
+    print()
+    print("  Three great factions wage endless war for control of")
+    print("  contested space, while pirates and opportunists lurk")
+    print("  in the shadows of unsecure systems.")
+    print()
+    print("  You are a freelance pilot, fresh out of the cloning bay")
+    print("  with nothing but a basic Stratos fighter and a dream")
+    print("  of making your fortune among the stars.")
+    print()
+    print("  Your journey begins at The Citadel, the safest station")
+    print("  in Core space. What you do next is up to you...")
+    print()
+    print("=" * 60)
+    print()
+
+    input("Press Enter to begin your journey...")
+
+    clear_screen()
+    print("=" * 60)
+    print("  NEW GAME")
+    print("=" * 60)
+    print()
+
+    player_name = input("Enter your pilot name: ").strip()
+
+    if not player_name:
+        print("\nPilot name cannot be empty!")
+        input("Press Enter to continue...")
+        return
+
+    save_name = input("Enter save name: ").strip()
+
+    if not save_name:
+        print("\nSave name cannot be empty!")
+        input("Press Enter to continue...")
+        return
+
+    # Create save with player's name
+    data = default_data()
+    data["player_name"] = player_name
+    save_data(save_name, data)
+
+    clear_screen()
+    print("=" * 60)
+    print(f"  WELCOME, COMMANDER {player_name.upper()}")
+    print("=" * 60)
+    print()
+    print(f"  Save '{save_name}' created successfully!")
+    print()
+    print("  You have been assigned:")
+    print("    - Stratos Fighter")
+    print("    - 5,000 Credits")
+    print("    - Docking clearance at The Citadel")
+    print()
+    input("Press Enter to continue...")
+
+    # TODO: Start game loop here
+    # game_loop(save_name, data)
+
 def create_default_save():
     """Create a default save with custom name"""
     clear_screen()
@@ -204,15 +270,15 @@ def main():
     """Main debug menu"""
     while True:
         options = [
-            "Create Default Save",
-            "Load and Print Save",
+            "New Game",
+            "[DEBUG] Load and Print Save",
             "Exit"
         ]
 
-        choice = arrow_menu("STARSCAPE: DEBUG MENU", options)
+        choice = arrow_menu("Starscape: Text Adventure Edition", options)
 
         if choice == 0:
-            create_default_save()
+            new_game()
         elif choice == 1:
             load_and_print_save()
         elif choice == 2:
