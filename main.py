@@ -258,6 +258,7 @@ def warp_menu(system, save_name, data):
     i = 0
     for system in connected_systems:
         security_level = system_data(system)["SecurityLevel"]
+
         match security_level:
             case "Core":
                 options[i] = f"{CORE_COLOR}⬤ {system}{RESET_COLOR}"
@@ -289,6 +290,22 @@ def warp_menu(system, save_name, data):
     print("=" * 60)
     sleep(2)
 
+    data["current_system"] = connected_systems[choice]
+    save_data(save_name, data)
+    new_system = system_data(data["current_system"])
+    system_color = ""
+    match new_system["SecurityLevel"]:
+        case "Core":
+            system_color = CORE_COLOR
+        case "Secure":
+            system_color = SECURE_COLOR
+        case "Contested":
+            system_color = CONTESTED_COLOR
+        case "Unsecure":
+            system_color = UNSECURE_COLOR
+        case "Wild":
+            system_color = WILD_COLOR
+
     clear_screen()
 
     total_padding = 58 - len(connected_systems[choice])
@@ -302,7 +319,7 @@ def warp_menu(system, save_name, data):
     print("|" + " " * 58 + "|")
     print("|" + " " * 58 + "|")
     print("|" + " " * 58 + "|")
-    print(f"|{spacingL}{connected_systems[choice]}{spacingR}|")
+    print(f"|{spacingL}{system_color}{connected_systems[choice]}{RESET_COLOR}{spacingR}|")
     print("|" + " " * 58 + "|")
     print("|" + " " * 58 + "|")
     print("|" + " " * 58 + "|")
@@ -310,9 +327,6 @@ def warp_menu(system, save_name, data):
     print("|" + " " * 58 + "|")
     print("|" + " " * 58 + "|")
     print("—" * 60)
-
-    data["current_system"] = connected_systems[choice]
-    save_data(save_name, data)
     sleep(2)
 
 
