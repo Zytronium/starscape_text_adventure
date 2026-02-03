@@ -8,6 +8,8 @@ import json
 import os
 from pathlib import Path
 
+VERSION_CODE = 1
+
 def read_data(save_name):
     """Load game data from save file"""
     save_path = Path.home() / ".starscape_text_adventure" / "saves" / save_name / "save.json"
@@ -103,7 +105,7 @@ def arrow_menu(title, options):
 def default_data():
     """Return default game data structure"""
     return {
-        "v": 1,  # save version code.
+        "v": VERSION_CODE,  # save version code.
         "player_name": "Player",
         "credits": 5000,
         "current_system": "The Citadel",
@@ -126,8 +128,34 @@ def default_data():
             "Lycentia": 0,
             "Forakus": 0,
             "Kavani": 0,
+        },
+        "tutorial_progress": {
+            "completed": True  # there is no tutorial, so we skip it if the save is loaded in a future version with tutorial
         }
     }
+
+
+def game_loop(save_name, data):
+    clear_screen()
+    if data["v"] < VERSION_CODE:
+        print("=" * 60)
+        print("  CONTINUE GAME")
+        print("=" * 60)
+        print()
+        print("ERROR: Save file is of an older data format.")
+        print("       No migration method has been programmed.")
+        print("       This save file can therefore not be loaded.")
+        print()
+        input("Press Enter to return to main menu")
+        return
+
+    # while True:
+    #     pass
+
+    print("Game loop not implemented yet")
+    print()
+    input("Press Enter to return to main menu")
+
 
 def new_game():
     """Start a new game with dialogue and player name input"""
@@ -190,14 +218,25 @@ def new_game():
     print()
     print(f"  Save '{save_name}' created successfully!")
     print()
+    print("You open your eyes, you see a glass tube around you.")
+    print("The tube opens and you step out. You've just been cloned")
+    print("for the first time. You awake with basic knowledge of the")
+    print("universe, how to survive, and how to pilot a spacecraft.")
+    print()
+    print("The cloning facility is now shutting down, no longer")
+    print("cloning in new players. You are the last of your kind.")
+    print("From now on, these cloning tubes will only be used to")
+    print("revive you in case you die. And you WILL die. This is a")
+    print("dangerous galaxy. Tread cautiously, but don't let caution get")
+    print("in the way of adventure. Go, explore this vast starscape!")
+    print()
     print("  You have been assigned:")
     print("    - Stratos (Starter Ship)")
     print("    - 5,000 Credits")
     print()
     input("Press Enter to continue...")
 
-    # TODO: Start game loop here
-    # game_loop(save_name, data)
+    game_loop(save_name, data)
 
 def create_default_save():
     """Create a default save with custom name"""
@@ -220,14 +259,15 @@ def create_default_save():
     print(f"\nSave '{save_name}' created successfully!")
     input("Press Enter to continue...")
 
-def load_and_print_save():
-    """Load a save and print its information"""
+
+def continue_game():
+    """Load a save and continue it"""
     # List available saves
     save_dir = Path.home() / ".starscape_text_adventure" / "saves"
     if not save_dir.exists():
         clear_screen()
         print("=" * 60)
-        print("  LOAD SAVE")
+        print("  CONTINUE GAME")
         print("=" * 60)
         print()
         print("No saves found!")
@@ -240,7 +280,7 @@ def load_and_print_save():
     if not saves:
         clear_screen()
         print("=" * 60)
-        print("  LOAD SAVE")
+        print("  CONTINUE GAME")
         print("=" * 60)
         print()
         print("No saves found!")
@@ -250,7 +290,7 @@ def load_and_print_save():
     # Add "Cancel" option
     options = saves + ["Cancel"]
 
-    choice = arrow_menu("SELECT SAVE TO LOAD", options)
+    choice = arrow_menu("SELECT SAVE TO CONTINUE", options)
 
     # If Cancel was selected
     if choice == len(saves):
@@ -261,14 +301,10 @@ def load_and_print_save():
 
     clear_screen()
     if data:
-        print("=" * 60)
-        print(f"  SAVE DATA: {save_name}")
-        print("=" * 60)
-        print(json.dumps(data, indent=2))
+        game_loop(save_name, data)
     else:
         print("\nFailed to load save!")
-
-    input("\nPress Enter to continue...")
+        input("\nPress Enter to continue...")
 
 
 def delete_save_screen():
@@ -340,7 +376,7 @@ def main():
     while True:
         options = [
             "New Game",
-            "[DEBUG] Load and Print Save",
+            "Continue Game",
             "Delete Save",
             "Exit"
         ]
@@ -350,7 +386,7 @@ def main():
         if choice == 0:
             new_game()
         elif choice == 1:
-            load_and_print_save()
+            continue_game()
         elif choice == 2:
             delete_save_screen()
         elif choice == 3:
