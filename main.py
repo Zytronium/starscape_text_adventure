@@ -7,6 +7,7 @@ import sys
 import json
 import os
 from pathlib import Path
+from io import StringIO
 
 VERSION_CODE = 1
 
@@ -70,9 +71,28 @@ def clear_screen():
     """Clear the terminal screen"""
     os.system('cls' if os.name == 'nt' else 'clear')
 
-def display_menu(title, options, selected_index):
-    """Display menu with highlighted selection"""
+def capture_screen_content(func, *args, **kwargs):
+    """Capture the output of a function without displaying it"""
+    old_stdout = sys.stdout
+    sys.stdout = StringIO()
+
+    try:
+        func(*args, **kwargs)
+        output = sys.stdout.getvalue()
+    finally:
+        sys.stdout = old_stdout
+
+    return output
+
+def display_menu(title, options, selected_index, previous_content=""):
+    """Display menu with highlighted selection, preserving previous content"""
     clear_screen()
+
+    # Re-print previous content if it exists
+    if previous_content:
+        print(previous_content, end='')
+        print()  # Add spacing between content and menu
+
     print("=" * 60)
     print(f"  {title}")
     print("=" * 60)
@@ -87,12 +107,12 @@ def display_menu(title, options, selected_index):
     print()
     print("  Use ↑/↓ arrows to navigate, Enter to select")
 
-def arrow_menu(title, options):
+def arrow_menu(title, options, previous_content=""):
     """Display menu with arrow key navigation, return selected index"""
     selected = 0
 
     while True:
-        display_menu(title, options, selected)
+        display_menu(title, options, selected, previous_content)
         key = get_key()
 
         if key == 'up':
@@ -149,12 +169,93 @@ def game_loop(save_name, data):
         input("Press Enter to return to main menu")
         return
 
-    # while True:
-    #     pass
+    while True:
+        main_screen(save_name, data)
 
-    print("Game loop not implemented yet")
-    print()
-    input("Press Enter to return to main menu")
+
+def main_screen(save_name, data):
+    system_name = data["current_system"]
+    system = system_data(system_name)
+
+    # Capture the screen content before showing the menu
+    content_buffer = StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = content_buffer
+
+    print("=" * 60)
+    print(f"  CURRENT SYSTEM: {system_name}")
+    print("=" * 60)
+    print(f"  SECURITY: {system["SecurityLevel"]}")
+    print(f"  {system["Region"]} > {system["Sector"]}")
+    print("=" * 60)
+    print(f"  CREDITS: ¢{data["credits"]}")
+    print("=" * 60)
+    print("  ACTIONS MENU")
+    print("=" * 60)
+
+    previous_content = content_buffer.getvalue()
+    sys.stdout = old_stdout
+
+    options = ["View status", "Warp to another system", "View inventory", "Dock at station", "Save", "Save and quit"]
+    choice = arrow_menu("Select action:", options, previous_content)
+
+    match choice:
+        case 0:
+            clear_screen()
+            print("=" * 60)
+            print("  STATUS")
+            print("=" * 60)
+            print("Not implemented yet")
+            input("Press enter to continue...")
+        case 1:
+            clear_screen()
+            print("=" * 60)
+            print("  WARP MENU")
+            print("=" * 60)
+            print("Not implemented yet")
+            input("Press enter to continue...")
+        case 2:
+            clear_screen()
+            print("=" * 60)
+            print("  INVENTORY")
+            print("=" * 60)
+            print("Not implemented yet")
+            input("Press enter to continue...")
+        case 3:
+            clear_screen()
+            print("=" * 60)
+            print("  STATION")
+            print("=" * 60)
+            print("Not implemented yet")
+            input("Press enter to continue...")
+        case 4:
+            clear_screen()
+            print("=" * 60)
+            print("  SAVE GAME")
+            print("=" * 60)
+            print("Saving...")
+            save_data(save_name, data)
+            print("Game saved.")
+            input("Press enter to continue...")
+        case 5:
+            clear_screen()
+            print("=" * 60)
+            print("  SAVE & QUIT")
+            print("=" * 60)
+            print("Saving...")
+            save_data(save_name, data)
+            print("Game saved.")
+            input("Press enter to exit...")
+            sys.exit(0)
+
+
+
+
+def system_data(system_name):
+    with open('system_data.json', 'r') as f:
+        data = json.load(f)
+
+    return data.get(system_name)
 
 
 def new_game():
