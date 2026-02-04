@@ -220,7 +220,7 @@ def main_screen(save_name, data):
         print("    Ignore the fleet")
         print()
         print("  Use ↑/↓ arrows to navigate, Enter to select")
-        sleep(0.5)
+        sleep(0.75)
 
         clear_screen()
 
@@ -234,12 +234,10 @@ def main_screen(save_name, data):
         print("=" * 60)
         print()
         print("The fleet of pirates obliterated your ship! You died.")
-        print()
-        print("Cloning...")
-        sleep(5)
-        data["inventory"] = {}  # clear inventory | todo: erase this ship too unless its a stratos
-        data["current_system"] = "The Citadel"
-        save_data(save_name, data)
+        sleep(2)
+
+        # Call the animated death screen
+        animated_death_screen(save_name, data)
         return
 
     previous_content = content_buffer.getvalue()
@@ -591,6 +589,118 @@ def delete_save_screen():
 
     print(f"\nSave '{save_name}' deleted successfully.")
     input("Press Enter to continue...")
+
+
+def animated_death_screen(save_name, data):
+    """Animated death and cloning sequence with glitch effects"""
+    import random
+
+    GREEN = "\033[1;32m"
+    DARK_GREEN = "\033[32m"
+    RED = "\033[31m"
+    RESET = "\033[0m"
+
+    def type_text(text, delay=0.03, color=GREEN):
+        """Print text with typing effect"""
+        for char in text:
+            print(color + char + RESET, end='', flush=True)
+            sleep(delay)
+        print()
+
+    def glitch_line(length=60):
+        """Generate a glitchy corrupted line"""
+        chars = ['█', '▓', '▒', '░', '▀', '▄', '■', '□', '▪', '▫', '|', '/',
+                 '\\', '-']
+        return ''.join(random.choice(chars) for _ in range(length))
+
+    def glitch_screen(lines=5):
+        """Flash glitchy corruption"""
+        for _ in range(lines):
+            print(RED + glitch_line() + RESET)
+            sleep(0.05)
+
+    clear_screen()
+
+    # Death message
+    print()
+    print()
+    type_text("CRITICAL SYSTEM FAILURE", 0.05, RED)
+    sleep(0.5)
+    glitch_screen(3)
+    sleep(0.3)
+
+    type_text("Hull integrity: 0%", 0.04, RED)
+    type_text("Life support: OFFLINE", 0.04, RED)
+    sleep(0.5)
+
+    # More glitches
+    glitch_screen(4)
+    sleep(0.3)
+
+    type_text("Consciousness upload initiated...", 0.04, DARK_GREEN)
+    sleep(0.5)
+
+    # Progress bar for consciousness upload
+    print(GREEN, end='')
+    print("[", end='', flush=True)
+    for i in range(30):
+        print("█", end='', flush=True)
+        sleep(0.05)
+    print("] 100%" + RESET)
+    sleep(0.3)
+
+    type_text("Consciousness pattern secured.", 0.03, GREEN)
+    sleep(0.4)
+
+    # Glitch transition
+    glitch_screen(5)
+
+    type_text("Accessing cloning facility database...", 0.03, GREEN)
+    sleep(0.6)
+    type_text("Synthesizing biological components...", 0.03, GREEN)
+    sleep(0.5)
+
+    # DNA sequence effect
+    print(GREEN, end='')
+    bases = ['A', 'T', 'C', 'G']
+    for _ in range(40):
+        print(random.choice(bases), end='', flush=True)
+        sleep(0.02)
+    print(RESET)
+    sleep(0.4)
+
+    type_text("Neural pathways reconstructing...", 0.03, GREEN)
+    sleep(0.5)
+
+    # Flashing reconstruction
+    for i in range(10):
+        if i % 2 == 0:
+            print(GREEN + "█" * 60 + RESET)
+        else:
+            print(" " * 60)
+        sleep(0.1)
+
+    clear_screen()
+
+    type_text("Cloning process complete.", 0.04, GREEN)
+    type_text("Memory restoration: 98.7% successful", 0.03, DARK_GREEN)
+    type_text("Motor functions: ONLINE", 0.03, GREEN)
+    type_text("Cognitive functions: ONLINE", 0.03, GREEN)
+    sleep(0.5)
+
+    print()
+    type_text("Welcome back, pilot.", 0.04, GREEN)
+    sleep(1)
+
+    print()
+    print(f"{RED}WARNING: All cargo has been lost.{RESET}")
+    print(f"{DARK_GREEN}Location: The Citadel - Cloning Bay{RESET}")
+    sleep(2)
+
+    # Clean up and respawn
+    data["inventory"] = {}
+    data["current_system"] = "The Citadel"
+    save_data(save_name, data)
 
 
 def main():
