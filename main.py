@@ -186,6 +186,7 @@ def game_loop(save_name, data):
 def main_screen(save_name, data):
     system_name = data["current_system"]
     system = system_data(system_name)
+    system["Name"] = system_name
 
     # Capture the screen content before showing the menu
     content_buffer = StringIO()
@@ -348,10 +349,43 @@ def warp_menu(system, save_name, data):
 
 
 def station_screen(system, save_name, data):
-    clear_screen()
-    title("STATION")
-    print("Not implemented yet")
-    input("Press enter to continue...")
+    while True:
+        clear_screen()
+
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        title(f"STATION - {system['Name']}")
+
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        options = [
+            "Access Global Storage",
+            "Visit Manufacturing",
+            "Visit Refinery",
+            "Visit Ship Vendor",
+            "Visit General Marketplace",
+            "Visit Observatory",
+            "Visit Mission Agent",
+            "Repair Ship",
+            "Switch Ships"
+            "Return to Ship & Undock",
+        ]
+
+        choice = arrow_menu("Select facility:", options, previous_content)
+
+        # Return to Ship & exit station
+        if choice == 8:
+            return
+
+        # All other options - not implemented yet
+        clear_screen()
+        title(options[choice].upper().replace("VISIT ", ""))
+        print()
+        print("Not implemented yet")
+        input("Press enter to continue...")
 
 
 def title(text, centered=False):
