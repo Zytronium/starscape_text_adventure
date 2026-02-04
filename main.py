@@ -215,15 +215,14 @@ def main_screen(save_name, data):
     sys.stdout = content_buffer
 
     title(f"CURRENT SYSTEM: {system_name}  [{system["SecurityLevel"].upper()}]")
-    # print(f"  SECURITY: {system["SecurityLevel"]}")
     print(f"  {system["Region"]} > {system["Sector"]}")
     title(f"CREDITS: ¢{data["credits"]}")
+
     if system_name == "Gatinsir":
         sys.stdout = old_stdout
         clear_screen()
 
         title(f"CURRENT SYSTEM: {system_name}  [{system["SecurityLevel"].upper()}]")
-        # print(f"  SECURITY: {system["SecurityLevel"]}")
         print(f"  {system["Region"]} > {system["Sector"]}")
         title(f"CREDITS: ¢{data["credits"]}")
         print()
@@ -240,7 +239,6 @@ def main_screen(save_name, data):
         clear_screen()
 
         title(f"CURRENT SYSTEM: {system_name}  [{system["SecurityLevel"].upper()}]")
-        # print(f"  SECURITY: {system["SecurityLevel"]}")
         print(f"  {system["Region"]} > {system["Sector"]}")
         title(f"CREDITS: ¢{data["credits"]}")
         print()
@@ -277,7 +275,7 @@ def main_screen(save_name, data):
             galaxy_map(save_name, data)
         case 5:
             clear_screen()
-            title("  SAVE & QUIT")
+            title("SAVE & QUIT")
             print("Saving...")
             save_data(save_name, data)
             print("Game saved.")
@@ -468,7 +466,7 @@ def station_screen(system, station_num, save_name, data):
 
         if action == "quit":
             clear_screen()
-            title("  SAVE & QUIT")
+            title("SAVE & QUIT")
             print("Saving...")
             save_data(save_name, data)
             print("Game saved.")
