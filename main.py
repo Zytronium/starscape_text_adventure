@@ -28,6 +28,7 @@ def read_data(save_name):
     with open(save_path, 'r') as f:
         return json.load(f)
 
+
 def save_data(save_name, data):
     """Save game data to file"""
     save_path = Path.home() / ".starscape_text_adventure" / "saves" / save_name / "save.json"
@@ -35,6 +36,7 @@ def save_data(save_name, data):
 
     with open(save_path, 'w') as f:
         json.dump(data, f, indent=4)
+
 
 def get_key():
     """Get a single keypress (cross-platform)"""
@@ -74,9 +76,11 @@ def get_key():
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     return None
 
+
 def clear_screen():
     """Clear the terminal screen"""
     os.system('cls' if os.name == 'nt' else 'clear')
+
 
 def capture_screen_content(func, *args, **kwargs):
     """Capture the output of a function without displaying it"""
@@ -91,7 +95,8 @@ def capture_screen_content(func, *args, **kwargs):
 
     return output
 
-def display_menu(title, options, selected_index, previous_content=""):
+
+def display_menu(title_, options, selected_index, previous_content=""):
     """Display menu with highlighted selection, preserving previous content"""
     clear_screen()
 
@@ -100,9 +105,7 @@ def display_menu(title, options, selected_index, previous_content=""):
         print(previous_content, end='')
         print()  # Add spacing between content and menu
 
-    print("=" * 60)
-    print(f"  {title}")
-    print("=" * 60)
+    title(title_)
     print()
 
     for i, option in enumerate(options):
@@ -113,6 +116,7 @@ def display_menu(title, options, selected_index, previous_content=""):
 
     print()
     print("  Use ↑/↓ arrows to navigate, Enter to select")
+
 
 def arrow_menu(title, options, previous_content=""):
     """Display menu with arrow key navigation, return selected index"""
@@ -128,6 +132,7 @@ def arrow_menu(title, options, previous_content=""):
             selected = (selected + 1) % len(options)
         elif key == 'enter':
             return selected
+
 
 def default_data():
     """Return default game data structure"""
@@ -165,9 +170,7 @@ def default_data():
 def game_loop(save_name, data):
     clear_screen()
     if data["v"] < VERSION_CODE:
-        print("=" * 60)
-        print("  CONTINUE GAME")
-        print("=" * 60)
+        title("CONTINUE GAME")
         print()
         print("ERROR: Save file is of an older data format.")
         print("       No migration method has been programmed.")
@@ -189,31 +192,21 @@ def main_screen(save_name, data):
     old_stdout = sys.stdout
     sys.stdout = content_buffer
 
-    print("=" * 60)
-    print(f"  CURRENT SYSTEM: {system_name}")
-    print("=" * 60)
-    print(f"  SECURITY: {system["SecurityLevel"]}")
+    title(f"CURRENT SYSTEM: {system_name}  [{system["SecurityLevel"].upper()}]")
+    # print(f"  SECURITY: {system["SecurityLevel"]}")
     print(f"  {system["Region"]} > {system["Sector"]}")
-    print("=" * 60)
-    print(f"  CREDITS: ¢{data["credits"]}")
-    print("=" * 60)
+    title(f"CREDITS: ¢{data["credits"]}")
     if system_name == "Gatinsir":
         sys.stdout = old_stdout
         clear_screen()
 
-        print("=" * 60)
-        print(f"  CURRENT SYSTEM: {system_name}")
-        print("=" * 60)
-        print(f"  SECURITY: {system["SecurityLevel"]}")
+        title(f"CURRENT SYSTEM: {system_name}  [{system["SecurityLevel"].upper()}]")
+        # print(f"  SECURITY: {system["SecurityLevel"]}")
         print(f"  {system["Region"]} > {system["Sector"]}")
-        print("=" * 60)
-        print(f"  CREDITS: ¢{data["credits"]}")
-        print("=" * 60)
+        title(f"CREDITS: ¢{data["credits"]}")
         print()
         print("A fleet of pirates approaches! What will you do?")
-        print("=" * 60)
-        print("  ACTIONS MENU")
-        print("=" * 60)
+        title("ACTIONS MENU")
         print()
         print("  > Fight")
         print("    Warp to another system")
@@ -224,14 +217,10 @@ def main_screen(save_name, data):
 
         clear_screen()
 
-        print("=" * 60)
-        print(f"  CURRENT SYSTEM: {system_name}")
-        print("=" * 60)
-        print(f"  SECURITY: {system["SecurityLevel"]}")
+        title(f"CURRENT SYSTEM: {system_name}  [{system["SecurityLevel"].upper()}]")
+        # print(f"  SECURITY: {system["SecurityLevel"]}")
         print(f"  {system["Region"]} > {system["Sector"]}")
-        print("=" * 60)
-        print(f"  CREDITS: ¢{data["credits"]}")
-        print("=" * 60)
+        title(f"CREDITS: ¢{data["credits"]}")
         print()
         print("The fleet of pirates obliterated your ship! You died.")
         sleep(2)
@@ -250,43 +239,30 @@ def main_screen(save_name, data):
     match choice:
         case 0:
             clear_screen()
-            print("=" * 60)
-            print("  STATUS")
-            print("=" * 60)
+            title("STATUS")
             print("Not implemented yet")
             input("Press enter to continue...")
         case 1:
             warp_menu(system, save_name, data)
         case 2:
             clear_screen()
-            print("=" * 60)
-            print("  INVENTORY")
-            print("=" * 60)
+            title("INVENTORY")
             print("Not implemented yet")
             input("Press enter to continue...")
         case 3:
-            clear_screen()
-            print("=" * 60)
-            print("  STATION")
-            print("=" * 60)
-            print("Not implemented yet")
-            input("Press enter to continue...")
+            station_screen(system, save_name, data)
         case 4:
             galaxy_map(save_name, data)
         case 5:
             clear_screen()
-            print("=" * 60)
-            print("  SAVE GAME")
-            print("=" * 60)
+            title("SAVE GAME")
             print("Saving...")
             save_data(save_name, data)
             print("Game saved.")
             input("Press enter to continue...")
         case 6:
             clear_screen()
-            print("=" * 60)
-            print("  SAVE & QUIT")
-            print("=" * 60)
+            title("  SAVE & QUIT")
             print("Saving...")
             save_data(save_name, data)
             print("Game saved.")
@@ -316,9 +292,7 @@ def warp_menu(system, save_name, data):
         i += 1
 
     clear_screen()
-    print("=" * 60)
-    print("  WARP MENU")
-    print("=" * 60)
+    title("WARP MENU")
     choice = arrow_menu("Select system to warp to", options)
 
     # If Cancel was selected
@@ -373,6 +347,25 @@ def warp_menu(system, save_name, data):
     sleep(2)
 
 
+def station_screen(system, save_name, data):
+    clear_screen()
+    title("STATION")
+    print("Not implemented yet")
+    input("Press enter to continue...")
+
+
+def title(text, centered=False):
+    print("=" * 60)
+    if centered:
+        total_padding = 60 - len(text)
+        spacingL = " " * math.ceil(total_padding / 2)
+        spacingR = " " * math.floor(total_padding / 2)
+        print(f"{spacingL}{text}{spacingR}")
+    else:
+        print(f"  {text}")
+    print("=" * 60)
+
+
 def system_data(system_name):
     with open('system_data.json', 'r') as f:
         data = json.load(f)
@@ -407,9 +400,7 @@ def new_game():
     input("Press Enter to begin your journey...")
 
     clear_screen()
-    print("=" * 60)
-    print("  NEW GAME")
-    print("=" * 60)
+    title("NEW GAME")
     print()
     print("Pilot, what shall you be called?")
 
@@ -435,9 +426,7 @@ def new_game():
     save_data(save_name, data)
 
     clear_screen()
-    print("=" * 60)
-    print(f"  WELCOME, {player_name.upper()}")
-    print("=" * 60)
+    title(f"WELCOME, {player_name.upper()}")
     print()
     print(f"  Save '{save_name}' created successfully!")
     print()
@@ -461,27 +450,6 @@ def new_game():
 
     game_loop(save_name, data)
 
-def create_default_save():
-    """Create a default save with custom name"""
-    clear_screen()
-    print("=" * 60)
-    print("  CREATE DEFAULT SAVE")
-    print("=" * 60)
-    print()
-
-    save_name = input("Enter save name: ").strip()
-
-    if not save_name:
-        print("\nSave name cannot be empty!")
-        input("Press Enter to continue...")
-        return
-
-    data = default_data()
-    save_data(save_name, data)
-
-    print(f"\nSave '{save_name}' created successfully!")
-    input("Press Enter to continue...")
-
 
 def continue_game():
     """Load a save and continue it"""
@@ -489,9 +457,7 @@ def continue_game():
     save_dir = Path.home() / ".starscape_text_adventure" / "saves"
     if not save_dir.exists():
         clear_screen()
-        print("=" * 60)
-        print("  CONTINUE GAME")
-        print("=" * 60)
+        title("CONTINUE GAME")
         print()
         print("No saves found!")
         input("Press Enter to continue...")
@@ -502,9 +468,7 @@ def continue_game():
 
     if not saves:
         clear_screen()
-        print("=" * 60)
-        print("  CONTINUE GAME")
-        print("=" * 60)
+        title("CONTINUE GAME")
         print()
         print("No saves found!")
         input("Press Enter to continue...")
@@ -536,9 +500,7 @@ def delete_save_screen():
 
     if not save_dir.exists():
         clear_screen()
-        print("=" * 60)
-        print("  DELETE SAVE")
-        print("=" * 60)
+        title("DELETE SAVE")
         print()
         print("No saves found!")
         input("Press Enter to continue...")
@@ -549,9 +511,7 @@ def delete_save_screen():
 
     if not saves:
         clear_screen()
-        print("=" * 60)
-        print("  DELETE SAVE")
-        print("=" * 60)
+        title("DELETE SAVE")
         print()
         print("No saves found!")
         input("Press Enter to continue...")
@@ -567,9 +527,7 @@ def delete_save_screen():
     save_path = save_dir / save_name
 
     clear_screen()
-    print("=" * 60)
-    print("  CONFIRM DELETE")
-    print("=" * 60)
+    title("CONFIRM DELETE")
     print()
     print(f"This will permanently delete the save '{save_name}'.")
     print(f"Type '{save_name}' to confirm.")
@@ -747,9 +705,7 @@ def fuzzy_match(query, text):
 def search_systems(all_systems_data):
     """Search for systems by name or security level"""
     clear_screen()
-    print("=" * 60)
-    print("  GALAXY SEARCH")
-    print("=" * 60)
+    title("GALAXY SEARCH")
     print()
     print("Search by system name or security level")
     print("(Core, Secure, Contested, Unsecure, Wild)")
@@ -1089,9 +1045,7 @@ def display_spatial_map(center_system, all_systems_data, current_system,
         grid[gy][gx] = (letter, system, color)
 
     # Print header
-    print("=" * 60)
-    print("  GALAXY MAP - SPATIAL VIEW")
-    print("=" * 60)
+    title("GALAXY MAP - SPATIAL VIEW")
     print(
         f"  Viewing: {get_security_color(all_systems_data[center_system]['SecurityLevel'])}{center_system}{RESET_COLOR}")
     if current_system != center_system:
@@ -1232,6 +1186,7 @@ def main():
             clear_screen()
             print("Exiting...")
             break
+
 
 if __name__ == "__main__":
     try:
