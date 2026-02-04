@@ -243,7 +243,8 @@ def main_screen(save_name, data):
     previous_content = content_buffer.getvalue()
     sys.stdout = old_stdout
 
-    options = ["View status", "Warp to another system", "View inventory", "Dock at station", "Save", "Save and quit"]
+    options = ["View status", "Warp to another system", "View inventory",
+               "Dock at station", "Map", "Save", "Save and quit"]
     choice = arrow_menu("Select action:", options, previous_content)
 
     match choice:
@@ -271,6 +272,8 @@ def main_screen(save_name, data):
             print("Not implemented yet")
             input("Press enter to continue...")
         case 4:
+            galaxy_map(save_name, data)
+        case 5:
             clear_screen()
             print("=" * 60)
             print("  SAVE GAME")
@@ -279,7 +282,7 @@ def main_screen(save_name, data):
             save_data(save_name, data)
             print("Game saved.")
             input("Press enter to continue...")
-        case 5:
+        case 6:
             clear_screen()
             print("=" * 60)
             print("  SAVE & QUIT")
@@ -673,7 +676,7 @@ def animated_death_screen(save_name, data):
     sleep(0.5)
 
     # Flashing reconstruction
-    for i in range(10):
+    for i in range(15):
         if i % 2 == 0:
             print(GREEN + "█" * 60 + RESET)
         else:
@@ -701,6 +704,510 @@ def animated_death_screen(save_name, data):
     data["inventory"] = {}
     data["current_system"] = "The Citadel"
     save_data(save_name, data)
+
+
+def get_systems_within_jumps(start_system, max_jumps, all_systems_data):
+    """BFS to find all systems within N jumps"""
+    from collections import deque
+
+    visited = {start_system: 0}  # system: jump_distance
+    queue = deque([(start_system, 0)])
+
+    while queue:
+        current, jumps = queue.popleft()
+
+        if jumps >= max_jumps:
+            continue
+
+        system_info = all_systems_data.get(current)
+        if not system_info:
+            continue
+
+        for neighbor in system_info.get("Connections", []):
+            if neighbor not in visited:
+                visited[neighbor] = jumps + 1
+                queue.append((neighbor, jumps + 1))
+
+    return visited
+
+
+def fuzzy_match(query, text):
+    """Simple fuzzy matching - returns True if all query chars appear in order in text"""
+    query = query.lower()
+    text = text.lower()
+    query_idx = 0
+
+    for char in text:
+        if query_idx < len(query) and char == query[query_idx]:
+            query_idx += 1
+
+    return query_idx == len(query)
+
+
+def search_systems(all_systems_data):
+    """Search for systems by name or security level"""
+    clear_screen()
+    print("=" * 60)
+    print("  GALAXY SEARCH")
+    print("=" * 60)
+    print()
+    print("Search by system name or security level")
+    print("(Core, Secure, Contested, Unsecure, Wild)")
+    print()
+
+    query = input("Search: ").strip()
+
+    if not query:
+        return None
+
+    matches = []
+
+    for system_name, system_info in all_systems_data.items():
+        # Match by name
+        if fuzzy_match(query, system_name):
+            matches.append(system_name)
+        # Match by security level
+        elif fuzzy_match(query, system_info.get("SecurityLevel", "")):
+            matches.append(system_name)
+
+    if not matches:
+        print(f"\nNo systems found matching '{query}'")
+        input("Press Enter to continue...")
+        return None
+
+    # Show results with letter navigation
+    print()
+    print(f"Found {len(matches)} system(s):")
+    print()
+
+    letter_map = {}
+    for i, system_name in enumerate(matches[:26]):  # Limit to 26 for a-z
+        letter = chr(ord('a') + i)
+        letter_map[letter] = system_name
+
+        system_info = all_systems_data[system_name]
+        security = system_info.get("SecurityLevel", "Unknown")
+        color = get_security_color(security)
+
+        print(f"  [{letter}] {color}{system_name}{RESET_COLOR} ({security})")
+
+    print()
+    print("Press a letter to view that system, or Enter to cancel")
+
+    while True:
+        key = get_key()
+        if key == 'enter':
+            return None
+        elif key and key in letter_map:
+            return letter_map[key]
+
+
+def get_security_color(security_level):
+    """Get color for security level"""
+    match security_level:
+        case "Core":
+            return CORE_COLOR
+        case "Secure":
+            return SECURE_COLOR
+        case "Contested":
+            return CONTESTED_COLOR
+        case "Unsecure":
+            return UNSECURE_COLOR
+        case "Wild":
+            return WILD_COLOR
+        case _:
+            return RESET_COLOR
+
+
+def get_key_with_shift():
+    """Get a keypress and detect if shift is held (for letter keys)"""
+    if os.name == 'nt':  # Windows
+        import msvcrt
+        key = msvcrt.getch()
+        if key in [b'\xe0', b'\x00']:  # Arrow key prefix
+            key = msvcrt.getch()
+            if key == b'H':
+                return 'up', False
+            elif key == b'P':
+                return 'down', False
+        elif key == b'\r':
+            return 'enter', False
+        elif key == b'\x1b':
+            return 'esc', False
+        else:
+            # Check if it's a letter
+            try:
+                char = key.decode('utf-8')
+                # Uppercase means shift was held
+                is_shift = char.isupper()
+                return char.lower(), is_shift
+            except:
+                return None, False
+    else:  # Unix/Linux/Mac
+        import termios
+        import tty
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            ch = sys.stdin.read(1)
+            if ch == '\x1b':  # Escape sequence
+                ch2 = sys.stdin.read(1)
+                if ch2 == '[':
+                    ch3 = sys.stdin.read(1)
+                    if ch3 == 'A':
+                        return 'up', False
+                    elif ch3 == 'B':
+                        return 'down', False
+                return 'esc', False
+            elif ch == '\n' or ch == '\r':
+                return 'enter', False
+            else:
+                # Check if shift was held (uppercase letter)
+                is_shift = ch.isupper()
+                return ch.lower(), is_shift
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    return None, False
+
+
+def calculate_map_positions(center_system, systems_by_distance,
+                            all_systems_data):
+    """Calculate 2D positions for systems using a force-directed approach"""
+    import random
+    import math
+
+    positions = {}
+
+    # Center system at origin
+    positions[center_system] = (0, 0)
+
+    # Place systems at distances based on jump count
+    for distance in range(1, 4):
+        systems = systems_by_distance.get(distance, [])
+
+        if not systems:
+            continue
+
+        # Arrange in a circle at this distance
+        radius = distance * 8  # Scale factor for spacing
+        angle_step = (2 * math.pi) / len(systems) if len(systems) > 0 else 0
+
+        for i, system in enumerate(systems):
+            angle = i * angle_step + random.uniform(-0.3, 0.3)  # Add jitter
+            x = radius * math.cos(angle)
+            y = radius * math.sin(angle)
+            positions[system] = (x, y)
+
+    # Run a few iterations of force-directed adjustment
+    for iteration in range(10):
+        forces = {system: (0, 0) for system in positions}
+
+        # Repulsion between all nodes
+        for s1 in positions:
+            for s2 in positions:
+                if s1 == s2:
+                    continue
+
+                x1, y1 = positions[s1]
+                x2, y2 = positions[s2]
+                dx = x1 - x2
+                dy = y1 - y2
+                dist = math.sqrt(dx * dx + dy * dy)
+
+                if dist < 0.1:
+                    dist = 0.1
+
+                # Repulsion force
+                force = 3.0 / (dist * dist)
+                fx = (dx / dist) * force
+                fy = (dy / dist) * force
+
+                fx_old, fy_old = forces[s1]
+                forces[s1] = (fx_old + fx, fy_old + fy)
+
+        # Attraction along connections
+        for system in positions:
+            if system not in all_systems_data:
+                continue
+
+            for connected in all_systems_data[system].get("Connections", []):
+                if connected not in positions:
+                    continue
+
+                x1, y1 = positions[system]
+                x2, y2 = positions[connected]
+                dx = x2 - x1
+                dy = y2 - y1
+                dist = math.sqrt(dx * dx + dy * dy)
+
+                if dist < 0.1:
+                    continue
+
+                # Attraction force
+                force = dist * 0.05
+                fx = (dx / dist) * force
+                fy = (dy / dist) * force
+
+                fx_old, fy_old = forces[system]
+                forces[system] = (fx_old + fx, fy_old + fy)
+
+        # Apply forces (don't move center system)
+        for system in positions:
+            if system == center_system:
+                continue
+
+            fx, fy = forces[system]
+            x, y = positions[system]
+            positions[system] = (x + fx * 0.1, y + fy * 0.1)
+
+    return positions
+
+
+def draw_line(grid, x1, y1, x2, y2, char='·'):
+    """Draw a line on the grid using Bresenham's algorithm"""
+    dx = abs(x2 - x1)
+    dy = abs(y2 - y1)
+    sx = 1 if x1 < x2 else -1
+    sy = 1 if y1 < y2 else -1
+    err = dx - dy
+
+    while True:
+        # Don't overwrite system markers
+        if 0 <= y1 < len(grid) and 0 <= x1 < len(grid[0]):
+            if grid[y1][x1] == ' ':
+                grid[y1][x1] = char
+
+        if x1 == x2 and y1 == y2:
+            break
+
+        e2 = 2 * err
+        if e2 > -dy:
+            err -= dy
+            x1 += sx
+        if e2 < dx:
+            err += dx
+            y1 += sy
+
+
+def display_spatial_map(center_system, all_systems_data, current_system,
+                        destination):
+    """Display galaxy map as a node-based spatial graph"""
+    clear_screen()
+
+    # Get systems within 3 jumps
+    systems_by_distance_dict = get_systems_within_jumps(center_system, 3,
+                                                        all_systems_data)
+
+    # Organize by jump distance
+    systems_by_distance = {0: [], 1: [], 2: [], 3: []}
+    for system, distance in systems_by_distance_dict.items():
+        systems_by_distance[distance].append(system)
+
+    # Sort alphabetically within each distance
+    for distance in systems_by_distance:
+        systems_by_distance[distance].sort()
+
+    # Calculate positions
+    positions = calculate_map_positions(center_system, systems_by_distance,
+                                        all_systems_data)
+
+    # Convert to grid coordinates (terminal space)
+    # Map dimensions
+    MAP_WIDTH = 70
+    MAP_HEIGHT = 24
+
+    # Find bounds
+    min_x = min(pos[0] for pos in positions.values())
+    max_x = max(pos[0] for pos in positions.values())
+    min_y = min(pos[1] for pos in positions.values())
+    max_y = max(pos[1] for pos in positions.values())
+
+    # Add padding
+    range_x = max_x - min_x if max_x != min_x else 1
+    range_y = max_y - min_y if max_y != min_y else 1
+
+    # Convert positions to grid coordinates
+    grid_positions = {}
+    for system, (x, y) in positions.items():
+        grid_x = int((x - min_x) / range_x * (MAP_WIDTH - 4) + 2)
+        grid_y = int((y - min_y) / range_y * (MAP_HEIGHT - 4) + 2)
+        grid_positions[system] = (grid_x, grid_y)
+
+    # Create display grid
+    grid = [[' ' for _ in range(MAP_WIDTH)] for _ in range(MAP_HEIGHT)]
+
+    # Draw connections first (so they appear behind nodes)
+    for system in positions:
+        if system not in all_systems_data:
+            continue
+
+        x1, y1 = grid_positions[system]
+
+        for connected in all_systems_data[system].get("Connections", []):
+            if connected not in grid_positions:
+                continue
+
+            x2, y2 = grid_positions[connected]
+
+            # Determine line character based on security levels
+            security1 = all_systems_data[system].get("SecurityLevel", "")
+            security2 = all_systems_data[connected].get("SecurityLevel", "")
+
+            # Use different characters for different connection types
+            if "Unsecure" in [security1, security2] or "Wild" in [security1,
+                                                                  security2]:
+                line_char = '·'
+            else:
+                line_char = '─'
+
+            draw_line(grid, x1, y1, x2, y2, line_char)
+
+    # Assign letters and place system markers
+    letter_map = {}
+    letter_idx = 0
+
+    all_systems = []
+    for distance in range(4):
+        all_systems.extend(systems_by_distance[distance])
+
+    for system in all_systems:
+        if letter_idx >= 26:
+            break
+
+        letter = chr(ord('a') + letter_idx)
+        letter_map[letter] = system
+        letter_idx += 1
+
+        gx, gy = grid_positions[system]
+
+        # Get color based on security
+        security = all_systems_data[system].get("SecurityLevel", "Unknown")
+        color = get_security_color(security)
+
+        # Store letter with color and system info
+        grid[gy][gx] = (letter, system, color)
+
+    # Print header
+    print("=" * 60)
+    print("  GALAXY MAP - SPATIAL VIEW")
+    print("=" * 60)
+    print(
+        f"  Viewing: {get_security_color(all_systems_data[center_system]['SecurityLevel'])}{center_system}{RESET_COLOR}")
+    if current_system != center_system:
+        print(
+            f"  Current: {get_security_color(all_systems_data[current_system]['SecurityLevel'])}{current_system}{RESET_COLOR}")
+    if destination:
+        print(
+            f"  Destination: {get_security_color(all_systems_data[destination]['SecurityLevel'])}{destination}{RESET_COLOR}")
+    print("=" * 60)
+    print()
+
+    # Print the grid
+    for y in range(MAP_HEIGHT):
+        line = ""
+        for x in range(MAP_WIDTH):
+            cell = grid[y][x]
+            if isinstance(cell, tuple):
+                letter, system, color = cell
+                line += f"{color}{letter}{RESET_COLOR}"
+            else:
+                line += cell
+        print(line)
+
+    print()
+    print("=" * 60)
+
+    # Print legend with letters
+    print("Systems:")
+    col_width = 30
+    systems_per_row = 2
+
+    for i in range(0, len(letter_map), systems_per_row):
+        row_items = []
+        for j in range(systems_per_row):
+            idx = i + j
+            if idx < len(letter_map):
+                letters = list(letter_map.keys())
+                letter = letters[idx]
+                system = letter_map[letter]
+                security = all_systems_data[system].get("SecurityLevel",
+                                                        "Unknown")
+                color = get_security_color(security)
+
+                # Add markers
+                markers = []
+                if system == current_system:
+                    markers.append("★")
+                if system == destination:
+                    markers.append("◆")
+                if system == center_system:
+                    markers.append("@")
+                marker_str = " ".join(markers) if markers else ""
+
+                item = f"[{letter}] {color}{system}{RESET_COLOR}"
+                if marker_str:
+                    item += f" {marker_str}"
+                row_items.append(item)
+
+        # Print items in this row
+        for item in row_items:
+            # Strip ANSI codes for length calculation
+            plain_item = item
+            for code in [CORE_COLOR, SECURE_COLOR, CONTESTED_COLOR,
+                         UNSECURE_COLOR, WILD_COLOR, RESET_COLOR]:
+                plain_item = plain_item.replace(code, "")
+
+            print(f"{item:<{col_width}}", end="")
+        print()
+
+    print()
+    print(
+        "  [a-z] Navigate | [SHIFT+letter] Set dest | [s] Search | [ESC] Exit")
+    print("  Legend: ★ Current System  ◆ Destination  @ Viewing Center")
+    print("=" * 60)
+
+    return letter_map
+
+
+def galaxy_map(save_name, data):
+    """Interactive galaxy map interface"""
+    # Load all systems data
+    with open('system_data.json', 'r') as f:
+        all_systems_data = json.load(f)
+
+    current_system = data["current_system"]
+    center_system = current_system
+    destination = data.get("destination", "")
+
+    while True:
+        letter_map = display_spatial_map(center_system, all_systems_data,
+                                         current_system, destination)
+
+        key, is_shift = get_key_with_shift()
+
+        if key == 'esc':
+            # Save destination before exiting
+            data["destination"] = destination
+            save_data(save_name, data)
+            return
+        elif key == 's' and not is_shift:
+            # Search
+            result = search_systems(all_systems_data)
+            if result:
+                center_system = result
+        elif key and key in letter_map:
+            selected_system = letter_map[key]
+
+            if is_shift:
+                # Toggle destination
+                if destination == selected_system:
+                    destination = ""
+                else:
+                    destination = selected_system
+            else:
+                # Navigate to system
+                center_system = selected_system
 
 
 def main():
