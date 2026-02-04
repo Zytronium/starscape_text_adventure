@@ -11,6 +11,12 @@ from io import StringIO
 from time import sleep
 
 VERSION_CODE = 1
+CORE_COLOR = "\033[1;32m"     # lime
+SECURE_COLOR = "\033[36m"     # cyan
+CONTESTED_COLOR = "\033[33m"  # orange/brown
+UNSECURE_COLOR = "\033[31m"   # red
+WILD_COLOR = "\033[35m"       # purple
+RESET_COLOR = "\033[0m"       # reset
 
 def read_data(save_name):
     """Load game data from save file"""
@@ -191,8 +197,50 @@ def main_screen(save_name, data):
     print("=" * 60)
     print(f"  CREDITS: ¢{data["credits"]}")
     print("=" * 60)
-    print("  ACTIONS MENU")
-    print("=" * 60)
+    if system_name == "Gatinsir":
+        sys.stdout = old_stdout
+        clear_screen()
+
+        print("=" * 60)
+        print(f"  CURRENT SYSTEM: {system_name}")
+        print("=" * 60)
+        print(f"  SECURITY: {system["SecurityLevel"]}")
+        print(f"  {system["Region"]} > {system["Sector"]}")
+        print("=" * 60)
+        print(f"  CREDITS: ¢{data["credits"]}")
+        print("=" * 60)
+        print()
+        print("A fleet of pirates approaches! What will you do?")
+        print("=" * 60)
+        print("  ACTIONS MENU")
+        print("=" * 60)
+        print()
+        print("  > Fight")
+        print("    Warp to another system")
+        print("    Ignore the fleet")
+        print()
+        print("  Use ↑/↓ arrows to navigate, Enter to select")
+        sleep(0.5)
+
+        clear_screen()
+
+        print("=" * 60)
+        print(f"  CURRENT SYSTEM: {system_name}")
+        print("=" * 60)
+        print(f"  SECURITY: {system["SecurityLevel"]}")
+        print(f"  {system["Region"]} > {system["Sector"]}")
+        print("=" * 60)
+        print(f"  CREDITS: ¢{data["credits"]}")
+        print("=" * 60)
+        print()
+        print("The fleet of pirates obliterated your ship! You died.")
+        print()
+        print("Cloning...")
+        sleep(5)
+        data["inventory"] = {}  # clear inventory | todo: erase this ship too unless its a stratos
+        data["current_system"] = "The Citadel"
+        save_data(save_name, data)
+        return
 
     previous_content = content_buffer.getvalue()
     sys.stdout = old_stdout
@@ -246,12 +294,6 @@ def main_screen(save_name, data):
 
 
 def warp_menu(system, save_name, data):
-    CORE_COLOR = "\033[1;32m"     # lime
-    SECURE_COLOR = "\033[36m"     # cyan
-    CONTESTED_COLOR = "\033[33m"  # orange/brown
-    UNSECURE_COLOR = "\033[31m"   # red
-    WILD_COLOR = "\033[35m"       # purple
-    RESET_COLOR = "\033[0m"       # reset
     connected_systems = system["Connections"]
     options = connected_systems + [f"{UNSECURE_COLOR}x{RESET_COLOR} Cancel"]
 
