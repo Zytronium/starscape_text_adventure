@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 from io import StringIO
 from time import sleep
+from uuid import uuid4
 
 VERSION_CODE = 1
 CORE_COLOR = "\033[1;32m"     # lime
@@ -141,10 +142,11 @@ def default_data():
         "player_name": "Player",
         "credits": 5000,
         "current_system": "The Citadel",
-        "ships_owned": [
+        "ships": [
             {
-                "id": "stratos",
-                "name": "Stratos",
+                "id": uuid4(),
+                "name": "stratos",
+                "nickname": "Stratos",
                 "hull_hp": 200,
                 "shield_hp": 200,
                 "modules_installed": [],
