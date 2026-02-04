@@ -142,9 +142,10 @@ def default_data():
         "player_name": "Player",
         "credits": 5000,
         "current_system": "The Citadel",
+        "docked_at": "The Citadel",
         "ships": [
             {
-                "id": uuid4(),
+                "id": str(uuid4()),
                 "name": "stratos",
                 "nickname": "Stratos",
                 "hull_hp": 200,
@@ -189,6 +190,24 @@ def main_screen(save_name, data):
     system_name = data["current_system"]
     system = system_data(system_name)
     system["Name"] = system_name
+
+    if data["docked_at"] != "":
+        # get index of station docked at
+        stations = system["Stations"]
+        station_index = None
+        i = 0
+        for station in stations:
+            if station["Name"] == data["docked_at"]:
+                station_index = i
+                break
+            i += 1
+
+        if station_index != None:
+            station_screen(system, station_index, save_name, data)
+            return
+        # else:
+            # data is corrupted. Pretend the player was never docked and put
+            # them outside the station
 
     # Capture the screen content before showing the menu
     content_buffer = StringIO()
@@ -236,7 +255,7 @@ def main_screen(save_name, data):
     sys.stdout = old_stdout
 
     options = ["View status", "Warp to another system", "View inventory",
-               "Dock at station", "Map", "Save", "Save and quit"]
+               "Dock at station", "Map", "Save and quit"]
     choice = arrow_menu("Select action:", options, previous_content)
 
     match choice:
@@ -257,13 +276,6 @@ def main_screen(save_name, data):
         case 4:
             galaxy_map(save_name, data)
         case 5:
-            clear_screen()
-            title("SAVE GAME")
-            print("Saving...")
-            save_data(save_name, data)
-            print("Game saved.")
-            input("Press enter to continue...")
-        case 6:
             clear_screen()
             title("  SAVE & QUIT")
             print("Saving...")
@@ -367,6 +379,8 @@ def select_station_menu(system, save_name, data):
     if choice == len(stations):
         return
 
+    data["docked_at"] = stations[choice]["Name"]
+    save_data(save_name, data)
     station_screen(system, choice, save_name, data)
 
 
@@ -438,13 +452,28 @@ def station_screen(system, station_num, save_name, data):
         options.append("Return to Ship & Undock")
         option_actions.append("undock")
 
+        # Always add save & quit option
+        options.append("Save & Quit")
+        option_actions.append("quit")
+
         choice = arrow_menu("Select facility:", options, previous_content)
 
         # Handle the selected option
         action = option_actions[choice]
 
         if action == "undock":
+            data["docked_at"] = ""
+            save_data(save_name, data)
             return
+
+        if action == "quit":
+            clear_screen()
+            title("  SAVE & QUIT")
+            print("Saving...")
+            save_data(save_name, data)
+            print("Game saved.")
+            input("Press enter to exit...")
+            sys.exit(0)
 
         # All other options - not implemented yet
         clear_screen()
