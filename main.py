@@ -251,7 +251,7 @@ def main_screen(save_name, data):
             print("Not implemented yet")
             input("Press enter to continue...")
         case 3:
-            station_screen(system, save_name, data)
+            select_station_menu(system, save_name, data)
         case 4:
             galaxy_map(save_name, data)
         case 5:
@@ -348,7 +348,37 @@ def warp_menu(system, save_name, data):
     sleep(2)
 
 
-def station_screen(system, save_name, data):
+def select_station_menu(system, save_name, data):
+    options = []
+    stations = system["Stations"]
+
+    for station in stations:
+        options.append(station.get("Name"))
+
+    options.append("Cancel")
+
+    clear_screen()
+    title("SELECT STATION")
+    choice = arrow_menu("Select station to dock with", options)
+
+    # If Cancel was selected
+    if choice == len(stations):
+        return
+
+    station_screen(system, choice, save_name, data)
+
+
+def station_screen(system, station_num, save_name, data):
+    # Check if system has any stations
+    if "Stations" not in system or not system["Stations"]:
+        clear_screen()
+        title("NO STATION")
+        print()
+        print("This system does not have any orbital stations.")
+        print("You cannot dock here.")
+        input("Press enter to continue...")
+        return
+
     while True:
         clear_screen()
 
@@ -356,28 +386,62 @@ def station_screen(system, save_name, data):
         old_stdout = sys.stdout
         sys.stdout = content_buffer
 
-        title(f"STATION - {system['Name']}")
+        # Get station data
+        station = system["Stations"][station_num]
+        station_name = station.get("Name", f"{system.get('Name', 'Unknown Station')}")
+        facilities = station.get("Facilities", [])
+
+        title(f"DOCKED AT: {station_name}")
 
         previous_content = content_buffer.getvalue()
         sys.stdout = old_stdout
 
-        options = [
-            "Access Global Storage",
-            "Visit Manufacturing",
-            "Visit Refinery",
-            "Visit Ship Vendor",
-            "Visit General Marketplace",
-            "Visit Observatory",
-            "Visit Mission Agent",
-            "Repair Ship",
-            "Switch Ships"
-            "Return to Ship & Undock",
-        ]
+        # Build options list based on available facilities
+        options = []
+        option_actions = []  # Track what each option does
+
+        # Always show global storage option
+        options.append("Access Global Storage")
+        option_actions.append("global_storage")
+
+        # Facility-based options
+        facility_mapping = {
+            "Manufacturing": ("Visit Manufacturing", "manufacturing"),
+            "Refinery": ("Visit Refinery", "refinery"),
+            "Ship Vendor": ("Visit Ship Vendor", "ship_vendor"),
+            "General Marketplace": ("Visit General Marketplace", "marketplace"),
+            "Observatory": ("Visit Observatory", "observatory"),
+            "Repair Bay": ("Repair Ship", "repair"),
+        }
+
+        # Check each facility type
+        for facility in facilities:
+            # Handle mission agencies (they have tier info)
+            if "Mission Agency" in facility:
+                if "Visit Mission Agent" not in options:
+                    options.append("Visit Mission Agent")
+                    option_actions.append("mission_agent")
+            else:
+                # Check standard facilities
+                for facility_key, (option_text, action) in facility_mapping.items():
+                    if facility_key in facility and option_text not in options:
+                        options.append(option_text)
+                        option_actions.append(action)
+
+        # Always show switch ships option
+        options.append("Switch Ships")
+        option_actions.append("switch_ships")
+
+        # Always add undock option
+        options.append("Return to Ship & Undock")
+        option_actions.append("undock")
 
         choice = arrow_menu("Select facility:", options, previous_content)
 
-        # Return to Ship & exit station
-        if choice == 8:
+        # Handle the selected option
+        action = option_actions[choice]
+
+        if action == "undock":
             return
 
         # All other options - not implemented yet

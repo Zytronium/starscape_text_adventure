@@ -154,7 +154,7 @@ def generate_citadel_station():
         facilities.append(f"{faction} Mission Agency (Tier {tier})")
 
     return {
-        "Name": "Citadel Central Station",
+        "Name": "The Citadel",
         "Type": "All-Purpose",
         "Facilities": facilities
     }
