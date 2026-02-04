@@ -459,6 +459,10 @@ def station_screen(system, station_num, save_name, data):
         # Handle the selected option
         action = option_actions[choice]
 
+        if action == "observatory":
+            visit_observatory()
+            continue
+
         if action == "undock":
             data["docked_at"] = ""
             save_data(save_name, data)
@@ -479,6 +483,65 @@ def station_screen(system, station_num, save_name, data):
         print()
         print("Not implemented yet")
         input("Press enter to continue...")
+
+
+def visit_observatory():
+    """Display a random ASCII art from the observatory collection"""
+    import random
+    from pathlib import Path
+    import json
+
+    ascii_art_dir = Path("ascii_art")
+
+    # Check if directory exists
+    if not ascii_art_dir.exists():
+        clear_screen()
+        title("OBSERVATORY")
+        print()
+        print("Error: ASCII art directory not found.")
+        input("Press Enter to continue...")
+        return
+
+    # Get all subdirectories with art.txt files
+    art_collections = []
+    for item in ascii_art_dir.iterdir():
+        if item.is_dir():
+            art_file = item / "art.txt"
+            meta_file = item / "meta.json"
+            if art_file.exists() and meta_file.exists():
+                art_collections.append(item)
+
+    if not art_collections:
+        clear_screen()
+        title("OBSERVATORY")
+        print()
+        print("No astronomical artwork available at this time.")
+        input("Press Enter to continue...")
+        return
+
+    # Select a random art piece
+    selected_art_dir = random.choice(art_collections)
+    art_file = selected_art_dir / "art.txt"
+    meta_file = selected_art_dir / "meta.json"
+
+    # Load the ASCII art
+    with open(art_file, 'r', encoding='utf-8') as f:
+        art_content = f.read()
+
+    # Load the metadata
+    with open(meta_file, 'r') as f:
+        metadata = json.load(f)
+
+    # Display the art
+    clear_screen()
+    title("OBSERVATORY")
+    print()
+    print(art_content)
+    print()
+    print(f"Title: {metadata.get('title', 'Untitled')}")
+    print(f"Artist: {metadata.get('Artist', 'Unknown')}")
+    print()
+    input("Press Enter to Exit")
 
 
 def title(text, centered=False):
