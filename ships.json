@@ -1,0 +1,105 @@
+{
+  "ships": [
+    {
+      "name": "Stratos",
+      "description": "An old but reliable starter scout ship; given for free and cannot be lost permanently.",
+      "class": "Starter",
+      "stats": {
+        "DPS": 120,
+        "Shield": 200,
+        "Hull": 200,
+        "Energy": 100,
+        "Speed": 260,
+        "Warp Speed": 1.00
+      },
+      "sell_price": "",
+      "buy_price": ""
+    },
+    {
+      "name": "Zenith",
+      "description": "An agile interceptor ship with balanced speed and combat capability.",
+      "class": "Interceptor",
+      "stats": {
+        "DPS": 180,
+        "Shield": 250,
+        "Hull": 250,
+        "Energy": 80,
+        "Speed": 410,
+        "Warp Speed": 1.30
+      },
+      "sell_price": "750",
+      "buy_price": "1500"
+    },
+    {
+      "name": "Falcon",
+      "description": "Swift interceptor designed for scouting and high warp speed.",
+      "class": "Interceptor",
+      "stats": {
+        "DPS": 150,
+        "Shield": 150,
+        "Hull": 250,
+        "Energy": 110,
+        "Speed": 445,
+        "Warp Speed": 1.50
+      },
+      "sell_price": "1000",
+      "buy_price": "2000"
+    },
+    {
+      "name": "Sabre",
+      "description": "Heavy fighter with substantial firepower and durability.",
+      "class": "Fighter",
+      "stats": {
+        "DPS": 260,
+        "Shield": 150,
+        "Hull": 600,
+        "Energy": 75,
+        "Speed": 300,
+        "Warp Speed": 1.00
+      },
+      "sell_price": "1100",
+      "buy_price": "2200"
+    },
+    {
+      "name": "Aurora",
+      "description": "General-purpose fighter spacecraft with balanced stats.",
+      "class": "Fighter",
+      "stats": {
+        "DPS": 220,
+        "Shield": 450,
+        "Hull": 200,
+        "Energy": 100,
+        "Speed": 320,
+        "Warp Speed": 1.10
+      },
+      "sell_price": "800",
+      "buy_price": "1600"
+    },
+    {
+      "name": "Spectator",
+      "description": "Admin spectating ship with extreme stats — not normally usable in play.",
+      "class": "Special",
+      "stats": {
+        "Shield": 10000,
+        "Hull": 10000,
+        "Speed": 500,
+        "Warp Speed": 10.0
+      },
+      "sell_price": "",
+      "buy_price": ""
+    },
+    {
+      "name": "Spectator-X",
+      "description": "Enhanced version of the Spectator ship for advanced testing.",
+      "class": "Special",
+      "stats": {
+        "Shield": 20000,
+        "Hull": 20000,
+        "Speed": 600,
+        "Warp Speed": 12.0
+      },
+      "sell_price": "",
+      "buy_price": ""
+    }
+  ]
+}
