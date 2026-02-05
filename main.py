@@ -261,9 +261,9 @@ def generate_enemy_fleet(security_level, data):
         case "Unsecure":
             # Larger pirate fleets or drone swarms
             fleet_types = [
-                ("Pirate Raiders", 2, 3, 100, 35),
-                ("Drone Swarm", 3, 5, 75, 22),
-                ("Pirate Squadron", 2, 4, 125, 45)
+                ("Pirate Raiders", 2, 3, 90, 30),
+                ("Drone Swarm", 3, 5, 70, 22),
+                ("Pirate Squadron", 2, 4, 115, 40)
             ]
             chosen = random.choice(fleet_types)
             fleet["type"] = chosen[0]
@@ -277,7 +277,7 @@ def generate_enemy_fleet(security_level, data):
             fleet_types = [
                 ("Large Pirate Den", 4, 6, 180, 40),
                 ("Large Drone Fleet", 4, 7, 75, 28),
-                ("Drone Armada", 8, 14, 80, 45)
+                ("Drone Armada", 8, 14, 80, 35)
             ]
             chosen = random.choice(fleet_types)
             fleet["type"] = chosen[0]
@@ -291,7 +291,7 @@ def generate_enemy_fleet(security_level, data):
             return None
 
     # Scale enemies slightly with player combat skill
-    skill_scaling = 1.0 + (combat_skill * 0.05)
+    skill_scaling = 1.0 + (combat_skill * 0.025)
 
     # Generate individual ships in fleet
     # Determine ship type name based on fleet type
@@ -448,9 +448,6 @@ def attempt_escape(enemy_fleet, system, save_name, data):
         sleep(2)
         input("Press Enter to engage...")
 
-        # Small piloting skill increase for attempting
-        data["skills"]["piloting"] += 1
-
         return combat_loop(enemy_fleet, system, save_name, data, forced_combat=True)
 
     # Base escape chance: 60%
@@ -459,42 +456,14 @@ def attempt_escape(enemy_fleet, system, save_name, data):
     # Piloting skill increases escape chance
     escape_chance += min(piloting_skill * 0.05, 0.50)
 
-    print("  Charging jump drive...")
-    sleep(1)
-    print("  Calculating escape vector...")
-    sleep(1)
-    print()
-
     if random.random() < escape_chance:
         # Successful escape
         print("  Successfully escaped!")
         print()
 
-        # Small piloting skill increase
-        data["skills"]["piloting"] += 1
-        print(f"  +1 Piloting Skill (now {data['skills']['piloting']})")
-
-        # Take some damage while escaping
-        damage_taken = int(enemy_fleet["total_firepower"] * 0.3 * random.uniform(0.5, 1.0))
-
-        if player_ship["shield_hp"] > 0:
-            shield_damage = min(damage_taken, player_ship["shield_hp"])
-            player_ship["shield_hp"] -= shield_damage
-            damage_taken -= shield_damage
-            max_shield = get_max_shield(player_ship)
-            print(f"  Shield HP: {player_ship['shield_hp']}/{max_shield} (-{shield_damage})")
-
-        if damage_taken > 0:
-            player_ship["hull_hp"] -= damage_taken
-            max_hull = get_max_hull(player_ship)
-            print(f"  Hull HP: {player_ship['hull_hp']}/{max_hull} (-{damage_taken})")
-
-        print()
         save_data(save_name, data)
         input("Press Enter to continue...")
 
-        if player_ship["hull_hp"] <= 0:
-            return "death"
         return "continue"
     else:
         # Failed escape - forced into combat
@@ -502,9 +471,6 @@ def attempt_escape(enemy_fleet, system, save_name, data):
         print("  Enemy fleet has intercepted you!")
         print()
         input("Press Enter to engage in combat...")
-
-        # Small piloting skill increase even on failure
-        data["skills"]["piloting"] += 1
 
         return combat_loop(enemy_fleet, system, save_name, data, forced_combat=True)
 
@@ -677,6 +643,11 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
                 data["skills"]["piloting"] += 2  # Bigger increase for successful retreat
                 save_data(save_name, data)
                 return "continue"
+            elif retreat_result == "death":
+                # Died while retreating
+                data["skills"]["combat"] += 1  # Small increase for participating
+                save_data(save_name, data)
+                return "death"
             elif retreat_result == "failed":
                 # Take extra damage and continue combat
                 print()
@@ -924,6 +895,10 @@ def attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data):
         print("  Warp disruptor is weakening, but still interfering!")
         print()
 
+    print("  Charging jump drive...")
+    sleep(1)
+    print("  Calculating escape vector...")
+    sleep(1)
     print("  Attempting to disengage...")
     sleep(1)
 
@@ -931,7 +906,33 @@ def attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data):
         print()
         print("  Successfully retreated from combat!")
         print()
+
+        # Piloting skill increase for successful retreat
+        data["skills"]["piloting"] += 1
+        print(f"  +1 Piloting Skill (now {data['skills']['piloting']})")
+        print()
+
+        # Take damage while retreating
+        player_ship = get_active_ship(data)
+        damage_taken = int(enemy_fleet["total_firepower"] * 0.3 * random.uniform(0.5, 1.0))
+
+        if player_ship["shield_hp"] > 0:
+            shield_damage = min(damage_taken, player_ship["shield_hp"])
+            player_ship["shield_hp"] -= shield_damage
+            damage_taken -= shield_damage
+            max_shield = get_max_shield(player_ship)
+            print(f"  Shield HP: {player_ship['shield_hp']}/{max_shield} (-{shield_damage})")
+
+        if damage_taken > 0:
+            player_ship["hull_hp"] -= damage_taken
+            max_hull = get_max_hull(player_ship)
+            print(f"  Hull HP: {player_ship['hull_hp']}/{max_hull} (-{damage_taken})")
+
+        print()
         input("Press Enter to continue...")
+
+        if player_ship["hull_hp"] <= 0:
+            return "death"
         return "success"
     else:
         print()
