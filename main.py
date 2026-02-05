@@ -1396,6 +1396,14 @@ def station_screen(system, station_num, save_name, data):
             access_global_storage(save_name, data)
             continue
 
+        if action == "ship_vendor":
+            visit_ship_vendor(save_name, data)
+            continue
+
+        if action == "switch_ships":
+            switch_ships_menu(save_name, data)
+            continue
+
         if action == "undock":
             data["docked_at"] = ""
             save_data(save_name, data)
@@ -1880,6 +1888,234 @@ def view_item_details(data):
 
         print()
         input("Press Enter to continue...")
+
+
+def visit_ship_vendor(save_name, data):
+    """Visit ship vendor to buy ships"""
+    ships_data = load_ships_data()
+
+    while True:
+        clear_screen()
+        title("SHIP VENDOR")
+        print()
+        print(f"Credits: {data['credits']}")
+        print()
+        print("=" * 60)
+
+        # Get all purchasable ships (ships with buy_price specified)
+        purchasable_ships = []
+        for ship_name_lower, ship_info in ships_data.items():
+            if ship_info.get('buy_price') and ship_info['buy_price'] != "":
+                purchasable_ships.append((ship_name_lower, ship_info))
+
+        # Sort by price
+        purchasable_ships.sort(key=lambda x: int(x[1]['buy_price']))
+
+        if not purchasable_ships:
+            print("No ships available for purchase.")
+            print()
+            input("Press Enter to continue...")
+            return
+
+        # Display ships
+        print("Available Ships:")
+        print()
+
+        for ship_name_lower, ship_info in purchasable_ships:
+            price = ship_info['buy_price']
+            ship_class = ship_info.get('class', 'Unknown')
+            ship_name = ship_info['name']
+
+            print(f"  {ship_name} ({ship_class}) - {price} CR")
+            print(f"    {ship_info.get('description', '')}")
+
+            stats = ship_info.get('stats', {})
+            print(f"    Stats: DPS {stats.get('DPS', '?')} | Shield {stats.get('Shield', '?')} | Hull {stats.get('Hull', '?')}")
+            print(f"           Speed {stats.get('Speed', '?')} | Warp {stats.get('Warp Speed', '?')}")
+            print()
+
+        print("=" * 60)
+
+        options = [f"{ship_info['name']} - {ship_info['buy_price']} CR" for _, ship_info in purchasable_ships]
+        options.append("Back")
+
+        # Capture current screen
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        print("SHIP VENDOR")
+        print()
+        print(f"Credits: {data['credits']}")
+        print()
+        print("=" * 60)
+
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        choice = arrow_menu("Select ship to purchase:", options, previous_content)
+
+        if choice == len(options) - 1:
+            # Back
+            return
+
+        # Show ship purchase confirmation
+        ship_name_lower, ship_info = purchasable_ships[choice]
+        price = int(ship_info['buy_price'])
+        ship_name = ship_info['name']
+
+        clear_screen()
+        title("PURCHASE SHIP")
+        print()
+        print(f"Ship: {ship_name}")
+        print(f"Class: {ship_info.get('class', 'Unknown')}")
+        print(f"Description: {ship_info.get('description', 'No description available.')}")
+        print()
+
+        stats = ship_info.get('stats', {})
+        print("Stats:")
+        print(f"  DPS: {stats.get('DPS', 'N/A')}")
+        print(f"  Shield: {stats.get('Shield', '?')}")
+        print(f"  Hull: {stats.get('Hull', '?')}")
+        print(f"  Energy: {stats.get('Energy', '?')}")
+        print(f"  Speed: {stats.get('Speed', '?')}")
+        print(f"  Warp Speed: {stats.get('Warp Speed', '?')}")
+        print()
+        print(f"Price: {price} CR")
+        print(f"Your Credits: {data['credits']} CR")
+        print()
+
+        if data['credits'] < price:
+            print("You don't have enough credits!")
+            print()
+            input("Press Enter to continue...")
+            continue
+
+        # Ask for ship nickname
+        print("Enter a nickname for this ship (press Enter for default): ", end="")
+        nickname = input().strip()
+        if not nickname:
+            nickname = ship_name
+
+        # Process purchase
+        data['credits'] -= price
+
+        # Create new ship entry
+        new_ship = {
+            "id": str(uuid4()),
+            "name": ship_name_lower,
+            "nickname": nickname,
+            "hull_hp": stats.get('Hull', 200),
+            "shield_hp": stats.get('Shield', 200),
+            "modules_installed": [],
+        }
+
+        data['ships'].append(new_ship)
+
+        save_data(save_name, data)
+
+        print()
+        print(f"Purchased {ship_name} '{nickname}' for {price} CR")
+        print("Your new ship is now available. Use 'Switch Ships' to select it.")
+        print()
+        input("Press Enter to continue...")
+
+
+def switch_ships_menu(save_name, data):
+    """Display a menu to switch current ship"""
+    ships_data = load_ships_data()
+
+    while True:
+        clear_screen()
+        title("SWITCH SHIPS")
+        print()
+
+        # Show all owned ships
+        if not data["ships"]:
+            print("  No ships available!")
+            input("\n  Press Enter to continue...")
+            return
+
+        # Build menu options
+        options = []
+        for i, ship in enumerate(data["ships"]):
+            ship_name = ship["name"]
+            nickname = ship.get("nickname", ship_name.title())
+
+            # Get ship stats from ships.json
+            stats = get_ship_stats(ship_name)
+
+            # Get current/max HP
+            max_hull = stats.get("Hull", 200)
+            max_shield = stats.get("Shield", 200)
+            current_hull = ship.get("hull_hp", max_hull)
+            current_shield = ship.get("shield_hp", max_shield)
+
+            # Mark active ship
+            active_marker = " [ACTIVE]" if i == data["active_ship"] else ""
+
+            # Format option
+            option = f"{nickname} ({ship_name.title()}){active_marker}"
+            options.append(option)
+
+        options.append("Back")
+
+        # Display ship details before menu
+        print("  Your Ships:")
+        print("  " + "=" * 58)
+        for i, ship in enumerate(data["ships"]):
+            ship_name = ship["name"]
+            nickname = ship.get("nickname", ship_name.title())
+            stats = get_ship_stats(ship_name)
+
+            max_hull = stats.get("Hull", 200)
+            max_shield = stats.get("Shield", 200)
+            current_hull = ship.get("hull_hp", max_hull)
+            current_shield = ship.get("shield_hp", max_shield)
+
+            active_marker = " ★" if i == data["active_ship"] else "  "
+
+            print(f"{active_marker} {i+1}. {nickname} ({ship_name.title()})")
+            print(f"     Hull: {current_hull}/{max_hull}  Shield: {current_shield}/{max_shield}")
+
+            # Show key stats
+            dps = stats.get("DPS", "N/A")
+            speed = stats.get("Speed", "N/A")
+            warp = stats.get("Warp Speed", "N/A")
+
+            print(f"     DPS: {dps}  Speed: {speed}  Warp: {warp}")
+            print()
+
+        print("  " + "=" * 58)
+        print()
+
+        # Get user choice
+        choice = arrow_menu("Select ship to make active", options)
+
+        if choice == len(options) - 1:  # Back option
+            return
+
+        # Switch to selected ship
+        if choice != data["active_ship"]:
+            old_ship = data["ships"][data["active_ship"]]
+            new_ship = data["ships"][choice]
+
+            data["active_ship"] = choice
+            save_data(save_name, data)
+
+            clear_screen()
+            title("SHIP SWITCHED")
+            print()
+            print(f"  Switched from {old_ship.get('nickname', old_ship['name'].title())} to {new_ship.get('nickname', new_ship['name'].title())}")
+            print()
+            input("  Press Enter to continue...")
+        else:
+            clear_screen()
+            title("SHIP SELECTION")
+            print()
+            print(f"  {data['ships'][choice].get('nickname', data['ships'][choice]['name'].title())} is already your active ship.")
+            print()
+            input("  Press Enter to continue...")
 
 
 def visit_observatory():
