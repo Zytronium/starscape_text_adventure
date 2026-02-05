@@ -1286,11 +1286,14 @@ def warp_menu(system, save_name, data):
         return
 
     clear_screen()
+    set_color("blue")
+    set_color("reverse")
     print("=" * 60)
     print("|" + " " * 58 + "|")
     print(f"| Warping to {connected_systems[choice]}...{" " * (58 - len(connected_systems[choice]) - 15)}|")
     print("|" + " " * 58 + "|")
     print("=" * 60)
+    reset_color()
 
     ships_data = load_ships_data()
     current_ship = get_active_ship(data)
