@@ -161,7 +161,9 @@ def default_data():
         "storage": {},
         "skills": {
             "combat": 0,      # Increases damage dealt and reduces damage taken
+            "combat_xp": 0,   # XP towards next combat level
             "piloting": 0,    # Increases evasion chance and escape success rate
+            "piloting_xp": 0, # XP towards next piloting level
         },
         "standing": {
             "Core Sec": 0,
@@ -216,6 +218,57 @@ def get_max_shield(ship):
     """Get max shield HP for a ship from ships.json"""
     stats = get_ship_stats(ship['name'])
     return stats.get('Shield', 200)
+
+
+def xp_required_for_level(level):
+    """Calculate XP required to reach the next level"""
+    # Progressive scaling: each level requires more XP
+    # Level 1: 100 XP, Level 2: 150 XP, Level 3: 200 XP, etc.
+    return 100 + (level * 50)
+
+
+def add_skill_xp(data, skill_name, xp_amount):
+    """Add XP to a skill and handle level ups
+
+    Args:
+        data: Game data dictionary
+        skill_name: 'combat' or 'piloting'
+        xp_amount: Amount of XP to add
+
+    Returns:
+        Number of levels gained (0 if no level up)
+    """
+    xp_key = f"{skill_name}_xp"
+
+    # Initialize XP if it doesn't exist (for old saves)
+    if xp_key not in data["skills"]:
+        data["skills"][xp_key] = 0
+
+    data["skills"][xp_key] += xp_amount
+
+    levels_gained = 0
+    current_level = data["skills"][skill_name]
+
+    # Check for level ups
+    while data["skills"][xp_key] >= xp_required_for_level(current_level):
+        data["skills"][xp_key] -= xp_required_for_level(current_level)
+        data["skills"][skill_name] += 1
+        current_level += 1
+        levels_gained += 1
+
+    return levels_gained
+
+
+def display_xp_gain(skill_name, xp_gained, levels_gained, current_level, current_xp):
+    """Display XP gain and level up information"""
+    if levels_gained > 0:
+        set_color("green")
+        print(f"  {skill_name.title()} Skill Level Up! +{levels_gained} (now Level {current_level})")
+        reset_color()
+
+    xp_needed = xp_required_for_level(current_level)
+    print(f"  +{xp_gained} {skill_name.title()} XP ({current_xp}/{xp_needed})")
+
 
 
 def generate_enemy_fleet(security_level, data):
@@ -450,8 +503,8 @@ def attempt_escape(enemy_fleet, system, save_name, data):
 
         return combat_loop(enemy_fleet, system, save_name, data, forced_combat=True)
 
-    # Base escape chance: 60%
-    escape_chance = 0.60
+    # Base escape chance: 75%
+    escape_chance = 0.75
 
     # Piloting skill increases escape chance
     escape_chance += min(piloting_skill * 0.05, 0.50)
@@ -467,7 +520,7 @@ def attempt_escape(enemy_fleet, system, save_name, data):
         return "continue"
     else:
         # Failed escape - forced into combat
-        print("  Escape failed!")
+        print("  You reacted too slow!")
         print("  Enemy fleet has intercepted you!")
         print()
         input("Press Enter to engage in combat...")
@@ -639,13 +692,13 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
             retreat_result = attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data)
 
             if retreat_result == "success":
-                data["skills"]["combat"] += 1  # Small increase for participating
-                data["skills"]["piloting"] += 2  # Bigger increase for successful retreat
+                # Small combat XP for participating
+                add_skill_xp(data, "combat", 5)
                 save_data(save_name, data)
                 return "continue"
             elif retreat_result == "death":
-                # Died while retreating
-                data["skills"]["combat"] += 1  # Small increase for participating
+                # Died while retreating - still get small combat XP
+                add_skill_xp(data, "combat", 5)
                 save_data(save_name, data)
                 return "death"
             elif retreat_result == "failed":
@@ -674,12 +727,13 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
             credits_earned = enemy_fleet["size"] * 150 * random.randint(8, 12) // 10
             data["credits"] += credits_earned
 
-            # Combat skill increase
-            skill_gained = 2 + (enemy_fleet["size"] // 2)
-            data["skills"]["combat"] += skill_gained
+            # Combat XP gain - scales with fleet size
+            combat_xp = 20 + (enemy_fleet["size"] * 10)
+            levels_gained = add_skill_xp(data, "combat", combat_xp)
 
             print(f"  Credits earned: ¢{credits_earned}")
-            print(f"  Combat Skill: +{skill_gained} (now {data['skills']['combat']})")
+            display_xp_gain("combat", combat_xp, levels_gained,
+                          data["skills"]["combat"], data["skills"]["combat_xp"])
             print()
 
             save_data(save_name, data)
@@ -698,8 +752,9 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
             print()
             sleep(1.5)
 
-            # Small combat skill increase even on loss
-            data["skills"]["combat"] += 1
+            # Small combat XP even on loss
+            combat_xp = 5
+            add_skill_xp(data, "combat", combat_xp)
             save_data(save_name, data)
 
             return "death"
@@ -907,9 +962,11 @@ def attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data):
         print("  Successfully retreated from combat!")
         print()
 
-        # Piloting skill increase for successful retreat
-        data["skills"]["piloting"] += 1
-        print(f"  +1 Piloting Skill (now {data['skills']['piloting']})")
+        # Piloting XP for successful retreat
+        piloting_xp = 30
+        levels_gained = add_skill_xp(data, "piloting", piloting_xp)
+        display_xp_gain("piloting", piloting_xp, levels_gained,
+                       data["skills"]["piloting"], data["skills"]["piloting_xp"])
         print()
 
         # Take damage while retreating
@@ -960,10 +1017,17 @@ def show_detailed_combat_stats(player_ship, enemy_fleet, data):
     print()
 
     print("YOUR SKILLS:")
-    print(f"  Combat: Level {data['skills']['combat']}")
-    print(f"    - Damage Bonus: +{data['skills']['combat'] * 2}")
-    print(f"  Piloting: Level {data['skills']['piloting']}")
-    print(f"    - Evasion Chance: {min(data['skills']['piloting'] * 2, 25)}%")
+    combat_level = data['skills']['combat']
+    combat_xp = data['skills'].get('combat_xp', 0)
+    combat_xp_needed = xp_required_for_level(combat_level)
+    print(f"  Combat: Level {combat_level} ({combat_xp}/{combat_xp_needed} XP)")
+    print(f"    - Damage Bonus: +{combat_level * 2}")
+
+    piloting_level = data['skills']['piloting']
+    piloting_xp = data['skills'].get('piloting_xp', 0)
+    piloting_xp_needed = xp_required_for_level(piloting_level)
+    print(f"  Piloting: Level {piloting_level} ({piloting_xp}/{piloting_xp_needed} XP)")
+    print(f"    - Evasion Chance: {min(piloting_level * 2, 25)}%")
     print()
 
     print("ENEMY FLEET:")
@@ -1158,15 +1222,22 @@ def view_status_screen(data):
     print()
 
     print("SKILLS:")
-    print(f"  Combat: Level {data['skills']['combat']}")
+    combat_level = data['skills']['combat']
+    combat_xp = data['skills'].get('combat_xp', 0)
+    combat_xp_needed = xp_required_for_level(combat_level)
+    print(f"  Combat: Level {combat_level} ({combat_xp}/{combat_xp_needed} XP)")
     print(f"    - Increases damage dealt")
-    print(f"    - Reduces damage taken (via better tactics)")
-    print(f"    - Current damage bonus: +{data['skills']['combat'] * 2}")
+    print(f"    - Reduces damage taken")
+    print(f"    - Current damage bonus: +{combat_level * 2}")
     print()
-    print(f"  Piloting: Level {data['skills']['piloting']}")
+
+    piloting_level = data['skills']['piloting']
+    piloting_xp = data['skills'].get('piloting_xp', 0)
+    piloting_xp_needed = xp_required_for_level(piloting_level)
+    print(f"  Piloting: Level {piloting_level} ({piloting_xp}/{piloting_xp_needed} XP)")
     print(f"    - Increases evasion chance in combat")
     print(f"    - Improves escape success rate")
-    print(f"    - Current evasion chance: {min(data['skills']['piloting'] * 2, 25)}%")
+    print(f"    - Current evasion chance: {min(piloting_level * 2, 25)}%")
     print()
 
     # Ship status warnings
