@@ -1110,10 +1110,7 @@ def main_screen(save_name, data):
         case 1:
             warp_menu(system, save_name, data)
         case 2:
-            clear_screen()
-            title("INVENTORY")
-            print("Not implemented yet")
-            input("Press enter to continue...")
+            view_inventory(data)
         case 3:
             select_station_menu(system, save_name, data)
         case 4:
@@ -1395,6 +1392,10 @@ def station_screen(system, station_num, save_name, data):
             visit_marketplace(save_name, data)
             continue
 
+        if action == "global_storage":
+            access_global_storage(save_name, data)
+            continue
+
         if action == "undock":
             data["docked_at"] = ""
             save_data(save_name, data)
@@ -1597,6 +1598,288 @@ def marketplace_sell(save_name, data, items_data):
     print("This feature is not yet implemented.")
     print()
     input("Press Enter to continue...")
+
+
+def view_inventory(data):
+    """View current inventory"""
+    clear_screen()
+    title("INVENTORY")
+    print()
+
+    inventory = data.get('inventory', {})
+
+    if not inventory:
+        print("Your inventory is empty.")
+    else:
+        print("Current Inventory:")
+        print("=" * 60)
+
+        # Load items data to show descriptions
+        items_data = load_items_data()
+
+        # Sort items by name
+        sorted_items = sorted(inventory.items())
+
+        for item_name, quantity in sorted_items:
+            item_info = items_data.get(item_name, {})
+            item_type = item_info.get('type', 'Unknown')
+            print(f"  {item_name} x{quantity} ({item_type})")
+            if item_info.get('description'):
+                print(f"    {item_info['description']}")
+
+    print()
+    input("Press Enter to continue...")
+
+
+def access_global_storage(save_name, data):
+    """Access global storage to view and transfer items"""
+    while True:
+        clear_screen()
+        title("GLOBAL STORAGE")
+        print()
+
+        inventory = data.get('inventory', {})
+        storage = data.get('storage', {})
+
+        print("=" * 60)
+        print("INVENTORY:")
+        if not inventory:
+            print("  Empty")
+        else:
+            for item_name, quantity in sorted(inventory.items()):
+                print(f"  {item_name} x{quantity}")
+
+        print()
+        print("STORAGE:")
+        if not storage:
+            print("  Empty")
+        else:
+            for item_name, quantity in sorted(storage.items()):
+                print(f"  {item_name} x{quantity}")
+
+        print("=" * 60)
+
+        options = [
+            "Move Items: Inventory → Storage",
+            "Move Items: Storage → Inventory",
+            "View Item Details",
+            "Back"
+        ]
+
+        # Capture current screen
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        print("GLOBAL STORAGE")
+        print()
+        print("=" * 60)
+        print("INVENTORY:")
+        if not inventory:
+            print("  Empty")
+        else:
+            for item_name, quantity in sorted(inventory.items()):
+                print(f"  {item_name} x{quantity}")
+
+        print()
+        print("STORAGE:")
+        if not storage:
+            print("  Empty")
+        else:
+            for item_name, quantity in sorted(storage.items()):
+                print(f"  {item_name} x{quantity}")
+
+        print("=" * 60)
+
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        choice = arrow_menu("Select action:", options, previous_content)
+
+        if choice == 0:
+            # Move from inventory to storage
+            transfer_items(save_name, data, "inventory", "storage")
+        elif choice == 1:
+            # Move from storage to inventory
+            transfer_items(save_name, data, "storage", "inventory")
+        elif choice == 2:
+            # View item details
+            view_item_details(data)
+        elif choice == 3:
+            # Back
+            return
+
+
+def transfer_items(save_name, data, source_key, dest_key):
+    """Transfer items between inventory and storage"""
+    source = data.get(source_key, {})
+
+    if not source:
+        clear_screen()
+        title("TRANSFER ITEMS")
+        print()
+        print(f"Your {source_key} is empty!")
+        print()
+        input("Press Enter to continue...")
+        return
+
+    while True:
+        clear_screen()
+        title(f"TRANSFER: {source_key.upper()} → {dest_key.upper()}")
+        print()
+
+        # Display source items
+        print(f"{source_key.upper()}:")
+        print("=" * 60)
+
+        sorted_items = sorted(source.items())
+
+        for i, (item_name, quantity) in enumerate(sorted_items):
+            print(f"  [{i+1}] {item_name} x{quantity}")
+
+        print()
+        print("=" * 60)
+
+        options = [f"{item_name} (x{quantity})" for item_name, quantity in sorted_items]
+        options.append("Back")
+
+        # Capture current screen
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        print(f"TRANSFER: {source_key.upper()} → {dest_key.upper()}")
+        print()
+        print(f"{source_key.upper()}:")
+        print("=" * 60)
+        for i, (item_name, quantity) in enumerate(sorted_items):
+            print(f"  [{i+1}] {item_name} x{quantity}")
+        print()
+        print("=" * 60)
+
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        choice = arrow_menu("Select item to transfer:", options, previous_content)
+
+        if choice == len(options) - 1:
+            # Back
+            return
+
+        # Get selected item
+        item_name, available_quantity = sorted_items[choice]
+
+        # Ask for quantity
+        clear_screen()
+        title("TRANSFER QUANTITY")
+        print()
+        print(f"Item: {item_name}")
+        print(f"Available: {available_quantity}")
+        print()
+        print("Enter quantity to transfer (0 to cancel): ", end="")
+
+        try:
+            quantity = int(input())
+
+            if quantity <= 0:
+                continue
+
+            if quantity > available_quantity:
+                print()
+                print("You don't have that many!")
+                print()
+                input("Press Enter to continue...")
+                continue
+
+            # Perform transfer
+            source[item_name] -= quantity
+            if source[item_name] <= 0:
+                del source[item_name]
+
+            dest = data.get(dest_key, {})
+            if item_name not in dest:
+                dest[item_name] = 0
+            dest[item_name] += quantity
+            data[dest_key] = dest
+
+            save_data(save_name, data)
+
+            print()
+            print(f"Transferred {quantity}x {item_name} to {dest_key}")
+            print()
+            input("Press Enter to continue...")
+
+        except ValueError:
+            print()
+            print("Invalid input!")
+            print()
+            input("Press Enter to continue...")
+
+
+def view_item_details(data):
+    """View detailed information about items in inventory or storage"""
+    # Combine inventory and storage for viewing
+    all_items = {}
+
+    for item_name, quantity in data.get('inventory', {}).items():
+        all_items[item_name] = all_items.get(item_name, 0) + quantity
+
+    for item_name, quantity in data.get('storage', {}).items():
+        all_items[item_name] = all_items.get(item_name, 0) + quantity
+
+    if not all_items:
+        clear_screen()
+        title("ITEM DETAILS")
+        print()
+        print("No items to display.")
+        print()
+        input("Press Enter to continue...")
+        return
+
+    while True:
+        clear_screen()
+        title("ITEM DETAILS")
+        print()
+
+        sorted_items = sorted(all_items.items())
+
+        options = [f"{item_name} (Total: {quantity})" for item_name, quantity in sorted_items]
+        options.append("Back")
+
+        choice = arrow_menu("Select item to view details:", options)
+
+        if choice == len(options) - 1:
+            # Back
+            return
+
+        # Show item details
+        item_name = sorted_items[choice][0]
+        items_data = load_items_data()
+        item_info = items_data.get(item_name, {})
+
+        clear_screen()
+        title("ITEM INFORMATION")
+        print()
+        print(f"Name: {item_name}")
+        print(f"Type: {item_info.get('type', 'Unknown')}")
+        print(f"Description: {item_info.get('description', 'No description available.')}")
+        print()
+
+        inv_qty = data.get('inventory', {}).get(item_name, 0)
+        stor_qty = data.get('storage', {}).get(item_name, 0)
+
+        print(f"In Inventory: {inv_qty}")
+        print(f"In Storage: {stor_qty}")
+        print(f"Total: {inv_qty + stor_qty}")
+        print()
+
+        if item_info.get('sell_price') and item_info['sell_price'] != "":
+            print(f"Sell Price: {item_info['sell_price']} CR")
+        if item_info.get('buy_price') and item_info['buy_price'] != "":
+            print(f"Buy Price: {item_info['buy_price']} CR")
+
+        print()
+        input("Press Enter to continue...")
 
 
 def visit_observatory():
