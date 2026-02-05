@@ -3,6 +3,7 @@ Starscape: Text Adventure Edition
 A text-based recreation of the Roblox game Starscape by Zolar Keth
 """
 import math
+import random
 import sys
 import json
 import os
@@ -11,7 +12,9 @@ from io import StringIO
 from time import sleep
 from uuid import uuid4
 
-VERSION_CODE = 1
+from colors import set_color, reset_color
+
+VERSION_CODE = 2
 CORE_COLOR = "\033[1;32m"     # lime
 SECURE_COLOR = "\033[36m"     # cyan
 CONTESTED_COLOR = "\033[33m"  # orange/brown
@@ -149,12 +152,19 @@ def default_data():
                 "name": "stratos",
                 "nickname": "Stratos",
                 "hull_hp": 200,
+                "max_hull_hp": 200,
                 "shield_hp": 200,
+                "max_shield_hp": 200,
                 "modules_installed": [],
             }
         ],
+        "active_ship": 0,  # Index of currently active ship
         "inventory": {},
         "storage": {},
+        "skills": {
+            "combat": 0,      # Increases damage dealt and reduces damage taken
+            "piloting": 0,    # Increases evasion chance and escape success rate
+        },
         "standing": {
             "Core Sec": 0,
             "Syndicate": 0,
@@ -168,6 +178,765 @@ def default_data():
             "completed": True  # there is no tutorial, so we skip it if the save is loaded in a future version with tutorial
         }
     }
+
+
+def get_active_ship(data):
+    """Get the player's currently active ship"""
+    active_idx = data.get("active_ship", 0)
+    if active_idx < len(data["ships"]):
+        return data["ships"][active_idx]
+    return data["ships"][0]
+
+
+def generate_enemy_fleet(security_level, data):
+    """Generate an enemy fleet based on system security level and player progress"""
+    # Get player's combat skill to scale enemy difficulty
+    combat_skill = data.get("skills", {}).get("combat", 0)
+
+    # Base enemy stats
+    fleet = {
+        "type": "",
+        "size": 0,
+        "ships": [],
+        "total_firepower": 0,
+        "warp_disruptor": False
+    }
+
+    # Determine fleet type and strength based on security
+    match security_level:
+        case "Secure":
+            # Small drone fleets, weak
+            fleet_types = [("Light Drones", 1, 3, 25, 10), ("Drone Fireteam", 3, 5, 30, 10)]
+            chosen = random.choice(fleet_types)
+            fleet["type"] = chosen[0]
+            fleet["size"] = random.randint(chosen[1], chosen[2])
+            base_hp = chosen[3]
+            base_damage = chosen[4]
+            disruptor_chance = 0.0
+
+        case "Contested":
+            # Medium drone fleets or small pirate groups
+            if random.random() < 0.3:
+                fleet["type"] = "Pirate Scouts"
+                fleet["size"] = random.randint(1, 2)
+                base_hp = 100
+                base_damage = 20
+            else:
+                fleet["type"] = "Drone Squadron"
+                fleet["size"] = random.randint(2, 4)
+                base_hp = 55
+                base_damage = 15
+            disruptor_chance = 0.0
+
+        case "Unsecure":
+            # Larger pirate fleets or drone swarms
+            fleet_types = [
+                ("Pirate Raiders", 2, 3, 100, 35),
+                ("Drone Swarm", 3, 5, 75, 22),
+                ("Pirate Squadron", 2, 4, 125, 45)
+            ]
+            chosen = random.choice(fleet_types)
+            fleet["type"] = chosen[0]
+            fleet["size"] = random.randint(chosen[1], chosen[2])
+            base_hp = chosen[3]
+            base_damage = chosen[4]
+            disruptor_chance = 0.2 if chosen != "Drone Swarm" else 0.0
+
+        case "Wild":
+            # Powerful pirate fleets, highly dangerous
+            fleet_types = [
+                ("Large Pirate Den", 4, 6, 180, 40),
+                ("Large Drone Fleet", 4, 7, 75, 28),
+                ("Drone Armada", 8, 14, 80, 45)
+            ]
+            chosen = random.choice(fleet_types)
+            fleet["type"] = chosen[0]
+            fleet["size"] = random.randint(chosen[1], chosen[2])
+            base_hp = chosen[3]
+            base_damage = chosen[4]
+            disruptor_chance = 0.30
+
+        case _:
+            # Default case (shouldn't happen in Core space)
+            return None
+
+    # Scale enemies slightly with player combat skill
+    skill_scaling = 1.0 + (combat_skill * 0.05)
+
+    # Generate individual ships in fleet
+    # Determine ship type name based on fleet type
+    if "Pirate" in fleet["type"]:
+        ship_type = "Pirate Fighter"
+    else:
+        ship_type = "Drone Fighter"
+
+    for i in range(fleet["size"]):
+        max_hull = int(base_hp * skill_scaling)
+        max_shield = int(base_hp * 0.5 * skill_scaling)
+
+        ship = {
+            "name": f"{ship_type} #{i + 1}",
+            "hull_hp": max_hull,
+            "max_hull_hp": max_hull,
+            "shield_hp": max_shield,
+            "max_shield_hp": max_shield,
+            "damage": int(
+                base_damage * skill_scaling * random.uniform(0.9, 1.1)),
+        }
+        fleet["ships"].append(ship)
+        fleet["total_firepower"] += ship["damage"]
+
+    # Chance for warp disruptor (pirates only)
+    if "Pirate" in fleet["type"] and random.random() < disruptor_chance:
+        fleet["warp_disruptor"] = True
+
+    return fleet
+
+
+def enemy_encounter(enemy_fleet, system, save_name, data, previous_content=""):
+    """Handle initial enemy encounter - choice to fight, run, or ignore"""
+    clear_screen()
+
+    if previous_content:
+        print(previous_content, end='')
+        print()
+
+    print("=" * 60)
+    print("  ", end="")
+    set_color("red")
+    set_color("blinking")
+    set_color("reverse")
+    print(" ⚠ HOSTILE CONTACT ⚠ ")
+    reset_color()
+    print("=" * 60)
+    print()
+    print(f"  Fleet Type: {enemy_fleet['type']}")
+    print(f"  Fleet Size: {enemy_fleet['size']} ships")
+    print(f"  Threat Level: ", end="")
+
+    # Calculate threat level based on total firepower vs player ship
+    player_ship = get_active_ship(data)
+    threat_ratio = enemy_fleet["total_firepower"] / (player_ship["max_hull_hp"] + player_ship["max_shield_hp"])
+
+    if threat_ratio < 0.3:
+        set_color("green")
+        print("LOW")
+    elif threat_ratio < 0.7:
+        set_color("yellow")
+        print("MODERATE")
+    elif threat_ratio < 1.2:
+        set_color("red")
+        print("HIGH")
+    else:
+        set_color("red")
+        set_color("blinking")
+        print("EXTREME")
+    reset_color()
+
+    if enemy_fleet["warp_disruptor"]:
+        print()
+        set_color("red")
+        print("  ⚠ WARP DISRUPTED ⚠")
+        reset_color()
+
+    print()
+
+    content_buffer = StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = content_buffer
+
+    # Get screen content
+    import io
+    temp_buffer = io.StringIO()
+    sys.stdout = temp_buffer
+
+    # Print the encounter info again to capture it
+    print("=" * 60)
+    print("  ", end="")
+    set_color("red")
+    set_color("blinking")
+    set_color("reverse")
+    print(" ⚠ HOSTILE CONTACT ⚠ ")
+    reset_color()
+    print("=" * 60)
+    print()
+    print(f"  Fleet Type: {enemy_fleet['type']}")
+    print(f"  Fleet Size: {enemy_fleet['size']} ships")
+    print(f"  Threat Level: ", end="")
+    if threat_ratio < 0.3:
+        print("LOW")
+    elif threat_ratio < 0.7:
+        print("MODERATE")
+    elif threat_ratio < 1.2:
+        print("HIGH")
+    else:
+        print("EXTREME")
+    if enemy_fleet["warp_disruptor"]:
+        print()
+        print("  ⚠ WARP DISRUPTOR DETECTED ⚠")
+    print()
+
+    encounter_content = temp_buffer.getvalue()
+    sys.stdout = old_stdout
+
+    options = ["Fight!", "Attempt to Escape", "Ignore and Tank Damage"]
+    choice = arrow_menu("What will you do?", options, previous_content + encounter_content)
+
+    if choice == 0:
+        # Fight
+        result = combat_loop(enemy_fleet, system, save_name, data)
+        return result
+
+    elif choice == 1:
+        # Attempt escape
+        return attempt_escape(enemy_fleet, system, save_name, data)
+
+    elif choice == 2:
+        # Ignore & tank damage
+        return ignore_enemies(enemy_fleet, system, save_name, data)
+
+
+def attempt_escape(enemy_fleet, system, save_name, data):
+    """Attempt to escape from combat"""
+    clear_screen()
+    title("ATTEMPTING ESCAPE")
+    print()
+
+    player_ship = get_active_ship(data)
+    piloting_skill = data.get("skills", {}).get("piloting", 0)
+
+    # Warp disruptor prevents escape entirely
+    if enemy_fleet["warp_disruptor"]:
+        print("  ⚠ WARP DISRUPTOR DETECTED ⚠")
+        print()
+        print("  The enemy's warp disruption field prevents any escape!")
+        print("  Your jump drive is completely disabled.")
+        print()
+        print("  You are forced into combat!")
+        sleep(2)
+        input("Press Enter to engage...")
+
+        # Small piloting skill increase for attempting
+        data["skills"]["piloting"] += 1
+
+        return combat_loop(enemy_fleet, system, save_name, data, forced_combat=True)
+
+    # Base escape chance: 60%
+    escape_chance = 0.60
+
+    # Piloting skill increases escape chance
+    escape_chance += min(piloting_skill * 0.05, 0.50)
+
+    print("  Charging jump drive...")
+    sleep(1)
+    print("  Calculating escape vector...")
+    sleep(1)
+    print()
+
+    if random.random() < escape_chance:
+        # Successful escape
+        print("  Successfully escaped!")
+        print()
+
+        # Small piloting skill increase
+        data["skills"]["piloting"] += 1
+        print(f"  +1 Piloting Skill (now {data['skills']['piloting']})")
+
+        # Take some damage while escaping
+        damage_taken = int(enemy_fleet["total_firepower"] * 0.3 * random.uniform(0.5, 1.0))
+
+        if player_ship["shield_hp"] > 0:
+            shield_damage = min(damage_taken, player_ship["shield_hp"])
+            player_ship["shield_hp"] -= shield_damage
+            damage_taken -= shield_damage
+            print(f"  Shield HP: {player_ship['shield_hp']}/{player_ship['max_shield_hp']} (-{shield_damage})")
+
+        if damage_taken > 0:
+            player_ship["hull_hp"] -= damage_taken
+            print(f"  Hull HP: {player_ship['hull_hp']}/{player_ship['max_hull_hp']} (-{damage_taken})")
+
+        print()
+        save_data(save_name, data)
+        input("Press Enter to continue...")
+
+        if player_ship["hull_hp"] <= 0:
+            return "death"
+        return "continue"
+    else:
+        # Failed escape - forced into combat
+        print("  Escape failed!")
+        print("  Enemy fleet has intercepted you!")
+        print()
+        input("Press Enter to engage in combat...")
+
+        # Small piloting skill increase even on failure
+        data["skills"]["piloting"] += 1
+
+        return combat_loop(enemy_fleet, system, save_name, data, forced_combat=True)
+
+
+def ignore_enemies(enemy_fleet, system, save_name, data):
+    """Ignore enemies and tank the damage"""
+    clear_screen()
+    title("IGNORING HOSTILE FLEET")
+    print()
+
+    player_ship = get_active_ship(data)
+
+    print("  You continue on your course, ignoring the hostile fleet.")
+    print("  They open fire on your ship!")
+    print()
+    sleep(1)
+
+    # Calculate damage - 70% of total firepower
+    total_damage = int(enemy_fleet["total_firepower"] * 0.7 * random.uniform(0.8, 1.2))
+
+    print(f"  Incoming damage: {total_damage}")
+    print()
+    sleep(0.5)
+
+    # Apply damage
+    remaining_damage = total_damage
+
+    if player_ship["shield_hp"] > 0:
+        shield_damage = min(remaining_damage, player_ship["shield_hp"])
+        player_ship["shield_hp"] -= shield_damage
+        remaining_damage -= shield_damage
+        print(f"  Shield HP: {player_ship['shield_hp']}/{player_ship['max_shield_hp']} (-{shield_damage})")
+        sleep(0.3)
+
+    if remaining_damage > 0:
+        player_ship["hull_hp"] -= remaining_damage
+        print(f"  Hull HP: {player_ship['hull_hp']}/{player_ship['max_hull_hp']} (-{remaining_damage})")
+        sleep(0.3)
+
+    print()
+
+    if player_ship["hull_hp"] <= 0:
+        print("  Your ship has been destroyed!")
+        sleep(1.5)
+        return "death"
+    elif player_ship["hull_hp"] < player_ship["max_hull_hp"] * 0.2:
+        set_color("red")
+        print("  ⚠ WARNING: CRITICAL HULL DAMAGE ⚠")
+        reset_color()
+        print()
+
+    print("  You've successfully passed through the hostile zone.")
+    print()
+
+    # No skill increase for ignoring
+    save_data(save_name, data)
+    input("Press Enter to continue...")
+    return "continue"
+
+
+def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
+    """Main turn-based combat loop"""
+    player_ship = get_active_ship(data)
+    combat_skill = data.get("skills", {}).get("combat", 0)
+    piloting_skill = data.get("skills", {}).get("piloting", 0)
+
+    turn = 1
+    combat_ongoing = True
+
+    while combat_ongoing:
+        # Regenerate shields slightly each turn (10% of max shields)
+        shield_regen = int(player_ship["max_shield_hp"] * 0.10)
+        if player_ship["shield_hp"] < player_ship["max_shield_hp"]:
+            player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, player_ship["max_shield_hp"])
+
+        # Also regenerate enemy shields slightly (5%)
+        for ship in enemy_fleet["ships"]:
+            if ship["hull_hp"] > 0 and ship["shield_hp"] < ship["max_shield_hp"]:
+                enemy_shield_regen = int(ship["max_shield_hp"] * 0.05)
+                ship["shield_hp"] = min(ship["shield_hp"] + enemy_shield_regen, ship["max_shield_hp"])
+
+        clear_screen()
+        title(f"COMBAT - TURN {turn}")
+        print()
+
+        # Display player status
+        print("YOUR SHIP:")
+        print(f"  Shield: {player_ship['shield_hp']}/{player_ship['max_shield_hp']}")
+        shield_bar = create_health_bar(player_ship['shield_hp'], player_ship['max_shield_hp'], 30, "cyan")
+        print(f"  {shield_bar}")
+        print(f"  Hull:   {player_ship['hull_hp']}/{player_ship['max_hull_hp']}")
+        hull_bar = create_health_bar(player_ship['hull_hp'], player_ship['max_hull_hp'], 30, "red")
+        print(f"  {hull_bar}")
+        print()
+
+        # Display enemy fleet status
+        print(f"ENEMY FLEET ({enemy_fleet['type']}):")
+        alive_enemies = [ship for ship in enemy_fleet["ships"] if ship["hull_hp"] > 0]
+
+        for i, ship in enumerate(alive_enemies):
+            print(f"  [{i+1}] {ship['name']}")
+            print(f"      Shield: {ship['shield_hp']}/{ship['max_shield_hp']} | Hull: {ship['hull_hp']}/{ship['max_hull_hp']}")
+
+        print()
+        print("=" * 60)
+        print()
+
+        # Combat options
+        options = [
+            "Fire Weapons (All Targets)",
+            "Focus Fire (Single Target)",
+            "Attempt Retreat",
+            "View Detailed Stats"
+        ]
+
+        # Capture current screen
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        # Re-print combat status
+        print(f"COMBAT - TURN {turn}")
+        print()
+        print("YOUR SHIP:")
+        print(f"  Shield: {player_ship['shield_hp']}/{player_ship['max_shield_hp']}")
+        print(f"  Hull:   {player_ship['hull_hp']}/{player_ship['max_hull_hp']}")
+        print()
+        print(f"ENEMY FLEET ({enemy_fleet['type']}):")
+        for i, ship in enumerate(alive_enemies):
+            print(f"  [{i+1}] {ship['name']}")
+            print(f"      Shield: {ship['shield_hp']}/{ship['max_shield_hp']} | Hull: {ship['hull_hp']}/{ship['max_hull_hp']}")
+        print()
+
+        combat_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        choice = arrow_menu("Select action:", options, combat_content)
+
+        if choice == 0:
+            # Fire at all targets
+            player_damage_distributed(alive_enemies, combat_skill, data)
+
+        elif choice == 1:
+            # Focus fire on single target
+            clear_screen()
+            print(combat_content)
+            target_options = [f"{ship['name']} (Hull: {ship['hull_hp']}/{ship['max_hull_hp']})" for ship in alive_enemies]
+            target_options.append("Cancel")
+
+            target_choice = arrow_menu("Select target:", target_options, combat_content)
+
+            if target_choice == len(alive_enemies):
+                continue  # Cancel, go back to combat menu
+
+            player_damage_focused(alive_enemies[target_choice], combat_skill, data)
+
+        elif choice == 2:
+            # Attempt retreat
+            retreat_result = attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data)
+
+            if retreat_result == "success":
+                data["skills"]["combat"] += 1  # Small increase for participating
+                data["skills"]["piloting"] += 2  # Bigger increase for successful retreat
+                save_data(save_name, data)
+                return "continue"
+            elif retreat_result == "failed":
+                # Take extra damage and continue combat
+                print()
+                print("  Retreat failed! Taking extra damage...")
+                sleep(1)
+            # If "impossible", just continue combat
+            continue
+
+        elif choice == 3:
+            # View detailed stats
+            show_detailed_combat_stats(player_ship, enemy_fleet, data)
+            continue
+
+        # Check if all enemies destroyed
+        alive_enemies = [ship for ship in enemy_fleet["ships"] if ship["hull_hp"] > 0]
+        if not alive_enemies:
+            clear_screen()
+            title("VICTORY!")
+            print()
+            print("  All enemy ships have been destroyed!")
+            print()
+
+            # Calculate rewards
+            credits_earned = enemy_fleet["size"] * 150 * random.randint(8, 12) // 10
+            data["credits"] += credits_earned
+
+            # Combat skill increase
+            skill_gained = 2 + (enemy_fleet["size"] // 2)
+            data["skills"]["combat"] += skill_gained
+
+            print(f"  Credits earned: ¢{credits_earned}")
+            print(f"  Combat Skill: +{skill_gained} (now {data['skills']['combat']})")
+            print()
+
+            save_data(save_name, data)
+            input("Press Enter to continue...")
+            return "continue"
+
+        # Enemy turn - they attack
+        enemy_attacks(alive_enemies, player_ship, piloting_skill)
+
+        # Check if player died
+        if player_ship["hull_hp"] <= 0:
+            clear_screen()
+            title("DEFEAT")
+            print()
+            print("  Your ship has been destroyed!")
+            print()
+            sleep(1.5)
+
+            # Small combat skill increase even on loss
+            data["skills"]["combat"] += 1
+            save_data(save_name, data)
+
+            return "death"
+
+        print()
+        input("Press Enter to continue to next turn...")
+        turn += 1
+
+
+def create_health_bar(current, maximum, width, color="green"):
+    """Create a colored health bar"""
+    if maximum == 0:
+        filled = 0
+    else:
+        filled = int((current / maximum) * width)
+
+    empty = width - filled
+
+    # Color codes
+    colors = {
+        "green": "\033[32m",
+        "cyan": "\033[36m",
+        "yellow": "\033[33m",
+        "red": "\033[31m",
+    }
+
+    color_code = colors.get(color, "\033[32m")
+
+    bar = f"{color_code}{'█' * filled}{RESET_COLOR}{'░' * empty}"
+    return bar
+
+
+def player_damage_distributed(enemies, combat_skill, data):
+    """Player attacks all enemies with distributed damage"""
+    clear_screen()
+    title("FIRING WEAPONS")
+    print()
+
+    # Base damage - scales with combat skill
+    base_damage = 40 + (combat_skill * 2)
+    damage_per_enemy = base_damage // len(enemies)
+
+    print(f"  Distributing {base_damage} damage across {len(enemies)} targets...")
+    print()
+    sleep(0.5)
+
+    for enemy in enemies:
+        # Random variance
+        damage = int(damage_per_enemy * random.uniform(0.85, 1.15))
+        apply_damage_to_enemy(enemy, damage)
+        sleep(0.3)
+
+    print()
+    input("Press Enter to continue...")
+
+
+def player_damage_focused(enemy, combat_skill, data):
+    """Player attacks single enemy with focused damage"""
+    clear_screen()
+    title("FOCUSED FIRE")
+    print()
+
+    # Higher damage when focused - scales with combat skill
+    damage = int((60 + (combat_skill * 3)) * random.uniform(0.9, 1.1))
+
+    print(f"  Targeting {enemy['name']}...")
+    print()
+    sleep(0.5)
+
+    apply_damage_to_enemy(enemy, damage)
+
+    print()
+    input("Press Enter to continue...")
+
+
+def apply_damage_to_enemy(enemy, damage):
+    """Apply damage to an enemy ship"""
+    remaining_damage = damage
+
+    # Damage shields first
+    if enemy["shield_hp"] > 0:
+        shield_damage = min(remaining_damage, enemy["shield_hp"])
+        enemy["shield_hp"] -= shield_damage
+        remaining_damage -= shield_damage
+        print(f"  Hit {enemy['name']}'s shields for {shield_damage} damage!")
+
+    # Then damage hull
+    if remaining_damage > 0:
+        enemy["hull_hp"] -= remaining_damage
+        print(f"  Hit {enemy['name']}'s hull for {remaining_damage} damage!")
+
+        if enemy["hull_hp"] <= 0:
+            enemy["hull_hp"] = 0
+            set_color("green")
+            print(f"  {enemy['name']} DESTROYED!")
+            reset_color()
+
+
+def enemy_attacks(enemies, player_ship, piloting_skill):
+    """All enemies attack the player"""
+    clear_screen()
+    title("ENEMY TURN")
+    print()
+
+    print("  Enemy fleet is attacking!")
+    print()
+    sleep(0.8)
+
+    total_damage = 0
+
+    for enemy in enemies:
+        # Base damage with variance
+        damage = int(enemy["damage"] * random.uniform(0.8, 1.2))
+
+        # Piloting skill gives evasion chance
+        evasion_chance = min(piloting_skill * 0.02, 0.25)  # Max 25% evasion
+
+        if random.random() < evasion_chance:
+            print(f"  {enemy['name']}'s attack missed! (Evaded)")
+            sleep(0.3)
+        else:
+            total_damage += damage
+            print(f"  {enemy['name']} deals {damage} damage!")
+            sleep(0.3)
+
+    print()
+    print(f"  Total incoming damage: {total_damage}")
+    print()
+    sleep(0.5)
+
+    # Apply damage to player
+    remaining_damage = total_damage
+
+    if player_ship["shield_hp"] > 0:
+        shield_damage = min(remaining_damage, player_ship["shield_hp"])
+        player_ship["shield_hp"] -= shield_damage
+        remaining_damage -= shield_damage
+        print(f"  Your shields absorbed {shield_damage} damage")
+        print(f"  Shield HP: {player_ship['shield_hp']}/{player_ship['max_shield_hp']}")
+        sleep(0.3)
+
+    if remaining_damage > 0:
+        player_ship["hull_hp"] -= remaining_damage
+        set_color("red")
+        print(f"  Your hull took {remaining_damage} damage!")
+        reset_color()
+        print(f"  Hull HP: {player_ship['hull_hp']}/{player_ship['max_hull_hp']}")
+        sleep(0.3)
+
+        if player_ship["hull_hp"] < player_ship["max_hull_hp"] * 0.2:
+            print()
+            set_color("red")
+            set_color("blinking")
+            print("  ⚠ CRITICAL HULL DAMAGE ⚠")
+            reset_color()
+
+
+def attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data):
+    """Attempt to retreat during combat"""
+    clear_screen()
+    title("ATTEMPTING RETREAT")
+    print()
+
+    if forced_combat and turn < 2:
+        print("  You cannot retreat yet!")
+        print("  The enemy has you locked down.")
+        print(f"  You must fight for at least 1 turn. (Turn {turn}/1)")
+        print()
+        input("Press Enter to continue...")
+        return "impossible"
+
+    # Warp disruptor prevents retreat for first 5 turns
+    if enemy_fleet["warp_disruptor"] and turn < 6:
+        print("  ⚠ WARP DISRUPTOR ACTIVE ⚠")
+        print()
+        print("  The enemy's warp disruption field prevents retreat!")
+        print(f"  You must fight for at least 5 turns. (Turn {turn}/5)")
+        print()
+        input("Press Enter to continue...")
+        return "impossible"
+
+    piloting_skill = data.get("skills", {}).get("piloting", 0)
+
+    # Retreat chance decreases as combat goes on
+    base_retreat_chance = max(0.50 - (turn * 0.05), 0.20)
+    retreat_chance = base_retreat_chance + (piloting_skill * 0.03)
+
+    # Warp disruptor makes retreat harder (if it's past turn 5)
+    if enemy_fleet["warp_disruptor"]:
+        retreat_chance *= 0.4
+        print("  Warp disruptor is weakening, but still interfering!")
+        print()
+
+    print("  Attempting to disengage...")
+    sleep(1)
+
+    if random.random() < retreat_chance:
+        print()
+        print("  Successfully retreated from combat!")
+        print()
+        input("Press Enter to continue...")
+        return "success"
+    else:
+        print()
+        print("  Retreat failed!")
+        print("  You remain engaged in combat.")
+        print()
+        input("Press Enter to continue...")
+        return "failed"
+
+
+def show_detailed_combat_stats(player_ship, enemy_fleet, data):
+    """Show detailed stats during combat"""
+    clear_screen()
+    title("DETAILED COMBAT STATISTICS")
+    print()
+
+    print("YOUR SHIP:")
+    print(f"  Name: {player_ship.get('nickname', 'Unknown')}")
+    print(f"  Type: {player_ship.get('name', 'Unknown').title()}")
+    print(f"  Shield HP: {player_ship['shield_hp']}/{player_ship['max_shield_hp']}")
+    print(f"  Hull HP: {player_ship['hull_hp']}/{player_ship['max_hull_hp']}")
+    print()
+
+    print("YOUR SKILLS:")
+    print(f"  Combat: Level {data['skills']['combat']}")
+    print(f"    - Damage Bonus: +{data['skills']['combat'] * 2}")
+    print(f"  Piloting: Level {data['skills']['piloting']}")
+    print(f"    - Evasion Chance: {min(data['skills']['piloting'] * 2, 25)}%")
+    print()
+
+    print("ENEMY FLEET:")
+    print(f"  Type: {enemy_fleet['type']}")
+    print(f"  Total Ships: {enemy_fleet['size']}")
+    alive_count = sum(1 for ship in enemy_fleet['ships'] if ship['hull_hp'] > 0)
+    print(f"  Remaining: {alive_count}")
+    print(f"  Warp Disruptor: {'ACTIVE' if enemy_fleet['warp_disruptor'] else 'None'}")
+    print()
+
+    print("ENEMY SHIPS:")
+    for ship in enemy_fleet['ships']:
+        if ship['hull_hp'] > 0:
+            print(f"  • {ship['name']}")
+            print(f"    Shield: {ship['shield_hp']}/{ship['max_shield_hp']}")
+            print(f"    Hull: {ship['hull_hp']}/{ship['max_hull_hp']}")
+            print(f"    Damage: {ship['damage']}")
+
+    print()
+    input("Press Enter to return to combat...")
 
 
 def game_loop(save_name, data):
@@ -190,6 +959,7 @@ def main_screen(save_name, data):
     system_name = data["current_system"]
     system = system_data(system_name)
     system["Name"] = system_name
+    system_security = system["SecurityLevel"]
 
     if data["docked_at"] != "":
         # get index of station docked at
@@ -202,7 +972,7 @@ def main_screen(save_name, data):
                 break
             i += 1
 
-        if station_index != None:
+        if station_index is not None:
             station_screen(system, station_index, save_name, data)
             return
         # else:
@@ -213,6 +983,38 @@ def main_screen(save_name, data):
     content_buffer = StringIO()
     old_stdout = sys.stdout
     sys.stdout = content_buffer
+
+    # Chance for enemy encounter
+    enemy_encounter_chance = 0.0
+    match system_security:
+        case "Core":
+            enemy_encounter_chance = 0.0
+        case "Secure":
+            enemy_encounter_chance = 1/8
+        case "Contested":
+            enemy_encounter_chance = 1/4
+        case "Unsecure":
+            enemy_encounter_chance = 1/2
+        case "Wild":
+            enemy_encounter_chance = 5/6
+
+    rng = random.random()
+    if rng <= enemy_encounter_chance:
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        # Generate enemy fleet based on system security
+        enemy_fleet = generate_enemy_fleet(system_security, data)
+
+        # Enemy encounter
+        result = enemy_encounter(enemy_fleet, system, save_name, data, previous_content)
+
+        if result == "death":
+            animated_death_screen(save_name, data)
+            return
+        elif result == "continue":
+            # Combat was resolved, continue to main menu
+            pass
 
     title(f"CURRENT SYSTEM: {system_name}  [{system["SecurityLevel"].upper()}]")
     print(f"  {system["Region"]} > {system["Sector"]}")
@@ -258,10 +1060,7 @@ def main_screen(save_name, data):
 
     match choice:
         case 0:
-            clear_screen()
-            title("STATUS")
-            print("Not implemented yet")
-            input("Press enter to continue...")
+            view_status_screen(data)
         case 1:
             warp_menu(system, save_name, data)
         case 2:
@@ -281,6 +1080,63 @@ def main_screen(save_name, data):
             print("Game saved.")
             input("Press enter to exit...")
             sys.exit(0)
+
+
+def view_status_screen(data):
+    """Display player status including ship and skills"""
+    clear_screen()
+    title("STATUS")
+    print()
+
+    player_ship = get_active_ship(data)
+
+    # Regenerate shields slightly when checking status (2% of max shields)
+    shield_regen = int(player_ship["max_shield_hp"] * 0.02)
+    if player_ship["shield_hp"] < player_ship["max_shield_hp"]:
+        player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, player_ship["max_shield_hp"])
+
+    print("PILOT INFORMATION:")
+    print(f"  Name: {data['player_name']}")
+    print(f"  Credits: ¢{data['credits']}")
+    print()
+
+    print("ACTIVE SHIP:")
+    print(f"  Name: {player_ship.get('nickname', 'Unknown')}")
+    print(f"  Type: {player_ship.get('name', 'Unknown').title()}")
+    print(f"  Shield HP: {player_ship['shield_hp']}/{player_ship['max_shield_hp']}")
+    shield_percent = int((player_ship['shield_hp'] / player_ship['max_shield_hp']) * 100)
+    print(f"  Shield: [{create_health_bar(player_ship['shield_hp'], player_ship['max_shield_hp'], 30, 'cyan')}] {shield_percent}%")
+    print(f"  Hull HP: {player_ship['hull_hp']}/{player_ship['max_hull_hp']}")
+    hull_percent = int((player_ship['hull_hp'] / player_ship['max_hull_hp']) * 100)
+    print(f"  Hull:   [{create_health_bar(player_ship['hull_hp'], player_ship['max_hull_hp'], 30, 'red')}] {hull_percent}%")
+    print()
+
+    print("SKILLS:")
+    print(f"  Combat: Level {data['skills']['combat']}")
+    print(f"    - Increases damage dealt")
+    print(f"    - Reduces damage taken (via better tactics)")
+    print(f"    - Current damage bonus: +{data['skills']['combat'] * 2}")
+    print()
+    print(f"  Piloting: Level {data['skills']['piloting']}")
+    print(f"    - Increases evasion chance in combat")
+    print(f"    - Improves escape success rate")
+    print(f"    - Current evasion chance: {min(data['skills']['piloting'] * 2, 25)}%")
+    print()
+
+    # Ship status warnings
+    if player_ship['hull_hp'] < player_ship['max_hull_hp'] * 0.3:
+        set_color("red")
+        print("⚠ WARNING: Hull damage detected! Visit a repair bay soon.")
+        reset_color()
+        print()
+
+    if player_ship['shield_hp'] < player_ship['max_shield_hp'] * 0.5:
+        set_color("yellow")
+        print("⚠ NOTICE: Shields need recharging.")
+        reset_color()
+        print()
+
+    input("Press Enter to continue...")
 
 
 def warp_menu(system, save_name, data):
@@ -321,6 +1177,13 @@ def warp_menu(system, save_name, data):
     sleep(2)
 
     data["current_system"] = connected_systems[choice]
+
+    # Regenerate shields slightly when warping (3% of max shields)
+    player_ship = get_active_ship(data)
+    shield_regen = int(player_ship["max_shield_hp"] * 0.03)
+    if player_ship["shield_hp"] < player_ship["max_shield_hp"]:
+        player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, player_ship["max_shield_hp"])
+
     save_data(save_name, data)
     new_system = system_data(data["current_system"])
     system_color = ""
@@ -362,7 +1225,7 @@ def warp_menu(system, save_name, data):
 
 def select_station_menu(system, save_name, data):
     options = []
-    stations = system["Stations"]
+    stations = system.get("Stations", [])
 
     for station in stations:
         options.append(station.get("Name"))
@@ -378,6 +1241,11 @@ def select_station_menu(system, save_name, data):
         return
 
     data["docked_at"] = stations[choice]["Name"]
+
+    # Automatically recharge shields to full when docking
+    player_ship = get_active_ship(data)
+    player_ship["shield_hp"] = player_ship["max_shield_hp"]
+
     save_data(save_name, data)
     station_screen(system, choice, save_name, data)
 
@@ -392,6 +1260,12 @@ def station_screen(system, station_num, save_name, data):
         print("You cannot dock here.")
         input("Press enter to continue...")
         return
+
+    # Regenerate shields slightly when accessing station facilities (2% of max shields)
+    player_ship = get_active_ship(data)
+    shield_regen = int(player_ship["max_shield_hp"] * 0.02)
+    if player_ship["shield_hp"] < player_ship["max_shield_hp"]:
+        player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, player_ship["max_shield_hp"])
 
     while True:
         clear_screen()
@@ -463,6 +1337,10 @@ def station_screen(system, station_num, save_name, data):
             visit_observatory()
             continue
 
+        if action == "repair":
+            visit_repair_bay(save_name, data)
+            continue
+
         if action == "undock":
             data["docked_at"] = ""
             save_data(save_name, data)
@@ -483,6 +1361,37 @@ def station_screen(system, station_num, save_name, data):
         print()
         print("Not implemented yet")
         input("Press enter to continue...")
+
+
+def visit_repair_bay(save_name, data):
+    """Repair ship hull and shields"""
+    clear_screen()
+    title("REPAIR BAY")
+    print()
+
+    player_ship = get_active_ship(data)
+
+    hull_damage = player_ship["max_hull_hp"] - player_ship["hull_hp"]
+
+    print(f"Ship: {player_ship.get('nickname', 'Unknown')}")
+    print()
+    print(f"Hull HP:   {player_ship['hull_hp']}/{player_ship['max_hull_hp']}")
+    print()
+
+    if hull_damage == 0:
+        print("Your ship is already in perfect condition!")
+        print()
+        input("Press Enter to continue...")
+        return
+
+    # Perform free repair
+    player_ship["hull_hp"] = player_ship["max_hull_hp"]
+
+    print("Hull fully repaired!")
+    print()
+
+    save_data(save_name, data)
+    input("Press Enter to continue...")
 
 
 def visit_observatory():
@@ -848,9 +1757,55 @@ def animated_death_screen(save_name, data):
     print(f"{DARK_GREEN}Location: The Citadel - Cloning Bay{RESET}")
     sleep(2)
 
-    # Clean up and respawn
+    # Clean up, respawn, and pay cloning fee
     data["inventory"] = {}
     data["current_system"] = "The Citadel"
+    data["docked_at"] = "The Citadel"
+    data["credits"] = max(0, data["credits"] - 500)
+
+    # Get the active ship before potentially removing it
+    player_ship = get_active_ship(data)
+    ship_name = player_ship.get("name", "").lower()
+
+    # Check if the ship is a Stratos - if not, player loses their ship
+    if ship_name != "stratos":
+        print()
+        print(f"{RED}Your {player_ship.get('nickname', 'ship')} was destroyed and cannot be recovered.{RESET}")
+        sleep(1.5)
+
+        # Remove the destroyed ship from the player's fleet
+        active_idx = data.get("active_ship", 0)
+        if active_idx < len(data["ships"]):
+            data["ships"].pop(active_idx)
+
+        # If player has no ships left, give them a basic Stratos
+        if not data["ships"]:
+            print(f"{DARK_GREEN}Emergency protocol: Issuing replacement Stratos...{RESET}")
+            sleep(1)
+            data["ships"].append({
+                "id": str(uuid4()),
+                "name": "stratos",
+                "nickname": "Stratos",
+                "hull_hp": 200,
+                "max_hull_hp": 200,
+                "shield_hp": 200,
+                "max_shield_hp": 200,
+                "modules_installed": [],
+            })
+
+        # Set active ship to first available ship
+        data["active_ship"] = 0
+        player_ship = get_active_ship(data)
+    else:
+        # Stratos is protected - restore it to full health
+        print()
+        print(f"{GREEN}Your Stratos has been recovered and repaired.{RESET}")
+        sleep(1)
+
+    # Restore ship to full health
+    player_ship["hull_hp"] = player_ship["max_hull_hp"]
+    player_ship["shield_hp"] = player_ship["max_shield_hp"]
+
     save_data(save_name, data)
 
 
@@ -1142,7 +2097,7 @@ def display_spatial_map(center_system, all_systems_data, current_system,
     clear_screen()
 
     # Get systems within 3 jumps
-    systems_by_distance_dict = get_systems_within_jumps(center_system, 3,
+    systems_by_distance_dict = get_systems_within_jumps(center_system, 2,
                                                         all_systems_data)
 
     # Organize by jump distance
