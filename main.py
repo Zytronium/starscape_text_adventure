@@ -152,9 +152,7 @@ def default_data():
                 "name": "stratos",
                 "nickname": "Stratos",
                 "hull_hp": 200,
-                "max_hull_hp": 200,
                 "shield_hp": 200,
-                "max_shield_hp": 200,
                 "modules_installed": [],
             }
         ],
@@ -186,6 +184,38 @@ def get_active_ship(data):
     if active_idx < len(data["ships"]):
         return data["ships"][active_idx]
     return data["ships"][0]
+
+
+def load_ships_data():
+    """Load ship data from ships.json"""
+    with open('ships.json', 'r') as f:
+        ships_data = json.load(f)
+    return {ship['name'].lower(): ship for ship in ships_data['ships']}
+
+
+def load_items_data():
+    """Load item data from items.json"""
+    with open('items.json', 'r') as f:
+        items_data = json.load(f)
+    return {item['name']: item for item in items_data['items']}
+
+
+def get_ship_stats(ship_name):
+    """Get ship stats from ships.json by ship name"""
+    ships = load_ships_data()
+    return ships.get(ship_name.lower(), {}).get('stats', {})
+
+
+def get_max_hull(ship):
+    """Get max hull HP for a ship from ships.json"""
+    stats = get_ship_stats(ship['name'])
+    return stats.get('Hull', 200)
+
+
+def get_max_shield(ship):
+    """Get max shield HP for a ship from ships.json"""
+    stats = get_ship_stats(ship['name'])
+    return stats.get('Shield', 200)
 
 
 def generate_enemy_fleet(security_level, data):
@@ -316,7 +346,9 @@ def enemy_encounter(enemy_fleet, system, save_name, data, previous_content=""):
 
     # Calculate threat level based on total firepower vs player ship
     player_ship = get_active_ship(data)
-    threat_ratio = enemy_fleet["total_firepower"] / (player_ship["max_hull_hp"] + player_ship["max_shield_hp"])
+    max_hull = get_max_hull(player_ship)
+    max_shield = get_max_shield(player_ship)
+    threat_ratio = enemy_fleet["total_firepower"] / (max_hull + max_shield)
 
     if threat_ratio < 0.3:
         set_color("green")
@@ -449,11 +481,13 @@ def attempt_escape(enemy_fleet, system, save_name, data):
             shield_damage = min(damage_taken, player_ship["shield_hp"])
             player_ship["shield_hp"] -= shield_damage
             damage_taken -= shield_damage
-            print(f"  Shield HP: {player_ship['shield_hp']}/{player_ship['max_shield_hp']} (-{shield_damage})")
+            max_shield = get_max_shield(player_ship)
+            print(f"  Shield HP: {player_ship['shield_hp']}/{max_shield} (-{shield_damage})")
 
         if damage_taken > 0:
             player_ship["hull_hp"] -= damage_taken
-            print(f"  Hull HP: {player_ship['hull_hp']}/{player_ship['max_hull_hp']} (-{damage_taken})")
+            max_hull = get_max_hull(player_ship)
+            print(f"  Hull HP: {player_ship['hull_hp']}/{max_hull} (-{damage_taken})")
 
         print()
         save_data(save_name, data)
@@ -502,12 +536,14 @@ def ignore_enemies(enemy_fleet, system, save_name, data):
         shield_damage = min(remaining_damage, player_ship["shield_hp"])
         player_ship["shield_hp"] -= shield_damage
         remaining_damage -= shield_damage
-        print(f"  Shield HP: {player_ship['shield_hp']}/{player_ship['max_shield_hp']} (-{shield_damage})")
+        max_shield = get_max_shield(player_ship)
+        print(f"  Shield HP: {player_ship['shield_hp']}/{max_shield} (-{shield_damage})")
         sleep(0.3)
 
     if remaining_damage > 0:
         player_ship["hull_hp"] -= remaining_damage
-        print(f"  Hull HP: {player_ship['hull_hp']}/{player_ship['max_hull_hp']} (-{remaining_damage})")
+        max_hull = get_max_hull(player_ship)
+        print(f"  Hull HP: {player_ship['hull_hp']}/{max_hull} (-{remaining_damage})")
         sleep(0.3)
 
     print()
@@ -516,7 +552,7 @@ def ignore_enemies(enemy_fleet, system, save_name, data):
         print("  Your ship has been destroyed!")
         sleep(1.5)
         return "death"
-    elif player_ship["hull_hp"] < player_ship["max_hull_hp"] * 0.2:
+    elif player_ship["hull_hp"] < get_max_hull(player_ship) * 0.2:
         set_color("red")
         print("  ⚠ WARNING: CRITICAL HULL DAMAGE ⚠")
         reset_color()
@@ -542,9 +578,10 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
 
     while combat_ongoing:
         # Regenerate shields slightly each turn (10% of max shields)
-        shield_regen = int(player_ship["max_shield_hp"] * 0.10)
-        if player_ship["shield_hp"] < player_ship["max_shield_hp"]:
-            player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, player_ship["max_shield_hp"])
+        max_shield = get_max_shield(player_ship)
+        shield_regen = int(max_shield * 0.10)
+        if player_ship["shield_hp"] < max_shield:
+            player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, max_shield)
 
         # Also regenerate enemy shields slightly (5%)
         for ship in enemy_fleet["ships"]:
@@ -558,11 +595,13 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
 
         # Display player status
         print("YOUR SHIP:")
-        print(f"  Shield: {player_ship['shield_hp']}/{player_ship['max_shield_hp']}")
-        shield_bar = create_health_bar(player_ship['shield_hp'], player_ship['max_shield_hp'], 30, "cyan")
+        max_shield = get_max_shield(player_ship)
+        max_hull = get_max_hull(player_ship)
+        print(f"  Shield: {player_ship['shield_hp']}/{max_shield}")
+        shield_bar = create_health_bar(player_ship['shield_hp'], max_shield, 30, "cyan")
         print(f"  {shield_bar}")
-        print(f"  Hull:   {player_ship['hull_hp']}/{player_ship['max_hull_hp']}")
-        hull_bar = create_health_bar(player_ship['hull_hp'], player_ship['max_hull_hp'], 30, "red")
+        print(f"  Hull:   {player_ship['hull_hp']}/{max_hull}")
+        hull_bar = create_health_bar(player_ship['hull_hp'], max_hull, 30, "red")
         print(f"  {hull_bar}")
         print()
 
@@ -595,8 +634,10 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
         print(f"COMBAT - TURN {turn}")
         print()
         print("YOUR SHIP:")
-        print(f"  Shield: {player_ship['shield_hp']}/{player_ship['max_shield_hp']}")
-        print(f"  Hull:   {player_ship['hull_hp']}/{player_ship['max_hull_hp']}")
+        max_shield = get_max_shield(player_ship)
+        max_hull = get_max_hull(player_ship)
+        print(f"  Shield: {player_ship['shield_hp']}/{max_shield}")
+        print(f"  Hull:   {player_ship['hull_hp']}/{max_hull}")
         print()
         print(f"ENEMY FLEET ({enemy_fleet['type']}):")
         for i, ship in enumerate(alive_enemies):
@@ -826,7 +867,8 @@ def enemy_attacks(enemies, player_ship, piloting_skill):
         player_ship["shield_hp"] -= shield_damage
         remaining_damage -= shield_damage
         print(f"  Your shields absorbed {shield_damage} damage")
-        print(f"  Shield HP: {player_ship['shield_hp']}/{player_ship['max_shield_hp']}")
+        max_shield = get_max_shield(player_ship)
+        print(f"  Shield HP: {player_ship['shield_hp']}/{max_shield}")
         sleep(0.3)
 
     if remaining_damage > 0:
@@ -834,10 +876,11 @@ def enemy_attacks(enemies, player_ship, piloting_skill):
         set_color("red")
         print(f"  Your hull took {remaining_damage} damage!")
         reset_color()
-        print(f"  Hull HP: {player_ship['hull_hp']}/{player_ship['max_hull_hp']}")
+        max_hull = get_max_hull(player_ship)
+        print(f"  Hull HP: {player_ship['hull_hp']}/{max_hull}")
         sleep(0.3)
 
-        if player_ship["hull_hp"] < player_ship["max_hull_hp"] * 0.2:
+        if player_ship["hull_hp"] < max_hull * 0.2:
             print()
             set_color("red")
             set_color("blinking")
@@ -905,11 +948,14 @@ def show_detailed_combat_stats(player_ship, enemy_fleet, data):
     title("DETAILED COMBAT STATISTICS")
     print()
 
+    max_shield = get_max_shield(player_ship)
+    max_hull = get_max_hull(player_ship)
+
     print("YOUR SHIP:")
     print(f"  Name: {player_ship.get('nickname', 'Unknown')}")
     print(f"  Type: {player_ship.get('name', 'Unknown').title()}")
-    print(f"  Shield HP: {player_ship['shield_hp']}/{player_ship['max_shield_hp']}")
-    print(f"  Hull HP: {player_ship['hull_hp']}/{player_ship['max_hull_hp']}")
+    print(f"  Shield HP: {player_ship['shield_hp']}/{max_shield}")
+    print(f"  Hull HP: {player_ship['hull_hp']}/{max_hull}")
     print()
 
     print("YOUR SKILLS:")
@@ -1089,11 +1135,13 @@ def view_status_screen(data):
     print()
 
     player_ship = get_active_ship(data)
+    max_shield = get_max_shield(player_ship)
+    max_hull = get_max_hull(player_ship)
 
     # Regenerate shields slightly when checking status (2% of max shields)
-    shield_regen = int(player_ship["max_shield_hp"] * 0.02)
-    if player_ship["shield_hp"] < player_ship["max_shield_hp"]:
-        player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, player_ship["max_shield_hp"])
+    shield_regen = int(max_shield * 0.02)
+    if player_ship["shield_hp"] < max_shield:
+        player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, max_shield)
 
     print("PILOT INFORMATION:")
     print(f"  Name: {data['player_name']}")
@@ -1103,12 +1151,12 @@ def view_status_screen(data):
     print("ACTIVE SHIP:")
     print(f"  Name: {player_ship.get('nickname', 'Unknown')}")
     print(f"  Type: {player_ship.get('name', 'Unknown').title()}")
-    print(f"  Shield HP: {player_ship['shield_hp']}/{player_ship['max_shield_hp']}")
-    shield_percent = int((player_ship['shield_hp'] / player_ship['max_shield_hp']) * 100)
-    print(f"  Shield: [{create_health_bar(player_ship['shield_hp'], player_ship['max_shield_hp'], 30, 'cyan')}] {shield_percent}%")
-    print(f"  Hull HP: {player_ship['hull_hp']}/{player_ship['max_hull_hp']}")
-    hull_percent = int((player_ship['hull_hp'] / player_ship['max_hull_hp']) * 100)
-    print(f"  Hull:   [{create_health_bar(player_ship['hull_hp'], player_ship['max_hull_hp'], 30, 'red')}] {hull_percent}%")
+    print(f"  Shield HP: {player_ship['shield_hp']}/{max_shield}")
+    shield_percent = int((player_ship['shield_hp'] / max_shield) * 100)
+    print(f"  Shield: [{create_health_bar(player_ship['shield_hp'], max_shield, 30, 'cyan')}] {shield_percent}%")
+    print(f"  Hull HP: {player_ship['hull_hp']}/{max_hull}")
+    hull_percent = int((player_ship['hull_hp'] / max_hull) * 100)
+    print(f"  Hull:   [{create_health_bar(player_ship['hull_hp'], max_hull, 30, 'red')}] {hull_percent}%")
     print()
 
     print("SKILLS:")
@@ -1124,13 +1172,13 @@ def view_status_screen(data):
     print()
 
     # Ship status warnings
-    if player_ship['hull_hp'] < player_ship['max_hull_hp'] * 0.3:
+    if player_ship['hull_hp'] < max_hull * 0.3:
         set_color("red")
         print("⚠ WARNING: Hull damage detected! Visit a repair bay soon.")
         reset_color()
         print()
 
-    if player_ship['shield_hp'] < player_ship['max_shield_hp'] * 0.5:
+    if player_ship['shield_hp'] < max_shield * 0.5:
         set_color("yellow")
         print("⚠ NOTICE: Shields need recharging.")
         reset_color()
@@ -1180,9 +1228,10 @@ def warp_menu(system, save_name, data):
 
     # Regenerate shields slightly when warping (3% of max shields)
     player_ship = get_active_ship(data)
-    shield_regen = int(player_ship["max_shield_hp"] * 0.03)
-    if player_ship["shield_hp"] < player_ship["max_shield_hp"]:
-        player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, player_ship["max_shield_hp"])
+    max_shield = get_max_shield(player_ship)
+    shield_regen = int(max_shield * 0.03)
+    if player_ship["shield_hp"] < max_shield:
+        player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, max_shield)
 
     save_data(save_name, data)
     new_system = system_data(data["current_system"])
@@ -1244,7 +1293,7 @@ def select_station_menu(system, save_name, data):
 
     # Automatically recharge shields to full when docking
     player_ship = get_active_ship(data)
-    player_ship["shield_hp"] = player_ship["max_shield_hp"]
+    player_ship["shield_hp"] = get_max_shield(player_ship)
 
     save_data(save_name, data)
     station_screen(system, choice, save_name, data)
@@ -1263,9 +1312,10 @@ def station_screen(system, station_num, save_name, data):
 
     # Regenerate shields slightly when accessing station facilities (2% of max shields)
     player_ship = get_active_ship(data)
-    shield_regen = int(player_ship["max_shield_hp"] * 0.02)
-    if player_ship["shield_hp"] < player_ship["max_shield_hp"]:
-        player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, player_ship["max_shield_hp"])
+    max_shield = get_max_shield(player_ship)
+    shield_regen = int(max_shield * 0.02)
+    if player_ship["shield_hp"] < max_shield:
+        player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, max_shield)
 
     while True:
         clear_screen()
@@ -1341,6 +1391,10 @@ def station_screen(system, station_num, save_name, data):
             visit_repair_bay(save_name, data)
             continue
 
+        if action == "marketplace":
+            visit_marketplace(save_name, data)
+            continue
+
         if action == "undock":
             data["docked_at"] = ""
             save_data(save_name, data)
@@ -1370,12 +1424,13 @@ def visit_repair_bay(save_name, data):
     print()
 
     player_ship = get_active_ship(data)
+    max_hull = get_max_hull(player_ship)
 
-    hull_damage = player_ship["max_hull_hp"] - player_ship["hull_hp"]
+    hull_damage = max_hull - player_ship["hull_hp"]
 
     print(f"Ship: {player_ship.get('nickname', 'Unknown')}")
     print()
-    print(f"Hull HP:   {player_ship['hull_hp']}/{player_ship['max_hull_hp']}")
+    print(f"Hull HP:   {player_ship['hull_hp']}/{max_hull}")
     print()
 
     if hull_damage == 0:
@@ -1385,12 +1440,162 @@ def visit_repair_bay(save_name, data):
         return
 
     # Perform free repair
-    player_ship["hull_hp"] = player_ship["max_hull_hp"]
+    player_ship["hull_hp"] = max_hull
 
     print("Hull fully repaired!")
     print()
 
     save_data(save_name, data)
+    input("Press Enter to continue...")
+
+
+def visit_marketplace(save_name, data):
+    """Visit the General Marketplace to buy and sell items"""
+    items_data = load_items_data()
+
+    while True:
+        clear_screen()
+        title("GENERAL MARKETPLACE")
+        print()
+        print(f"Credits: {data['credits']}")
+        print()
+        print("=" * 60)
+
+        # Show tabs
+        options = ["Buy Items", "Sell Items", "Cancel"]
+        choice = arrow_menu("Select:", options)
+
+        if choice == 0:
+            # Buy tab
+            marketplace_buy(save_name, data, items_data)
+        elif choice == 1:
+            # Sell tab
+            marketplace_sell(save_name, data, items_data)
+        elif choice == 2:
+            # Back
+            return
+
+
+def marketplace_buy(save_name, data, items_data):
+    """Buy items from marketplace"""
+    while True:
+        clear_screen()
+        title("MARKETPLACE - BUY")
+        print()
+        print(f"Credits: {data['credits']}")
+        print()
+        print("=" * 60)
+        print()
+
+        # Get all buyable items (items with buy_price specified)
+        buyable_items = []
+        for item_name, item_info in items_data.items():
+            if item_info.get('buy_price') and item_info['buy_price'] != "":
+                buyable_items.append((item_name, item_info))
+
+        # Sort by price
+        buyable_items.sort(key=lambda x: int(x[1]['buy_price']))
+
+        if not buyable_items:
+            print("No items available for purchase.")
+            print()
+            input("Press Enter to continue...")
+            return
+
+        # Display items
+        options = []
+        for item_name, item_info in buyable_items:
+            price = item_info['buy_price']
+            item_type = item_info.get('type', 'Unknown')
+            # Get current inventory count
+            inv_count = data.get('inventory', {}).get(item_name, 0)
+            options.append(f"{item_name} - {price} CR ({item_type}) [Own: {inv_count}]")
+
+        options.append("Back")
+
+        # Capture current screen for display
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        print(f"MARKETPLACE - BUY")
+        print()
+        print(f"Credits: {data['credits']}")
+        print()
+        print("=" * 60)
+
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        choice = arrow_menu("Select item to buy:", options, previous_content)
+
+        if choice == len(options) - 1:
+            # Back
+            return
+
+        # Show item details and purchase confirmation
+        item_name, item_info = buyable_items[choice]
+        price = int(item_info['buy_price'])
+
+        clear_screen()
+        title("PURCHASE ITEM")
+        print()
+        print(f"Item: {item_name}")
+        print(f"Type: {item_info.get('type', 'Unknown')}")
+        print(f"Description: {item_info.get('description', 'No description available.')}")
+        print()
+        print(f"Price: {price} CR")
+        print(f"Your Credits: {data['credits']} CR")
+        print()
+
+        if data['credits'] < price:
+            print("You don't have enough credits!")
+            print()
+            input("Press Enter to continue...")
+            continue
+
+        # Ask how many to buy
+        print("Enter quantity to purchase (0 to cancel): ", end="")
+        try:
+            quantity = int(input())
+            if quantity <= 0:
+                continue
+
+            total_cost = price * quantity
+            if data['credits'] < total_cost:
+                print()
+                print("You don't have enough credits for that quantity!")
+                print()
+                input("Press Enter to continue...")
+                continue
+
+            # Process purchase
+            data['credits'] -= total_cost
+            if item_name not in data['inventory']:
+                data['inventory'][item_name] = 0
+            data['inventory'][item_name] += quantity
+
+            save_data(save_name, data)
+
+            print()
+            print(f"Purchased {quantity}x {item_name} for {total_cost} CR")
+            print()
+            input("Press Enter to continue...")
+
+        except ValueError:
+            print()
+            print("Invalid input!")
+            print()
+            input("Press Enter to continue...")
+
+
+def marketplace_sell(save_name, data, items_data):
+    """Sell items to marketplace"""
+    clear_screen()
+    title("MARKETPLACE - SELL")
+    print()
+    print("This feature is not yet implemented.")
+    print()
     input("Press Enter to continue...")
 
 
@@ -1787,9 +1992,7 @@ def animated_death_screen(save_name, data):
                 "name": "stratos",
                 "nickname": "Stratos",
                 "hull_hp": 200,
-                "max_hull_hp": 200,
                 "shield_hp": 200,
-                "max_shield_hp": 200,
                 "modules_installed": [],
             })
 
@@ -1803,8 +2006,8 @@ def animated_death_screen(save_name, data):
         sleep(1)
 
     # Restore ship to full health
-    player_ship["hull_hp"] = player_ship["max_hull_hp"]
-    player_ship["shield_hp"] = player_ship["max_shield_hp"]
+    player_ship["hull_hp"] = get_max_hull(player_ship)
+    player_ship["shield_hp"] = get_max_shield(player_ship)
 
     save_data(save_name, data)
 
@@ -2319,7 +2522,7 @@ def main():
             "Exit"
         ]
 
-        logo_text = ( f"{CONTESTED_COLOR}\n" +
+        logo_text = ( "\033[1;33m\n" +
             "  /$$$$$$  /$$$$$$$$ /$$$$$$  /$$$$$$$   /$$$$$$   /$$$$$$   /$$$$$$  /$$$$$$$  /$$$$$$$$\n" +
             " /$$__  $$|__  $$__//$$__  $$| $$__  $$ /$$__  $$ /$$__  $$ /$$__  $$| $$__  $$| $$_____/\n" +
             "| $$  \__/   | $$  | $$  \ $$| $$  \ $$| $$  \__/| $$  \__/| $$  \ $$| $$  \ $$| $$      \n" +
