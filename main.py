@@ -1291,7 +1291,13 @@ def warp_menu(system, save_name, data):
     print(f"| Warping to {connected_systems[choice]}...{" " * (58 - len(connected_systems[choice]) - 15)}|")
     print("|" + " " * 58 + "|")
     print("=" * 60)
-    sleep(2)
+
+    ships_data = load_ships_data()
+    current_ship = get_active_ship(data)
+    ship_stats = ships_data[current_ship["name"].lower()]
+    warp_speed = ship_stats["stats"]["Warp Speed"]
+    sleep_time = 5 / warp_speed
+    sleep(sleep_time)
 
     data["current_system"] = connected_systems[choice]
 
