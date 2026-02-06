@@ -9,10 +9,19 @@ import json
 import os
 from pathlib import Path
 from io import StringIO
-from time import sleep
+from time import sleep, time
 from uuid import uuid4
-
 from colors import set_color, reset_color
+
+# Discord Rich Presence support
+try:
+    from pypresence import Presence
+    DISCORD_AVAILABLE = True
+except ImportError:
+    DISCORD_AVAILABLE = False
+    print("Warning: pypresence not installed. Discord Rich Presence disabled.")
+    print("Install with: pip install pypresence")
+    sleep(3)
 
 VERSION_CODE = 2
 CORE_COLOR = "\033[1;32m"     # lime
@@ -21,6 +30,157 @@ CONTESTED_COLOR = "\033[33m"  # orange/brown
 UNSECURE_COLOR = "\033[31m"   # red
 WILD_COLOR = "\033[35m"       # purple
 RESET_COLOR = "\033[0m"       # reset
+
+# Discord Application Client ID
+DISCORD_CLIENT_ID = "1469089302578200799"
+
+# Global Discord RPC instance
+discord_rpc = None
+
+
+def init_discord_rpc():
+    """Initialize Discord Rich Presence"""
+    global discord_rpc
+
+    if not DISCORD_AVAILABLE:
+        return False
+
+    try:
+        discord_rpc = Presence(DISCORD_CLIENT_ID)
+        discord_rpc.connect()
+
+        # Set initial presence
+        discord_rpc.update(
+            state="In Main Menu",
+            details="Playing Starscape Text Adventure",
+            large_text="Starscape: Text Adventure",
+            start=int(time())
+        )
+        return True
+    except Exception as e:
+        print(f"Warning: Could not connect to Discord: {e}")
+        discord_rpc = None
+        return False
+
+
+def get_adaptive_presence(data, context="default"):
+    """Determine adaptive Discord presence based on game state
+
+    Args:
+        data: Game save data dictionary
+        context: Current game context - "docked", "combat", "dead", "traveling", "menu", etc.
+
+    Returns:
+        tuple: (details, state) for Discord Rich Presence
+    """
+    # Load system data to get security level
+    try:
+        with open('system_data.json', 'r') as f:
+            all_systems_data = json.load(f)
+    except:
+        all_systems_data = {}
+
+    current_system = data.get("current_system", "Unknown")
+    security_level = "Unknown"
+
+    if current_system in all_systems_data:
+        security_level = all_systems_data[current_system].get("SecurityLevel", "Unknown")
+
+    # Format security level for display
+    security_text = f"somewhere in {security_level.lower()} space"
+
+    # Get current ship info
+    active_ship_idx = data.get("active_ship", 0)
+    ships = data.get("ships", [])
+    ship_name = "Unknown Ship"
+
+    if ships and 0 <= active_ship_idx < len(ships):
+        ship_name = ships[active_ship_idx].get("name", "Unknown Ship")
+
+    # Determine presence based on context
+    if context == "dead":
+        return ("Getting obliterated by hostile forces",
+                "transferring consciousness to cloning bay...")
+
+    elif context == "docked":
+        docked_at = data.get("docked_at", "a space station")
+        return (f"Docked at {docked_at}", security_text)
+
+    elif context == "combat":
+        return ("Engaged in combat", security_text)
+
+    elif context == "traveling":
+        return (f"Piloting a {ship_name}", security_text)
+
+    elif context == "mining":
+        return ("Mining asteroids", security_text)
+
+    elif context == "menu":
+        return ("Navigating menus", "In Main Menu")
+
+    elif context == "galaxy_map":
+        return ("Viewing galaxy map", f"planning route in {current_system}")
+
+    elif context == "station_menu":
+        docked_at = data.get("docked_at", "a space station")
+        return (f"Managing affairs at {docked_at}", security_text)
+
+    elif context == "trading":
+        return ("Trading goods", security_text)
+
+    elif context == "outfitting":
+        return ("Outfitting ship", f"at {data.get('docked_at', 'station')}")
+
+    # Default: flying around
+    else:
+        return (f"Piloting a {ship_name}", security_text)
+
+
+def update_discord_presence(state=None, details=None, data=None, context=None):
+    """Update Discord Rich Presence status
+
+    Args:
+        state: Small text shown below details (e.g., current location)
+        details: Main text (e.g., current activity)
+        data: Game save data (optional, for adaptive presence)
+        context: Game context for adaptive presence (optional)
+    """
+    global discord_rpc
+
+    if discord_rpc is None:
+        return
+
+    try:
+        update_args = {
+            "large_text": "Starscape: Text Adventure"
+        }
+
+        # Use adaptive presence if data and context provided
+        if data and context:
+            details, state = get_adaptive_presence(data, context)
+
+        if state:
+            update_args["state"] = state
+        if details:
+            update_args["details"] = details
+
+        discord_rpc.update(**update_args)
+    except Exception as e:
+        # Silently fail - don't interrupt gameplay
+        pass
+
+
+def close_discord_rpc():
+    """Close Discord Rich Presence connection"""
+    global discord_rpc
+
+    if discord_rpc:
+        try:
+            discord_rpc.close()
+        except:
+            pass
+        discord_rpc = None
+
 
 def read_data(save_name):
     """Load game data from save file"""
@@ -588,6 +748,9 @@ def ignore_enemies(enemy_fleet, system, save_name, data):
 
 def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
     """Main turn-based combat loop"""
+    # Update Discord presence for combat
+    update_discord_presence(data=data, context="combat")
+
     player_ship = get_active_ship(data)
     combat_skill = data.get("skills", {}).get("combat", 0)
     piloting_skill = data.get("skills", {}).get("piloting", 0)
@@ -695,6 +858,8 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
                 # Small combat XP for participating
                 add_skill_xp(data, "combat", 5)
                 save_data(save_name, data)
+                # Update presence - back to traveling after escape
+                update_discord_presence(data=data, context="traveling")
                 return "continue"
             elif retreat_result == "death":
                 # Died while retreating - still get small combat XP
@@ -737,6 +902,8 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
             print()
 
             save_data(save_name, data)
+            # Update presence - back to traveling after victory
+            update_discord_presence(data=data, context="traveling")
             input("Press Enter to continue...")
             return "continue"
 
@@ -1062,6 +1229,12 @@ def game_loop(save_name, data):
         input("Press Enter to return to main menu")
         return
 
+    # Set initial presence based on whether player is docked
+    if data.get("docked_at"):
+        update_discord_presence(data=data, context="docked")
+    else:
+        update_discord_presence(data=data, context="traveling")
+
     while True:
         main_screen(save_name, data)
 
@@ -1089,6 +1262,9 @@ def main_screen(save_name, data):
         # else:
             # data is corrupted. Pretend the player was never docked and put
             # them outside the station
+
+    # Update presence - player is in space/traveling
+    update_discord_presence(data=data, context="traveling")
 
     # Capture the screen content before showing the menu
     content_buffer = StringIO()
@@ -1184,6 +1360,7 @@ def main_screen(save_name, data):
             clear_screen()
             title("SAVE & QUIT")
             print("Saving...")
+            close_discord_rpc()
             save_data(save_name, data)
             print("Game saved.")
             input("Press enter to exit...")
@@ -1376,10 +1553,15 @@ def select_station_menu(system, save_name, data):
     player_ship["shield_hp"] = get_max_shield(player_ship)
 
     save_data(save_name, data)
+    # Update presence to docked
+    update_discord_presence(data=data, context="docked")
     station_screen(system, choice, save_name, data)
 
 
 def station_screen(system, station_num, save_name, data):
+    # Update Discord presence for station menu
+    update_discord_presence(data=data, context="docked")
+
     # Check if system has any stations
     if "Stations" not in system or not system["Stations"]:
         clear_screen()
@@ -1490,6 +1672,8 @@ def station_screen(system, station_num, save_name, data):
         if action == "undock":
             data["docked_at"] = ""
             save_data(save_name, data)
+            # Update presence to traveling after undocking
+            update_discord_presence(data=data, context="traveling")
             return
 
         if action == "quit":
@@ -1497,6 +1681,7 @@ def station_screen(system, station_num, save_name, data):
             title("SAVE & QUIT")
             print("Saving...")
             save_data(save_name, data)
+            close_discord_rpc()
             print("Game saved.")
             input("Press enter to exit...")
             sys.exit(0)
@@ -2462,6 +2647,9 @@ def animated_death_screen(save_name, data):
     """Animated death and cloning sequence with glitch effects"""
     import random
 
+    # Update Discord presence to show death
+    update_discord_presence(data=data, context="dead")
+
     GREEN = "\033[1;32m"
     DARK_GREEN = "\033[32m"
     RED = "\033[31m"
@@ -2612,6 +2800,9 @@ def animated_death_screen(save_name, data):
     player_ship["shield_hp"] = get_max_shield(player_ship)
 
     save_data(save_name, data)
+
+    # Update presence - now docked at The Citadel after respawn
+    update_discord_presence(data=data, context="docked")
 
 
 def get_systems_within_jumps(start_system, max_jumps, all_systems_data):
@@ -3076,6 +3267,9 @@ def display_spatial_map(center_system, all_systems_data, current_system,
 
 def galaxy_map(save_name, data):
     """Interactive galaxy map interface"""
+    # Update Discord presence for galaxy map
+    update_discord_presence(data=data, context="galaxy_map")
+
     # Load all systems data
     with open('system_data.json', 'r') as f:
         all_systems_data = json.load(f)
@@ -3094,6 +3288,11 @@ def galaxy_map(save_name, data):
             # Save destination before exiting
             data["destination"] = destination
             save_data(save_name, data)
+            # Restore presence based on current state
+            if data.get("docked_at"):
+                update_discord_presence(data=data, context="docked")
+            else:
+                update_discord_presence(data=data, context="traveling")
             return
         elif key == 's' and not is_shift:
             # Search
@@ -3116,40 +3315,50 @@ def galaxy_map(save_name, data):
 
 def main():
     """Main debug menu"""
-    while True:
-        options = [
-            "New Game",
-            "Continue Game",
-            "Delete Save",
-            "Exit"
-        ]
+    # Initialize Discord Rich Presence
+    init_discord_rpc()
 
-        logo_text = ( "\033[1;33m\n" +
-            "  /$$$$$$  /$$$$$$$$ /$$$$$$  /$$$$$$$   /$$$$$$   /$$$$$$   /$$$$$$  /$$$$$$$  /$$$$$$$$\n" +
-            " /$$__  $$|__  $$__//$$__  $$| $$__  $$ /$$__  $$ /$$__  $$ /$$__  $$| $$__  $$| $$_____/\n" +
-            "| $$  \__/   | $$  | $$  \ $$| $$  \ $$| $$  \__/| $$  \__/| $$  \ $$| $$  \ $$| $$      \n" +
-            "|  $$$$$$    | $$  | $$$$$$$$| $$$$$$$/|  $$$$$$ | $$      | $$$$$$$$| $$$$$$$/| $$$$$   \n" +
-            " \____  $$   | $$  | $$__  $$| $$__  $$ \____  $$| $$      | $$__  $$| $$____/ | $$__/   \n" +
-            " /##  \ ##   | ##  | ##  | ##| ##  \ ## /##  \ ##| ##    ##| ##  | ##| ##      | ##      \n" +
-            "|  ######/   | ##  | ##  | ##| ##  | ##|  ######/|  ######/| ##  | ##| ##      | ########\n" +
-            " \______/    |__/  |__/  |__/|__/  |__/ \______/  \______/ |__/  |__/|__/      |________/\n" +
-                                                     RESET_COLOR
-        )
+    try:
+        while True:
+            # Update Discord status to show we're in main menu
+            update_discord_presence(context="menu", data={})
 
-        print(logo_text)
+            options = [
+                "New Game",
+                "Continue Game",
+                "Delete Save",
+                "Exit"
+            ]
 
-        choice = arrow_menu("Starscape: Text Adventure Edition", options, logo_text)
+            logo_text = ("\033[1;33m\n" +
+                r"  /$$$$$$  /$$$$$$$$ /$$$$$$  /$$$$$$$   /$$$$$$   /$$$$$$   /$$$$$$  /$$$$$$$  /$$$$$$$$" + "\n" +
+                r" /$$__  $$|__  $$__//$$__  $$| $$__  $$ /$$__  $$ /$$__  $$ /$$__  $$| $$__  $$| $$_____/" + "\n" +
+                r"| $$  \__/   | $$  | $$  \ $$| $$  \ $$| $$  \__/| $$  \__/| $$  \ $$| $$  \ $$| $$      " + "\n" +
+                r"|  $$$$$$    | $$  | $$$$$$$$| $$$$$$$/|  $$$$$$ | $$      | $$$$$$$$| $$$$$$$/| $$$$$   " + "\n" +
+                r" \____  $$   | $$  | $$__  $$| $$__  $$ \____  $$| $$      | $$__  $$| $$____/ | $$__/   " + "\n" +
+                r" /##  \ ##   | ##  | ##  | ##| ##  \ ## /##  \ ##| ##    ##| ##  | ##| ##      | ##      " + "\n" +
+                r"|  ######/   | ##  | ##  | ##| ##  | ##|  ######/|  ######/| ##  | ##| ##      | ########" + "\n" +
+                r" \______/    |__/  |__/  |__/|__/  |__/ \______/  \______/ |__/  |__/|__/      |________/" + "\n" +
+                                                        RESET_COLOR
+            )
 
-        if choice == 0:
-            new_game()
-        elif choice == 1:
-            continue_game()
-        elif choice == 2:
-            delete_save_screen()
-        elif choice == 3:
-            clear_screen()
-            print("Exiting...")
-            break
+            print(logo_text)
+
+            choice = arrow_menu("Starscape: Text Adventure Edition", options, logo_text)
+
+            if choice == 0:
+                new_game()
+            elif choice == 1:
+                continue_game()
+            elif choice == 2:
+                delete_save_screen()
+            elif choice == 3:
+                clear_screen()
+                print("Exiting...")
+                break
+    finally:
+        # Clean up Discord connection when exiting
+        close_discord_rpc()
 
 
 if __name__ == "__main__":
@@ -3157,4 +3366,5 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         print("\n\nGame interrupted. Exiting...")
+        close_discord_rpc()
         sys.exit(0)
