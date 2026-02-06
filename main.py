@@ -176,6 +176,7 @@ def close_discord_rpc():
 
     if discord_rpc:
         try:
+            discord_rpc.clear()
             discord_rpc.close()
         except:
             pass
