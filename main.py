@@ -201,7 +201,7 @@ def read_data(save_name):
     if not save_path.exists():
         return None
 
-    with open(resource_path(save_path), 'r') as f:
+    with open(save_path, 'r') as f:
         return json.load(f)
 
 
@@ -210,7 +210,7 @@ def save_data(save_name, data):
     save_path = Path.home() / ".starscape_text_adventure" / "saves" / save_name / "save.json"
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(resource_path(save_path), 'w') as f:
+    with open(save_path, 'w') as f:
         json.dump(data, f, indent=4)
 
 
@@ -2404,7 +2404,7 @@ def visit_observatory():
     from pathlib import Path
     import json
 
-    ascii_art_dir = Path("ascii_art")
+    ascii_art_dir = Path(resource_path("ascii_art"))
 
     # Check if directory exists
     if not ascii_art_dir.exists():
@@ -2438,11 +2438,11 @@ def visit_observatory():
     meta_file = selected_art_dir / "meta.json"
 
     # Load the ASCII art
-    with open(resource_path(art_file), 'r', encoding='utf-8') as f:
+    with open(art_file, 'r', encoding='utf-8') as f:
         art_content = f.read()
 
     # Load the metadata
-    with open(resource_path(meta_file), 'r') as f:
+    with open(meta_file, 'r') as f:
         metadata = json.load(f)
 
     # Display the art
@@ -2646,9 +2646,9 @@ def delete_save_screen():
     # Delete save directory and contents
     for root, dirs, files in os.walk(save_path, topdown=False):
         for file in files:
-            os.remove(Path(root) / file)
+            os.remove(os.path.join(root, file))
         for d in dirs:
-            os.rmdir(Path(root) / d)
+            os.rmdir(os.path.join(root, d))
     os.rmdir(save_path)
 
     print(f"\nSave '{save_name}' deleted successfully.")
