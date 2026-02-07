@@ -38,6 +38,17 @@ DISCORD_CLIENT_ID = "1469089302578200799"
 discord_rpc = None
 
 
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+
 def init_discord_rpc():
     """Initialize Discord Rich Presence"""
     global discord_rpc
@@ -75,7 +86,7 @@ def get_adaptive_presence(data, context="default"):
     """
     # Load system data to get security level
     try:
-        with open('system_data.json', 'r') as f:
+        with open(resource_path('system_data.json'), 'r') as f:
             all_systems_data = json.load(f)
     except:
         all_systems_data = {}
@@ -190,7 +201,7 @@ def read_data(save_name):
     if not save_path.exists():
         return None
 
-    with open(save_path, 'r') as f:
+    with open(resource_path(save_path), 'r') as f:
         return json.load(f)
 
 
@@ -199,7 +210,7 @@ def save_data(save_name, data):
     save_path = Path.home() / ".starscape_text_adventure" / "saves" / save_name / "save.json"
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(save_path, 'w') as f:
+    with open(resource_path(save_path), 'w') as f:
         json.dump(data, f, indent=4)
 
 
@@ -351,14 +362,14 @@ def get_active_ship(data):
 
 def load_ships_data():
     """Load ship data from ships.json"""
-    with open('ships.json', 'r') as f:
+    with open(resource_path('ships.json'), 'r') as f:
         ships_data = json.load(f)
     return {ship['name'].lower(): ship for ship in ships_data['ships']}
 
 
 def load_items_data():
     """Load item data from items.json"""
-    with open('items.json', 'r') as f:
+    with open(resource_path('items.json'), 'r') as f:
         items_data = json.load(f)
     return {item['name']: item for item in items_data['items']}
 
@@ -2427,11 +2438,11 @@ def visit_observatory():
     meta_file = selected_art_dir / "meta.json"
 
     # Load the ASCII art
-    with open(art_file, 'r', encoding='utf-8') as f:
+    with open(resource_path(art_file), 'r', encoding='utf-8') as f:
         art_content = f.read()
 
     # Load the metadata
-    with open(meta_file, 'r') as f:
+    with open(resource_path(meta_file), 'r') as f:
         metadata = json.load(f)
 
     # Display the art
@@ -2459,7 +2470,7 @@ def title(text, centered=False):
 
 
 def system_data(system_name):
-    with open('system_data.json', 'r') as f:
+    with open(resource_path('system_data.json'), 'r') as f:
         data = json.load(f)
 
     return data.get(system_name)
@@ -3272,7 +3283,7 @@ def galaxy_map(save_name, data):
     update_discord_presence(data=data, context="galaxy_map")
 
     # Load all systems data
-    with open('system_data.json', 'r') as f:
+    with open(resource_path('system_data.json'), 'r') as f:
         all_systems_data = json.load(f)
 
     current_system = data["current_system"]
