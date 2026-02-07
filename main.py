@@ -11,7 +11,7 @@ from pathlib import Path
 from io import StringIO
 from time import sleep, time
 from uuid import uuid4
-from colors import set_color, reset_color
+from colors import set_color, set_background_color, reset_color
 
 # Discord Rich Presence support
 try:
@@ -1474,17 +1474,38 @@ def warp_menu(system, save_name, data):
     if choice == len(connected_systems):
         return
 
+    total_padding1 = 80 - len(connected_systems[choice]) - 14
+    spacingL1 = " " * math.ceil(total_padding1 / 2)
+    spacingR1 = " " * math.floor(total_padding1 / 2)
+
     clear_screen()
-    set_color("blue")
-    set_color("reverse")
-    print("=" * 60)
-    print("|" + " " * 58 + "|")
-    print("|" + " " * 58 + "|")
-    print(f"| Warping to {connected_systems[choice]}...{" " * (58 - len(connected_systems[choice]) - 15)}|")
-    print("|" + " " * 58 + "|")
-    print("|" + " " * 58 + "|")
-    print("=" * 60)
-    reset_color()
+    set_color("white")
+    set_background_color("blue")
+    print(
+r"                                                                 X              " + "\n" +
+r" $   &&&   &; ;   :  $  &  $   ;   x& +        : ::  X&  $   &&&& ;     +& xX   " + "\n" +
+r"  :$    ;&x  :$          $X         X .       &  .  $$ +:  ;x&X       &&Xx    &x" + "\n" +
+r" &&&:x ;   x$$  +;         &   x   .         &     &. x    $X     +&&+    &&&&& " + "\n" +
+r"     .&&X::    +&  +:       x;  &    :      .     & ;    &     +&     &&&&+     " + "\n" +
+r"          $&::;               &  .     .    +   :;     ;    +$    &&&&    +   +." + "\n" +
+r"   &+          && +   :        X       ;       X         $    .;&+      .&x& ;& " + "\n" +
+r"X&                ;;&;  +&       ;     +       .      .    &&.    +&&&&&& ;     " + "\n" +
+r" :&&&&&&$&&            &.+ &&x                     $:  x.    &&&&+$;            " + "\n" +
+r"          &:;&&+&$            .&&              X$+  ; ;:;& $        :.+&&&&&&&& " + "\n" +
+r"                                  &;       ;:&               :&&&               " + "\n" +
+r"                                                 +&&&&:          :$&&&&&&&&&&&& " + "\n" +
+        f"{spacingL1}Warping to {connected_systems[choice]}...{spacingR1}"          + "\n" +
+r"  +&&&x;.X&&&&+&$:.      &.       ;.        :;     ;&                           " + "\n" +
+r"+X  ;+:        x&  &           :&              X$    ;+  $X &&        ;:        " + "\n" +
+r"  X;  XX:&&&      .:+X     :&&:                   ;:: .  & x     &&.$X       ;& " + "\n" +
+r"&& ; x$     ::&& . ;    :&&X  &                         ;.    &&      &X+&&& .  " + "\n" +
+r"      &+&&:  $&  X + +&&X  &&  +             &;   + X ;     &;  ;& +&.    & X&& " + "\n" +
+r" $&&&   :&:+.; x  ;X&&   &:  &&       ..      +;    + $  &      $.  : &  &&     " + "\n" +
+r"   ;&&& $  $;  &:&&;   &   &&   ;.  $ ::    :  $&    ;; x; ;&       &:x  X :+X&$" + "\n" +
+r" $X +  :X$ $&+ &&   +&:   &X   + : $  .: ;  .   +&  ;  X  + .XXX       +&$+     " + "\n" +
+r" :  && :&&   &&   &&    &&    & &  X  $  $   $   X&  X   $  X  $x$  .      &&&: " + "\n" +
+r" & ; &&   &&    &&    &&&    X &    X $  ::  x.  & &  +  $ X  &  &&$$  &Xx&   ::" + "\n" +
+ "   :    &     x      &                            : X               +        &  \033[0m")
 
     ships_data = load_ships_data()
     current_ship = get_active_ship(data)
@@ -1519,9 +1540,9 @@ def warp_menu(system, save_name, data):
 
     clear_screen()
 
-    total_padding = 58 - len(connected_systems[choice])
-    spacingL = " " * math.ceil(total_padding / 2)
-    spacingR = " " * math.floor(total_padding / 2)
+    total_padding2 = 58 - len(connected_systems[choice])
+    spacingL2 = " " * math.ceil(total_padding2 / 2)
+    spacingR2 = " " * math.floor(total_padding2 / 2)
 
     print("—" * 60)
     print("|" + " " * 58 + "|")
@@ -1530,7 +1551,7 @@ def warp_menu(system, save_name, data):
     print("|" + " " * 58 + "|")
     print("|" + " " * 58 + "|")
     print("|" + " " * 58 + "|")
-    print(f"|{spacingL}{system_color}{connected_systems[choice]}{RESET_COLOR}{spacingR}|")
+    print(f"|{spacingL2}{system_color}{connected_systems[choice]}{RESET_COLOR}{spacingR2}|")
     print("|" + " " * 58 + "|")
     print("|" + " " * 58 + "|")
     print("|" + " " * 58 + "|")
