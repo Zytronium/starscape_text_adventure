@@ -76,6 +76,38 @@
       "buy_price": "1600"
     },
     {
+      "name": "Marlin",
+      "description": "A nimble vessel that is designed to mine efficiently but be capable of making a quick escape when necessary.",
+      "class": "Miner",
+      "stats": {
+        "DPS": 85,
+        "Shield": 75,
+        "Hull": 180,
+        "Energy": 90,
+        "Speed": 420,
+        "Agility": 120,
+        "Warp Speed": 1.50
+      },
+      "sell_price": "500",
+      "buy_price": "1000"
+    },
+    {
+      "name": "Badger",
+      "description": "An entry-level miner-class ship best suited as a starter mining ship. While it mines more efficiently than the Marlin, it's less capable of making a quick escape.",
+      "class": "Miner",
+      "stats": {
+        "DPS": 102,
+        "Shield": 50,
+        "Hull": 260,
+        "Energy": 100,
+        "Speed": 350,
+        "Agility": 67,
+        "Warp Speed": 1.40
+      },
+      "sell_price": "700",
+      "buy_price": "1400"
+    },
+    {
       "name": "Spectator",
       "description": "Admin spectating ship with extreme stats — not normally usable in play.",
       "class": "Special",
