@@ -229,6 +229,12 @@ def get_key():
             return 'enter'
         elif key == b'\x1b':  # Escape
             return 'esc'
+        else:
+            # Return the actual character
+            try:
+                return key.decode('utf-8').lower()
+            except:
+                return None
     else:  # Unix/Linux/Mac
         import termios
         import tty
@@ -248,6 +254,9 @@ def get_key():
                 return 'esc'
             elif ch == '\n' or ch == '\r':  # Enter
                 return 'enter'
+            else:
+                # Return the actual character (lowercased)
+                return ch.lower()
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     return None
@@ -1317,6 +1326,39 @@ def main_screen(save_name, data):
 
     title(f"CURRENT SYSTEM: {system_name}  [{system["SecurityLevel"].upper()}]")
     print(f"  {system["Region"]} > {system["Sector"]}")
+
+    # Show destination info if set
+    destination = data.get("destination", "")
+    if destination:
+        # Load all systems data for pathfinding
+        with open(resource_path('system_data.json'), 'r') as f:
+            all_systems_data = json.load(f)
+
+        route = find_route_to_destination(system_name, destination, all_systems_data)
+
+        if route and len(route) > 1:
+            jumps = len(route) - 1
+            dest_security = all_systems_data[destination].get("SecurityLevel", "Unknown")
+            dest_color = get_security_color(dest_security)
+
+            # Show destination and jump count
+            print(f"  Destination: {dest_color}{destination}{RESET_COLOR} ({jumps} jump{'s' if jumps != 1 else ''})")
+
+            # Show security dots for next 5 systems (excluding current)
+            print(f"  Route: ", end="")
+            next_systems = route[1:6]  # Get next 5 systems (excluding current)
+            for next_sys in next_systems:
+                next_security = all_systems_data[next_sys].get("SecurityLevel", "Unknown")
+                next_color = get_security_color(next_security)
+                print(f"{next_color}●{RESET_COLOR}", end="")
+            print()  # newline
+        elif route and len(route) == 1:
+            # Already at destination
+            print(f"  Destination: {get_security_color(all_systems_data[destination].get('SecurityLevel', 'Unknown'))}{destination}{RESET_COLOR} (Arrived!)")
+        else:
+            # No route found
+            print(f"  Destination: {destination} (No route found)")
+
     title(f"CREDITS: ¢{data["credits"]}")
 
     if system_name == "Gatinsir":
@@ -1449,21 +1491,50 @@ def warp_menu(system, save_name, data):
     connected_systems = system["Connections"]
     options = connected_systems + [f"{UNSECURE_COLOR}x{RESET_COLOR} Cancel"]
 
-    i = 0
-    for system in connected_systems:
-        security_level = system_data(system)["SecurityLevel"]
+    # Load all systems data for route checking
+    with open(resource_path('system_data.json'), 'r') as f:
+        all_systems_data = json.load(f)
 
+    # Check if we've reached destination and unset it
+    current_system = data["current_system"]
+    destination = data.get("destination", "")
+    if destination and current_system == destination:
+        data["destination"] = ""
+        destination = ""
+        save_data(save_name, data)
+
+    # Find next system in route if destination is set
+    next_in_route = None
+    if destination:
+        current_system = data["current_system"]
+        route = find_route_to_destination(current_system, destination, all_systems_data)
+        if route and len(route) > 1:
+            next_in_route = route[1]  # Next system in route
+
+    i = 0
+    for sys_name in connected_systems:
+        security_level = system_data(sys_name)["SecurityLevel"]
+
+        # Determine security color
         match security_level:
             case "Core":
-                options[i] = f"{CORE_COLOR}⬤ {system}{RESET_COLOR}"
+                color = CORE_COLOR
             case "Secure":
-                options[i] = f"{SECURE_COLOR}⬤ {system}{RESET_COLOR}"
+                color = SECURE_COLOR
             case "Contested":
-                options[i] = f"{CONTESTED_COLOR}⬤ {system}{RESET_COLOR}"
+                color = CONTESTED_COLOR
             case "Unsecure":
-                options[i] = f"{UNSECURE_COLOR}⬤ {system}{RESET_COLOR}"
+                color = UNSECURE_COLOR
             case "Wild":
-                options[i] = f"{WILD_COLOR}⬤ {system}{RESET_COLOR}"
+                color = WILD_COLOR
+            case _:
+                color = RESET_COLOR
+
+        # If this is the next system in route, use yellow, bold, italicized text; otherwise use color of security status
+        if sys_name == next_in_route:
+            options[i] = f"{color}⬤ \033[33m\033[1m\033[3m{sys_name}{RESET_COLOR}"
+        else:
+            options[i] = f"{color}⬤ {sys_name}{RESET_COLOR}"
         i += 1
 
     clear_screen()
@@ -2863,6 +2934,35 @@ def get_systems_within_jumps(start_system, max_jumps, all_systems_data):
     return visited
 
 
+def find_route_to_destination(start_system, end_system, all_systems_data):
+    """Find shortest route from start to end system using BFS.
+    Returns list of systems in order, or None if no route exists."""
+    from collections import deque
+
+    if start_system == end_system:
+        return [start_system]
+
+    visited = {start_system}
+    queue = deque([(start_system, [start_system])])
+
+    while queue:
+        current, path = queue.popleft()
+
+        system_info = all_systems_data.get(current)
+        if not system_info:
+            continue
+
+        for neighbor in system_info.get("Connections", []):
+            if neighbor == end_system:
+                return path + [neighbor]
+
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append((neighbor, path + [neighbor]))
+
+    return None  # No route found
+
+
 def fuzzy_match(query, text):
     """Simple fuzzy matching - returns True if all query chars appear in order in text"""
     query = query.lower()
@@ -3251,6 +3351,13 @@ def display_spatial_map(center_system, all_systems_data, current_system,
     col_width = 30
     systems_per_row = 2
 
+    # Find next system in route if destination is set
+    next_in_route = None
+    if destination:
+        route = find_route_to_destination(current_system, destination, all_systems_data)
+        if route and len(route) > 1:
+            next_in_route = route[1]
+
     for i in range(0, len(letter_map), systems_per_row):
         row_items = []
         for j in range(systems_per_row):
@@ -3271,9 +3378,12 @@ def display_spatial_map(center_system, all_systems_data, current_system,
                     markers.append("◆")
                 if system == center_system:
                     markers.append("@")
+                if system == next_in_route:
+                    markers.append("\033[33m➜\033[0m")  # Yellow arrow for next in route
                 marker_str = " ".join(markers) if markers else ""
 
                 item = f"[{letter}] {color}{system}{RESET_COLOR}"
+
                 if marker_str:
                     item += f" {marker_str}"
                 row_items.append(item)
@@ -3292,7 +3402,7 @@ def display_spatial_map(center_system, all_systems_data, current_system,
     print()
     print(
         "  [a-z] Navigate | [SHIFT+letter] Set dest | [s] Search | [ESC] Exit")
-    print("  Legend: ★ Current System  ◆ Destination  @ Viewing Center")
+    print("  Legend: ★ Current System  ◆ Destination  @ Viewing Center  \033[33m➜\033[0m Next in Route")
     print("=" * 60)
 
     return letter_map
