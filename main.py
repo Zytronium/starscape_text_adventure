@@ -1446,7 +1446,7 @@ def main_screen(save_name, data):
             close_discord_rpc()
             save_data(save_name, data)
             print("Game saved.")
-            input("Press enter to exit...")
+            input("Press Enter to exit...")
             sys.exit(0)
 
 
@@ -1516,6 +1516,33 @@ def view_status_screen(data):
     input("Press Enter to continue...")
 
 
+def type_lines(lines):
+    for line in lines:
+        if line == "":
+            print()
+        else:
+            for char in line:
+                print(char, end='', flush=True)
+                match char:
+                    case ' ':
+                        delay = 0.05
+                    case '.':
+                        delay = 0.15
+                    case '?':
+                        delay = 0.15
+                    case '!':
+                        delay = 0.15
+                    case ',':
+                        delay = 0.1
+                    case ';':
+                        delay = 0.125
+                    case _:
+                        delay = 0.025
+
+                sleep(delay)
+            print()
+        sleep(0.15)
+
 def warp_to_gate_system(gate_name, save_name, data):
     """Special warp sequence for entering gate systems with lore and ASCII art"""
     clear_screen()
@@ -1568,7 +1595,8 @@ def warp_to_gate_system(gate_name, save_name, data):
             "You move your ship closer to the wreckage and get a peak inside",
             "one of the capital ships torn in half. You see alien bodies in",
             "some sort of armor, just floating lifeless in the exposed vacuum",
-            "inside the ship, and the captain still sitting in his seat, helmet cracked.",
+            "inside the ship, and the captain still sitting in his seat, helmet"
+            "cracked.",
             "",
             "You take a good look at the gate...",
             "",
@@ -1604,18 +1632,10 @@ def warp_to_gate_system(gate_name, save_name, data):
         ]
 
     # Display lore with typing effect
-    for line in lore_lines:
-        if line == "":
-            print()
-        else:
-            for char in line:
-                print(char, end='', flush=True)
-                sleep(0.03)
-            print()
-        sleep(0.3)
-
+    type_lines(lore_lines)
     print()
-    sleep(5)
+    sleep(3)
+    input("Press Enter to continue...")
 
     # Update player location
     data["current_system"] = gate_name
@@ -1658,7 +1678,7 @@ def warp_to_gate_system(gate_name, save_name, data):
                 print(f"[ASCII art file {random_file} not found]")
 
             print()
-            print(f"Press ENTER to return to {previous_system}")
+            print(f"Press Enter to return to {previous_system}")
             print()
 
             # Wait for frame duration or until stop signal
@@ -1686,7 +1706,7 @@ def warp_to_gate_system(gate_name, save_name, data):
             print("     ═══════════════════════════")
 
         print()
-        print(f"Press ENTER to return to {previous_system}")
+        print(f"Press Enter to return to {previous_system}")
 
         # Wait for Enter key
         input()
@@ -1907,7 +1927,7 @@ def station_screen(system, station_num, save_name, data):
         print()
         print("This system does not have any orbital stations.")
         print("You cannot dock here.")
-        input("Press enter to continue...")
+        input("Press Enter to continue...")
         return
 
     # Regenerate shields slightly when accessing station facilities (2% of max shields)
@@ -2021,7 +2041,7 @@ def station_screen(system, station_num, save_name, data):
             save_data(save_name, data)
             close_discord_rpc()
             print("Game saved.")
-            input("Press enter to exit...")
+            input("Press Enter to exit...")
             sys.exit(0)
 
         # All other options - not implemented yet
@@ -2029,7 +2049,7 @@ def station_screen(system, station_num, save_name, data):
         title(options[choice].upper().replace("VISIT ", ""))
         print()
         print("Not implemented yet")
-        input("Press enter to continue...")
+        input("Press Enter to continue...")
 
 
 def visit_repair_bay(save_name, data):
@@ -2805,25 +2825,29 @@ def system_data(system_name):
 def new_game():
     """Start a new game with dialogue and player name input"""
     clear_screen()
-    print("============================================================")
+    print("=" * 60)
     print()
-    print("Welcome to Starscape, the greatest adventure you'll ever")
-    print("live among the stars. Plagued with war and malicious drones,")
-    print("this vast galaxy contains wonders beyond belief,")
-    print("opportunities for profit, and loads of adventure.")
-    print()
-    print("The galaxy was once filled with people like you. But one")
-    print("day, the player population slowly disappeared. You are the")
-    print("last player. You will meet no one else like you on your")
-    print("journey.")
-    print()
-    print("You are the last player to clone out of the cloning bay")
-    print("for their first time. You have a lot to learn. With just a")
-    print("Stratos and 5,000 credits to your name, you're ready to")
-    print("begin the greatest adventure one could dream of. Go, make")
-    print("this truly a Starscape.")
-    print()
-    print("============================================================")
+    intro = [
+        "Welcome to Starscape, the greatest adventure you'll ever",
+        "live among the stars. Plagued with war and malicious drones,",
+        "this vast galaxy contains wonders beyond belief,",
+        "opportunities for profit, and loads of adventure.",
+        "",
+        "The galaxy was once filled with people like you. But one",
+        "day, the player population slowly disappeared. You are the",
+        "last player. You will meet no one else like you on your",
+        "journey.",
+        "",
+        "You are the last player to clone out of the cloning bay",
+        "for their first time. You have a lot to learn. With just a",
+        "Stratos and 5,000 credits to your name, you're ready to",
+        "begin the greatest adventure one could dream of. Go, make",
+        "this truly a Starscape.",
+        ""
+    ]
+    type_lines(intro)
+    sleep(1)
+    print("=" * 60)
     print()
 
     input("Press Enter to begin your journey...")
@@ -2858,19 +2882,23 @@ def new_game():
     title(f"WELCOME, {player_name.upper()}")
     print()
     print(f"  Save '{save_name}' created successfully!")
-    print()
-    print("You open your eyes, you see a glass tube around you.")
-    print("The tube opens and you step out. You've just been cloned")
-    print("for the first time. You awake with basic knowledge of the")
-    print("universe, how to survive, and how to pilot a spacecraft.")
-    print()
-    print("The cloning facility is now shutting down, no longer")
-    print("cloning in new players. You are the last of your kind.")
-    print("From now on, these cloning tubes will only be used to")
-    print("revive you in case you die. And you WILL die. This is a")
-    print("dangerous galaxy. Tread cautiously, but don't let caution get")
-    print("in the way of adventure. Go, explore this vast starscape!")
-    print()
+    lines = [
+        "",
+        "You open your eyes, you see a glass tube around you.",
+        "The tube opens and you step out. You've just been cloned",
+        "for the first time. You awake with basic knowledge of the",
+        "universe, how to survive, and how to pilot a spacecraft.",
+        "",
+        "The cloning facility is now shutting down, no longer",
+        "cloning in new players. You are the last of your kind.",
+        "From now on, these cloning tubes will only be used to",
+        "revive you in case you die. And you WILL die. This is a",
+        "dangerous galaxy. Tread cautiously, but don't let caution get",
+        "in the way of adventure. Go, explore this vast starscape!",
+        ""
+        ]
+    type_lines(lines)
+    sleep(1)
     print("  You have been assigned:")
     print("    - Stratos (Starter Ship)")
     print("    - 5,000 Credits")
