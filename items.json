@@ -2,19 +2,32 @@
   "items": [
     {
       "name": "System Probe",
-      "description": "Lets you scan a star system for anomalies (one use).",
-      "type": "Utility",
-      "sell_price": "",
+      "description": "An autonomous probe which scans for anomalies throughout a star system.",
+      "type": "Deployable",
+      "sell_price": "30",
       "buy_price": "50"
     },
     {
       "name": "Metal Scraps",
-      "description": "Metal scraps from the wreck of a space ship; can be sold or refined.",
+      "description": "Metal scraps from the wreck of a spaceship or structure.",
       "type": "Salvage",
       "sell_price": "2",
       "buy_price": ""
     },
-
+    {
+      "name": "Power Cell",
+      "description": "Intact power cell used to provide energy to a spaceship.",
+      "type": "Salvage",
+      "sell_price": "10",
+      "buy_price": ""
+    },
+    {
+      "name": "Drone Core",
+      "description": "The core from the wreck of a drone.",
+      "type": "Salvage",
+      "sell_price": "50",
+      "buy_price": ""
+    },
     {
       "name": "Korrelite Ore (Inferior)",
       "description": "Unrefined Korrelite ore (inferior quality).",
@@ -23,7 +36,7 @@
       "buy_price": ""
     },
     {
-      "name": "Korrelite Ore (Normal)",
+      "name": "Korrelite Ore",
       "description": "Unrefined Korrelite ore.",
       "type": "Ore",
       "sell_price": "5",
