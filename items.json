@@ -32,119 +32,119 @@
       "name": "Korrelite Ore (Inferior)",
       "description": "Unrefined Korrelite ore (inferior quality).",
       "type": "Ore",
-      "sell_price": "3",
+      "sell_price": "4",
       "buy_price": ""
     },
     {
       "name": "Korrelite Ore",
       "description": "Unrefined Korrelite ore.",
       "type": "Ore",
-      "sell_price": "5",
+      "sell_price": "9",
       "buy_price": ""
     },
     {
       "name": "Korrelite Ore (Superior)",
       "description": "Unrefined Korrelite ore (superior quality).",
       "type": "Ore",
-      "sell_price": "8",
+      "sell_price": "13",
       "buy_price": ""
     },
     {
       "name": "Korrelite Ore (Pristine)",
       "description": "Unrefined Korrelite ore (pristine quality).",
       "type": "Ore",
-      "sell_price": "12",
+      "sell_price": "18",
       "buy_price": ""
     },
     {
       "name": "Reknite Ore (Inferior)",
       "description": "Unrefined Reknite ore (inferior quality).",
       "type": "Ore",
-      "sell_price": "4",
+      "sell_price": "6",
       "buy_price": ""
     },
     {
-      "name": "Reknite Ore (Normal)",
+      "name": "Reknite Ore",
       "description": "Unrefined Reknite ore.",
       "type": "Ore",
-      "sell_price": "7",
+      "sell_price": "12",
       "buy_price": ""
     },
     {
       "name": "Reknite Ore (Superior)",
       "description": "Unrefined Reknite ore (superior quality).",
       "type": "Ore",
-      "sell_price": "11",
+      "sell_price": "18",
       "buy_price": ""
     },
     {
       "name": "Reknite Ore (Pristine)",
       "description": "Unrefined Reknite ore (pristine quality).",
       "type": "Ore",
-      "sell_price": "16",
+      "sell_price": "24",
       "buy_price": ""
     },
     {
-      "name": "Gellium Ore (Normal)",
+      "name": "Gellium Ore",
       "description": "Unrefined Gellium ore.",
       "type": "Ore",
-      "sell_price": "10",
+      "sell_price": "27",
       "buy_price": ""
     },
     {
       "name": "Gellium Ore (Superior)",
       "description": "Unrefined Gellium ore (superior quality).",
       "type": "Ore",
-      "sell_price": "15",
+      "sell_price": "40",
       "buy_price": ""
     },
     {
       "name": "Gellium Ore (Pristine)",
       "description": "Unrefined Gellium ore (pristine quality).",
       "type": "Ore",
-      "sell_price": "22",
+      "sell_price": "54",
       "buy_price": ""
     },
     {
-      "name": "Axnit Ore (Normal)",
+      "name": "Axnit Ore",
       "description": "Unrefined Axnit ore.",
       "type": "Ore",
-      "sell_price": "25",
+      "sell_price": "45",
       "buy_price": ""
     },
     {
       "name": "Axnit Ore (Pristine)",
       "description": "Unrefined Axnit ore (pristine quality).",
       "type": "Ore",
-      "sell_price": "40",
+      "sell_price": "90",
       "buy_price": ""
     },
     {
       "name": "Narcor Ore",
       "description": "Unrefined Narcor ore.",
       "type": "Ore",
-      "sell_price": "40",
+      "sell_price": "72",
       "buy_price": ""
     },
     {
       "name": "Red Narcor Ore",
       "description": "Unrefined Red Narcor ore.",
       "type": "Ore",
-      "sell_price": "60",
+      "sell_price": "135",
       "buy_price": ""
     },
     {
       "name": "Vexnium Ore",
       "description": "Unrefined Vexnium ore.",
       "type": "Ore",
-      "sell_price": "200",
+      "sell_price": "540",
       "buy_price": ""
     },
     {
       "name": "Water Ice",
       "description": "Unrefined Water Ice.",
       "type": "Ore",
-      "sell_price": "8",
+      "sell_price": "14",
       "buy_price": ""
     },
 
@@ -152,28 +152,28 @@
       "name": "Korrelite",
       "description": "Refined Korrelite material.",
       "type": "Material",
-      "sell_price": "15",
+      "sell_price": "5",
       "buy_price": ""
     },
     {
       "name": "Reknite",
       "description": "Refined Reknite material.",
       "type": "Material",
-      "sell_price": "20",
+      "sell_price": "7",
       "buy_price": ""
     },
     {
       "name": "Gellium",
       "description": "Refined Gellium material.",
       "type": "Material",
-      "sell_price": "30",
+      "sell_price": "15",
       "buy_price": ""
     },
     {
       "name": "Axnit",
       "description": "Refined Axnit material.",
       "type": "Material",
-      "sell_price": "60",
+      "sell_price": "50",
       "buy_price": ""
     },
     {
@@ -187,21 +187,21 @@
       "name": "Red Narcor",
       "description": "Refined Red Narcor material.",
       "type": "Material",
-      "sell_price": "110",
+      "sell_price": "150",
       "buy_price": ""
     },
     {
       "name": "Vexnium",
       "description": "Refined Vexnium material.",
       "type": "Material",
-      "sell_price": "400",
+      "sell_price": "600",
       "buy_price": ""
     },
     {
       "name": "Water",
       "description": "Refined Water material.",
       "type": "Material",
-      "sell_price": "12",
+      "sell_price": "16",
       "buy_price": ""
     }
   ]

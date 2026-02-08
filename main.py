@@ -359,6 +359,7 @@ def default_data():
             "completed": True  # there is no tutorial, so we skip it if the save is loaded in a future version with tutorial
         },
         "destination": "",  # Current navigation destination
+        "anomalies": {},  # Discovered anomalies per system: {system_name: [anomaly1, anomaly2, ...]}
     }
 
 
@@ -1239,6 +1240,736 @@ def show_detailed_combat_stats(player_ship, enemy_fleet, data):
     input("Press Enter to return to combat...")
 
 
+def generate_anomalies(system_name, system_security):
+    """Generate random anomalies for a star system based on security level"""
+    anomalies = []
+    current_time = time()
+
+    # Anomaly spawn rates by security level
+    anomaly_counts = {
+        "Core": 0,
+        "Secure": random.randint(1, 2),
+        "Contested": random.randint(2, 3),
+        "Unsecure": random.randint(2, 4),
+        "Wild": random.randint(3, 6),
+    }
+
+    num_anomalies = anomaly_counts.get(system_security, 0)
+
+    # Weighted anomaly types by security level
+    anomaly_pools = {
+        "Secure": ["AT", "AL", "CM", "BF", "SP"],
+        "Contested": ["AT", "AL", "AA", "CM", "BF", "DH", "SP", "MT"],
+        "Unsecure": ["AT", "AL", "AA", "CM", "BF", "DH", "SP", "MT", "WH"],
+        "Wild": ["AL", "AA", "AN", "VX", "CM", "BF", "DH", "SP", "MT", "WH", "FO"],
+    }
+
+    pool = anomaly_pools.get(system_security, [])
+
+    for _ in range(num_anomalies):
+        if pool:
+            anomaly_type = random.choice(pool)
+
+            # Determine duration for wormholes
+            if anomaly_type == "WH":
+                # 5% chance for 2-week wormhole, 95% chance for 48-hour wormhole
+                if random.random() < 0.05:
+                    duration = 14 * 24 * 3600  # 2 weeks in seconds
+                else:
+                    duration = 48 * 3600  # 48 hours in seconds
+            else:
+                duration = 48 * 3600  # Standard 48 hours
+
+            anomaly = {
+                "type": anomaly_type,
+                "visited": False,
+                "timestamp": current_time,
+                "duration": duration,
+            }
+            anomalies.append(anomaly)
+
+    return anomalies
+
+
+def manage_system_anomalies(save_name, data, system_name):
+    """Manage anomalies for a system: clean up expired ones and generate new ones if needed"""
+    current_time = time()
+    system = system_data(system_name)
+    system_security = system.get("SecurityLevel", "Secure")
+
+    # Initialize anomalies dict if needed
+    if "anomalies" not in data:
+        data["anomalies"] = {}
+
+    # Initialize system visit tracking
+    if "last_system_visit" not in data:
+        data["last_system_visit"] = {}
+
+    # Get existing anomalies for this system
+    existing_anomalies = data["anomalies"].get(system_name, [])
+
+    # Clean up expired anomalies (older than their duration)
+    cleaned_anomalies = []
+    for anomaly in existing_anomalies:
+        anomaly_age = current_time - anomaly.get("timestamp", current_time)
+        duration = anomaly.get("duration", 48 * 3600)
+
+        if anomaly_age < duration:
+            cleaned_anomalies.append(anomaly)
+
+    # Get last visit time
+    last_visit = data["last_system_visit"].get(system_name, 0)
+    time_since_visit = current_time - last_visit
+
+    # Generate new anomalies if enough time has passed (every 12 hours, capped at 48 hours)
+    if last_visit == 0:
+        # First visit - generate anomalies
+        new_anomalies = generate_anomalies(system_name, system_security)
+        cleaned_anomalies.extend(new_anomalies)
+    elif time_since_visit >= 12 * 3600:
+        # Generate anomalies for each 12-hour period, capped at 48 hours
+        periods_elapsed = min(int(time_since_visit / (12 * 3600)), 4)  # Cap at 4 periods (48 hours)
+
+        for _ in range(periods_elapsed):
+            new_anomalies = generate_anomalies(system_name, system_security)
+            cleaned_anomalies.extend(new_anomalies)
+
+    # Update system data
+    data["anomalies"][system_name] = cleaned_anomalies
+    data["last_system_visit"][system_name] = current_time
+    save_data(save_name, data)
+
+    return cleaned_anomalies
+
+
+def get_anomaly_name(anomaly_type):
+    """Get the full name of an anomaly type"""
+    names = {
+        "AT": "Small Asteroid Field",
+        "AL": "Large Asteroid Field",
+        "AA": "All-Axnit Asteroid Field",
+        "AN": "All-Narcor Asteroid Field",
+        "VX": "Vexnium Asteroid Field",
+        "CM": "Comet",
+        "BF": "Battlefield",
+        "DH": "Drone Hideout",
+        "SP": "Spice Platform",
+        "MT": "Monument",
+        "WH": "Wormhole",
+        "FO": "Frontier Outpost",
+    }
+    return names.get(anomaly_type, "Unknown Anomaly")
+
+
+def scan_for_anomalies(save_name, data):
+    """Scan the current system for anomalies using a system probe"""
+    clear_screen()
+    title("SCAN FOR ANOMALIES")
+    print()
+
+    # Check if player has a system probe
+    if data.get("inventory", {}).get("System Probe", 0) < 1:
+        print("  You need a System Probe to scan for anomalies!")
+        print()
+        print("  System Probes can be purchased from the General Marketplace")
+        print("  at most space stations.")
+        print()
+        input("Press Enter to continue...")
+        return
+
+    # Consume the probe
+    data["inventory"]["System Probe"] -= 1
+
+    current_system = data["current_system"]
+
+    # Scan animation
+    print("  Deploying System Probe...")
+    sleep(0.5)
+    print("  Scanning...")
+    for i in range(3):
+        print("  .", end="", flush=True)
+        sleep(0.3)
+    print()
+    print()
+    sleep(0.3)
+
+    # Manage anomalies (cleanup expired + generate new if needed)
+    manage_system_anomalies(save_name, data, current_system)
+
+    anomalies = data.get("anomalies", {}).get(current_system, [])
+
+    # Display results
+    clear_screen()
+    title("SCAN RESULTS")
+    print()
+    print(f"  System: {current_system}")
+    system = system_data(current_system)
+    system_security = system.get("SecurityLevel", "Secure")
+    print(f"  Security: {system_security}")
+    print()
+
+    if not anomalies:
+        print("  No anomalies detected in this system.")
+    else:
+        print(f"  {len(anomalies)} anomal{'y' if len(anomalies) == 1 else 'ies'} detected:")
+        print()
+        for i, anomaly in enumerate(anomalies):
+            visited_str = " (Visited)" if anomaly.get("visited") else ""
+            anomaly_name = get_anomaly_name(anomaly['type'])
+
+            # Show duration for wormholes
+            if anomaly['type'] == "WH":
+                duration_hours = anomaly.get('duration', 48 * 3600) / 3600
+                if duration_hours >= 24:
+                    duration_days = duration_hours / 24
+                    if duration_days >= 7:
+                        duration_str = f" ({int(duration_days/7)} week duration)"
+                    else:
+                        duration_str = f" ({int(duration_days)} day duration)"
+                else:
+                    duration_str = f" ({int(duration_hours)}h duration)"
+                print(f"    [{i+1}] {anomaly_name}{duration_str}{visited_str}")
+            else:
+                print(f"    [{i+1}] {anomaly_name}{visited_str}")
+
+    print()
+    save_data(save_name, data)
+    input("Press Enter to continue...")
+
+
+def visit_anomalies_menu(save_name, data):
+    """Menu to visit discovered anomalies in current system"""
+    current_system = data["current_system"]
+
+    if current_system not in data.get("anomalies", {}):
+        clear_screen()
+        title("ANOMALIES")
+        print()
+        print("  No anomalies have been scanned in this system yet.")
+        print("  Use a System Probe to scan for anomalies.")
+        print()
+        input("Press Enter to continue...")
+        return
+
+    anomalies = data["anomalies"][current_system]
+
+    if not anomalies:
+        clear_screen()
+        title("ANOMALIES")
+        print()
+        print("  No anomalies detected in this system.")
+        print()
+        input("Press Enter to continue...")
+        return
+
+    while True:
+        clear_screen()
+        title(f"ANOMALIES - {current_system}")
+        print()
+        print(f"  {len(anomalies)} anomal{'y' if len(anomalies) == 1 else 'ies'} detected:")
+        print()
+
+        options = []
+        for i, anomaly in enumerate(anomalies):
+            visited_str = " (Visited)" if anomaly.get("visited") else ""
+            options.append(f"{get_anomaly_name(anomaly['type'])}{visited_str}")
+        options.append("Back")
+
+        choice = arrow_menu("Select anomaly to visit:", options)
+
+        if choice == len(anomalies):
+            return
+
+        # Visit the selected anomaly
+        visit_anomaly(save_name, data, anomalies[choice])
+
+
+def visit_anomaly(save_name, data, anomaly):
+    """Visit a specific anomaly"""
+    anomaly_type = anomaly["type"]
+    anomaly_name = get_anomaly_name(anomaly_type)
+
+    # Mark as visited
+    anomaly["visited"] = True
+    save_data(save_name, data)
+
+    # Ore-bearing anomalies
+    if anomaly_type in ["AT", "AL", "AA", "AN", "VX", "CM", "MT"]:
+        mine_anomaly(save_name, data, anomaly)
+    else:
+        clear_screen()
+        title(anomaly_name.upper())
+        print()
+        print(f"  {anomaly_name} visit not yet implemented.")
+        print()
+        input("Press Enter to continue...")
+
+
+def mine_anomaly(save_name, data, anomaly):
+    """Mine ores from an ore-bearing anomaly"""
+    anomaly_type = anomaly["type"]
+    anomaly_name = get_anomaly_name(anomaly_type)
+
+    update_discord_presence(data=data, context="mining")
+
+    # Define ore types and quantities for each anomaly type
+    ore_configs = {
+        "AT": {
+            "ores": ["Korrelite Ore", "Korrelite Ore (Superior)", "Reknite Ore", "Gellium Ore"],
+            "count": random.randint(3, 8),
+        },
+        "AL": {
+            "ores": ["Korrelite Ore", "Korrelite Ore (Superior)", "Reknite Ore", "Reknite Ore (Superior)", "Gellium Ore", "Gellium Ore (Superior)"],
+            "count": random.randint(7, 16),
+        },
+        "AA": {
+            "ores": ["Axnit Ore", "Axnit Ore (Pristine)"],
+            "count": random.randint(4, 10),
+        },
+        "AN": {
+            "ores": ["Narcor Ore", "Red Narcor Ore"],
+            "count": random.randint(4, 9),
+        },
+        "VX": {
+            "ores": ["Vexnium Ore"],
+            "count": random.randint(1, 4),
+        },
+        "CM": {
+            "ores": ["Water Ice"],
+            "count": random.randint(3, 8),
+        },
+        "MT": {
+            "ores": ["Korrelite Ore (Pristine)", "Reknite Ore (Pristine)", "Gellium Ore (Pristine)"],
+            "count": 8,
+        },
+    }
+
+    config = ore_configs.get(anomaly_type, {"ores": ["Korrelite Ore"], "count": 3})
+
+    # Load or generate asteroids for this anomaly
+    if "asteroids" not in anomaly:
+        # Generate asteroids for first visit
+        asteroids = []
+        for _ in range(config["count"]):
+            ore_type = random.choice(config["ores"])
+            # Adjust quantity based on anomaly type
+            if anomaly_type == "VX":
+                quantity = random.randint(2, 6)
+            elif anomaly_type == "CM":
+                quantity = random.randint(4, 10)
+            else:
+                quantity = random.randint(16, 48)
+            asteroids.append({"ore": ore_type, "quantity": quantity, "mined": 0})
+        anomaly["asteroids"] = asteroids
+    else:
+        asteroids = anomaly["asteroids"]
+
+    # Check for crystalline entities at VX anomalies
+    vexnium_guarded = anomaly_type == "VX" and random.random() < 0.8
+    if vexnium_guarded:
+        clear_screen()
+        title("VEXNIUM ANOMALY")
+        print()
+        print("  ⚠ WARNING: Crystalline entities detected!")
+        print()
+        print("  This anomaly is guarded by hostile crystalline life forms.")
+        print("  They will attack if you attempt to mine here.")
+        print()
+        print("  Proceed with caution.")
+        print()
+        input("Press Enter to continue...")
+
+    # Mining loop
+    while asteroids:
+        clear_screen()
+        title(f"{anomaly_name.upper()} - MINING")
+        print()
+        print(f"  {len(asteroids)} asteroid{'s' if len(asteroids) != 1 else ''} remaining")
+        print()
+
+        options = []
+        for i, asteroid in enumerate(asteroids):
+            ore_name = asteroid["ore"]
+            quantity = asteroid["quantity"]
+            mined = asteroid["mined"]
+            progress_str = f" [{mined}/{quantity} mined]" if mined > 0 else ""
+            options.append(f"{ore_name} ({quantity} units){progress_str}")
+        options.append("Leave anomaly")
+
+        choice = arrow_menu("Select asteroid to mine:", options)
+
+        if choice == len(asteroids):
+            # Save asteroid states before leaving
+            save_data(save_name, data)
+            update_discord_presence(data=data, context="traveling")
+            return
+
+        # Mine the selected asteroid
+        result = mine_asteroid(save_name, data, asteroids[choice], vexnium_guarded)
+
+        if result == "death":
+            animated_death_screen(save_name, data)
+            return
+        elif result == "escaped":
+            save_data(save_name, data)
+            return
+        elif result == "completed":
+            # Remove the depleted asteroid
+            asteroids.pop(choice)
+            # Save updated asteroid list
+            save_data(save_name, data)
+
+    # If all asteroids depleted, mark for deletion
+    if not asteroids:
+        # Find and remove this anomaly from the system's anomaly list
+        current_system = data["current_system"]
+        if current_system in data.get("anomalies", {}):
+            system_anomalies = data["anomalies"][current_system]
+            # Find this specific anomaly object and remove it
+            if anomaly in system_anomalies:
+                system_anomalies.remove(anomaly)
+                save_data(save_name, data)
+
+        clear_screen()
+        title("ANOMALY DEPLETED")
+        print()
+        print(f"  {anomaly_name} has been fully mined.")
+        print("  The anomaly has dissipated.")
+        print()
+        input("Press Enter to continue...")
+
+
+def mine_asteroid(save_name, data, asteroid, guarded=False):
+    """Mine a single asteroid with progress bar animation"""
+    ore_name = asteroid["ore"]
+    total_quantity = asteroid["quantity"]
+    current_mined = asteroid["mined"]
+
+    # Get player ship stats
+    player_ship = get_active_ship(data)
+    ship_data = load_ships_data().get(player_ship["name"].lower(), {})
+    ship_class = ship_data.get("class", "Fighter")
+    ship_stats = ship_data.get("stats", {})
+    dps = ship_stats.get("DPS", 100)
+
+    # Calculate base mining time based on ore type and quantity
+    if ore_name == "Water Ice":
+        # 60 seconds for 10 units of water ice
+        base_time = (total_quantity / 10.0) * 60
+    else:
+        # 60 seconds for 30 units of regular ore
+        base_time = (total_quantity / 30.0) * 60
+
+    # Calculate mining speed multiplier based on ship class
+    if ship_class == "Miner":
+        speed_multiplier = 1.0 + (dps / 500)  # Fast mining with DPS bonus
+    else:
+        speed_multiplier = 0.25 * (0.5 + (dps / 1000))  # Painfully slow with smaller DPS bonus
+
+    # Final mining time
+    mining_time = base_time / speed_multiplier
+
+    clear_screen()
+    title("MINING ASTEROID")
+    print()
+    print(f"  Ore: {ore_name}")
+    print(f"  Ship: {player_ship.get('nickname', player_ship['name'].title())} ({ship_class})")
+    print(f"  Estimated time: {int(mining_time)} seconds")
+    print()
+    print("  Press ESC at any time to stop mining")
+    print()
+    sleep(1)
+
+    # Mining animation loop
+    progress = 0.0
+    units_collected = current_mined
+    start_time = time()
+
+    # Trigger crystalline guardian attack if guarded
+    if guarded and random.random() < 0.8:
+        clear_screen()
+        update_discord_presence(data=data, context="combat")
+        print("=" * 60)
+        set_color("magenta")
+        set_color("blinking")
+        set_color("reverse")
+        print("⚠ CRYSTALLINE GUARDIAN ATTACK ⚠")
+        reset_color()
+        print("=" * 60)
+        print()
+        print("  The crystalline guardians are attacking!")
+        print()
+        sleep(1)
+
+        # Generate crystalline enemy fleet
+        enemy_fleet = {
+            "type": "Crystalline Guardians",
+            "size": random.randint(2, 4),
+            "warp_disruptor": False,
+            "total_firepower": 500,
+            "ships": []
+        }
+
+        for i in range(enemy_fleet["size"]):
+            entity = {
+                "name": f"Crystalline Guardian {i+1}",
+                "shield_hp": 100,
+                "max_shield_hp": 100,
+                "hull_hp": 500,
+                "max_hull_hp": 500,
+                "damage": 125,
+            }
+            enemy_fleet["ships"].append(entity)
+
+        system = system_data(data["current_system"])
+        result = combat_loop(enemy_fleet, system, save_name, data, forced_combat=True)
+
+        if result == "death":
+            return "death"
+        elif result == "continue":
+            # Successfully defeated, continue mining
+            pass
+        else:
+            # Escaped
+            return "escaped"
+
+    while progress < 1.0:
+        # Check for ESC key (non-blocking)
+        if os.name == 'nt':
+            import msvcrt
+            if msvcrt.kbhit():
+                key = msvcrt.getch()
+                if key == b'\x1b':  # ESC
+                    break
+        else:
+            import select
+            if select.select([sys.stdin], [], [], 0)[0]:
+                import termios
+                import tty
+                fd = sys.stdin.fileno()
+                old_settings = termios.tcgetattr(fd)
+                try:
+                    tty.setraw(fd)
+                    ch = sys.stdin.read(1)
+                    if ch == '\x1b':  # ESC
+                        break
+                finally:
+                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+        # Update progress
+        elapsed = time() - start_time
+        progress = min(1.0, elapsed / mining_time)
+        units_collected = current_mined + int(progress * (total_quantity - current_mined))
+
+        # Draw progress bar
+        clear_screen()
+        title("MINING ASTEROID")
+        print()
+        print(f"  Ore: {ore_name}")
+        print(f"  Units collected: {units_collected}/{total_quantity}")
+        print()
+
+        # Progress bar
+        bar_width = 50
+        filled = int(progress * bar_width)
+        empty = bar_width - filled
+        bar = f"[{'█' * filled}{'░' * empty}] {int(progress * 100)}%"
+        print(f"  {bar}")
+        print()
+        print("  Press ESC to stop mining")
+        print()
+
+        sleep(0.1)
+
+    # Add collected ore to inventory
+    ore_collected = units_collected - current_mined
+    if ore_collected > 0:
+        if ore_name not in data.get("inventory", {}):
+            data["inventory"][ore_name] = 0
+        data["inventory"][ore_name] += ore_collected
+
+        clear_screen()
+        title("MINING COMPLETE")
+        print()
+        print(f"  Collected {ore_collected}x {ore_name}!")
+        print()
+        save_data(save_name, data)
+        sleep(1)
+        input("Press Enter to continue...")
+
+    # Update asteroid state
+    asteroid["mined"] = units_collected
+
+    if units_collected >= total_quantity:
+        return "completed"
+    else:
+        return "partial"
+
+
+def visit_refinery(save_name, data):
+    """Visit the refinery to process ores and metal scraps into materials"""
+    # Define refining rules
+    refining_rules = {
+        "Korrelite Ore (Inferior)": ("Korrelite", 1),
+        "Korrelite Ore": ("Korrelite", 2),
+        "Korrelite Ore (Superior)": ("Korrelite", 3),
+        "Korrelite Ore (Pristine)": ("Korrelite", 4),
+        "Reknite Ore (Inferior)": ("Reknite", 1),
+        "Reknite Ore": ("Reknite", 2),
+        "Reknite Ore (Superior)": ("Reknite", 3),
+        "Reknite Ore (Pristine)": ("Reknite", 4),
+        "Gellium Ore": ("Gellium", 2),
+        "Gellium Ore (Superior)": ("Gellium", 3),
+        "Gellium Ore (Pristine)": ("Gellium", 4),
+        "Axnit Ore": ("Axnit", 1),
+        "Axnit Ore (Pristine)": ("Axnit", 2),
+        "Narcor Ore": ("Narcor", 1),
+        "Red Narcor Ore": ("Red Narcor", 1),
+        "Vexnium Ore": ("Vexnium", 1),
+        "Water Ice": ("Water", 1),
+    }
+
+    while True:
+        clear_screen()
+        title("REFINERY")
+        print()
+        print("  Process ores and salvage into refined materials")
+        print()
+        print("=" * 60)
+        print()
+
+        # Get refinable items from inventory
+        refinable_items = []
+        inventory = data.get("inventory", {})
+
+        for item_name, quantity in inventory.items():
+            if quantity > 0:
+                if item_name in refining_rules:
+                    material, yield_amount = refining_rules[item_name]
+                    refinable_items.append((item_name, quantity, material, yield_amount))
+                elif item_name == "Metal Scraps":
+                    refinable_items.append((item_name, quantity, "Random", "?"))
+
+        if not refinable_items:
+            print("  You don't have any items that can be refined.")
+            print()
+            input("Press Enter to continue...")
+            return
+
+        # Display refinable items
+        options = []
+        for item_name, quantity, material, yield_amount in refinable_items:
+            if item_name == "Metal Scraps":
+                options.append(f"{item_name} (x{quantity}) → Random material (20% chance)")
+            else:
+                options.append(f"{item_name} (x{quantity}) → {material} (x{yield_amount} per ore)")
+        options.append("Back")
+
+        choice = arrow_menu("Select item to refine:", options)
+
+        if choice == len(refinable_items):
+            return
+
+        # Process refinement
+        item_name, quantity, material, yield_amount = refinable_items[choice]
+
+        clear_screen()
+        title("REFINING")
+        print()
+        print(f"Item: {item_name}")
+        print(f"Available: {quantity}")
+        print()
+
+        if item_name == "Metal Scraps":
+            print("Metal Scraps have a 20% chance to refine into a random material.")
+            print("Higher tier materials are rarer.")
+            print()
+            print("How many would you like to process? (0 to cancel): ", end="")
+        else:
+            print(f"Refines into: {material} (x{yield_amount} per ore)")
+            print()
+            print("How many would you like to refine? (0 to cancel): ", end="")
+
+        try:
+            amount = int(input())
+            if amount <= 0:
+                continue
+            if amount > quantity:
+                print()
+                print("You don't have that many!")
+                print()
+                input("Press Enter to continue...")
+                continue
+
+            # Process the refinement
+            data["inventory"][item_name] -= amount
+
+            if item_name == "Metal Scraps":
+                # Metal scraps special processing
+                successful_refines = 0
+                materials_gained = {}
+
+                # Material pool with weighted chances
+                material_pool = [
+                    ("Korrelite", 40),      # 40% of successes
+                    ("Reknite", 30),        # 30% of successes
+                    ("Gellium", 15),        # 15% of successes
+                    ("Axnit", 10),          # 10% of successes
+                    ("Narcor", 4),          # 4% of successes
+                    ("Red Narcor", 1),      # 1% of successes
+                ]
+
+                for _ in range(amount):
+                    if random.random() < 0.20:  # 20% success rate
+                        successful_refines += 1
+                        # Choose material based on weights
+                        total_weight = sum(weight for _, weight in material_pool)
+                        rand = random.randint(1, total_weight)
+                        cumulative = 0
+                        for mat, weight in material_pool:
+                            cumulative += weight
+                            if rand <= cumulative:
+                                materials_gained[mat] = materials_gained.get(mat, 0) + 1
+                                break
+
+                print()
+                print(f"Processed {amount} Metal Scraps")
+                print(f"Successful refines: {successful_refines} ({int(successful_refines/amount*100)}%)")
+
+                if materials_gained:
+                    print()
+                    print("Materials gained:")
+                    for mat, qty in materials_gained.items():
+                        if mat not in data["inventory"]:
+                            data["inventory"][mat] = 0
+                        data["inventory"][mat] += qty
+                        print(f"  +{qty}x {mat}")
+                else:
+                    print("No materials recovered.")
+
+            else:
+                # Standard ore refinement
+                total_yield = amount * yield_amount
+
+                if material not in data["inventory"]:
+                    data["inventory"][material] = 0
+                data["inventory"][material] += total_yield
+
+                print()
+                print(f"Refined {amount}x {item_name}")
+                print(f"Produced: {total_yield}x {material}")
+
+            print()
+            save_data(save_name, data)
+            input("Press Enter to continue...")
+
+        except ValueError:
+            print()
+            print("Invalid input!")
+            print()
+            input("Press Enter to continue...")
+
+
 def game_loop(save_name, data):
     clear_screen()
     if data["v"] < VERSION_CODE:
@@ -1425,7 +2156,7 @@ def main_screen(save_name, data):
     sys.stdout = old_stdout
 
     options = ["View status", "Warp to another system", "View inventory",
-               "Dock at station", "Map", "Save and quit"]
+               "Dock at station", "Scan for anomalies", "Visit anomalies", "Map", "Save and quit"]
     choice = arrow_menu("Select action:", options, previous_content)
 
     match choice:
@@ -1438,8 +2169,12 @@ def main_screen(save_name, data):
         case 3:
             select_station_menu(system, save_name, data)
         case 4:
-            galaxy_map(save_name, data)
+            scan_for_anomalies(save_name, data)
         case 5:
+            visit_anomalies_menu(save_name, data)
+        case 6:
+            galaxy_map(save_name, data)
+        case 7:
             clear_screen()
             title("SAVE & QUIT")
             print("Saving...")
@@ -1640,6 +2375,9 @@ def warp_to_gate_system(gate_name, save_name, data):
     # Update player location
     data["current_system"] = gate_name
 
+    # Manage anomalies for the gate system
+    manage_system_anomalies(save_name, data, gate_name)
+
     # Regenerate shields slightly when warping
     player_ship = get_active_ship(data)
     max_shield = get_max_shield(player_ship)
@@ -1686,6 +2424,10 @@ def warp_to_gate_system(gate_name, save_name, data):
 
         # Warp back to previous system
         data["current_system"] = previous_system
+
+        # Manage anomalies for the previous system
+        manage_system_anomalies(save_name, data, previous_system)
+
         save_data(save_name, data)
         return
 
@@ -1713,6 +2455,10 @@ def warp_to_gate_system(gate_name, save_name, data):
 
         # Warp back to previous system
         data["current_system"] = previous_system
+
+        # Manage anomalies for the previous system
+        manage_system_anomalies(save_name, data, previous_system)
+
         save_data(save_name, data)
         return
 
@@ -1840,6 +2586,9 @@ r" & ; &&   &&    &&    &&&    X &    X $  ::  x.  & &  +  $ X  &  &&$$  &Xx&   
     sleep(sleep_time)
 
     data["current_system"] = connected_systems[choice]
+
+    # Manage anomalies for the new system
+    manage_system_anomalies(save_name, data, data["current_system"])
 
     # Regenerate shields slightly when warping (3% of max shields)
     player_ship = get_active_ship(data)
@@ -2021,6 +2770,10 @@ def station_screen(system, station_num, save_name, data):
 
         if action == "ship_vendor":
             visit_ship_vendor(save_name, data)
+            continue
+
+        if action == "refinery":
+            visit_refinery(save_name, data)
             continue
 
         if action == "switch_ships":
