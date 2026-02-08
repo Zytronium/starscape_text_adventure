@@ -123,6 +123,63 @@ or Emas. You must be ready for this to happen at any time in wild space.
 Anomalies get more common, richer, and more dangerous the further out you go. 
 Wild space is especially high-risk, high reward.
 
+### (Fun) Mining
+If you try to mine ores with a ship that's not a miner, it will be painfully
+slow and boring. However, when you take a mining ship, things change significantly.
+
+#### Mining Laser Intensity
+With each mining laser blast, you must choose an intensity between 1 and 5.
+Lower intensities make less progress but improve asteroid stability. Higher
+values significantly reduce asteroid stability and may vaporize some of the ore,
+reducing mining efficiency even though mining speed is higher.
+
+#### Asteroid Stability
+Most asteroids by default have their stability at 100%. Mining at the asteroid
+at medium or high intensities makes the asteroid less stable. When stability
+is low, the asteroid risks shattering or vaporizing, losing all remaining ore
+forever. When stability hits 0%, the asteroid explodes, vaporizing all remaining
+ore and severely damaging your ship. This explosion is capable of destroying 
+ships if they are already damaged.
+
+#### Random Events
+Random events may occur while mining an asteroid, some may be more likely than
+others depending on system security status, anomaly type, or ore type.
+
+- Gas Pocket Exposed
+  - A gas pocket is uncovered, causing a portion of the asteroid to disappear 
+    with nor ore gained. In unstable asteroids, this may happen explosively,
+    causing more of the asteroid's ore to be lost and potentially damaging 
+    your ship. When gas pockets are exposed, they instantly vent the gas,
+    reducing the asteroid's stability by a random amount.
+  - This event is more likely with gellium ore and red narcor ore
+- Dense Mineral Formation Uncovered
+  - As the name suggests, a dense formation of the ore is uncovered, giving you
+    a sudden burst of extra ore.
+  - This event is more likely for vexnium ore, and axnit ore, and korrelite ore.
+  - It is also even more likely for pristine ore variants. 
+- Asteroid Collision
+  - The asteroid being mined collides with another asteroid present, causing
+    some ore from both asteroids to break off, some of which escapes you and
+    cannot be recovered. If this happens, you may act fast to recover more of
+    the ore thrown loose.
+  - This event is more likely in AL and CM anomalies and cannot happen in VX and
+    MT anomalies.
+- Ancient Artifact Uncovered
+  - An artifact from an ancient spacefaring civilization has been uncovered
+    after being buried in the asteroid for ages. If using a high-intensity laser
+    blast, the artifact may be vaporized. Otherwise, the artifact can be sold
+    for a high price at a marketplace.
+  - This event is more likely in wild space.
+- Proximity-based Mine Encountered
+  - This asteroid has been mined! No, no, the ore is intact, but someone has
+    attached an explosive mine to this asteroid. Should you try to defuse it, 
+    risking accidental detonation, or leave it be and skip this asteroid? If
+    the mine goes off, your ship will be heavily damaged and the asteroid's
+    ore will be unsalvageable.
+  - This event is likely in unsecure and contested space and very likely
+    in wild space. It cannot happen in secure space.
+
+
 ### Exploration & System Security Levels
 
 There are five system security levels:
