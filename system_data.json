@@ -78684,5 +78684,140 @@
         ],
         "Name": "Zuta-4",
         "Planets": 6
-    }
+    },
+  "G-01": {
+    "Faction": "Neutral",
+    "Region": "Uncharted",
+    "Sector": "Gate",
+    "SecurityLevel": "Wild",
+    "SpectralClass": "N",
+    "Spice": "None",
+    "Connections": [
+      "Hualt"
+    ],
+    "Name": "G-01",
+    "Planets": 1,
+    "hidden": true,
+    "gate_type": "intact"
+  },
+  "G-02": {
+    "Faction": "Neutral",
+    "Region": "Uncharted",
+    "Sector": "Gate",
+    "SecurityLevel": "Wild",
+    "SpectralClass": "N",
+    "Spice": "None",
+    "Connections": [
+      "Vesma"
+    ],
+    "Name": "G-02",
+    "Planets": 1,
+    "hidden": true,
+    "gate_type": "intact"
+  },
+  "G-03": {
+    "Faction": "Neutral",
+    "Region": "Uncharted",
+    "Sector": "Gate",
+    "SecurityLevel": "Wild",
+    "SpectralClass": "N",
+    "Spice": "None",
+    "Connections": [
+      "Arpirom"
+    ],
+    "Name": "G-03",
+    "Planets": 1,
+    "hidden": true,
+    "gate_type": "intact"
+  },
+  "G-04": {
+    "Faction": "Neutral",
+    "Region": "Uncharted",
+    "Sector": "Gate",
+    "SecurityLevel": "Wild",
+    "SpectralClass": "N",
+    "Spice": "None",
+    "Connections": [
+      "Toracas"
+    ],
+    "Name": "G-04",
+    "Planets": 1,
+    "hidden": true,
+    "gate_type": "intact"
+  },
+  "G-05": {
+    "Faction": "Neutral",
+    "Region": "Uncharted",
+    "Sector": "Gate",
+    "SecurityLevel": "Wild",
+    "SpectralClass": "N",
+    "Spice": "None",
+    "Connections": [
+      "Lisaer"
+    ],
+    "Name": "G-05",
+    "Planets": 1,
+    "hidden": true,
+    "gate_type": "intact"
+  },
+  "G-06": {
+    "Faction": "Neutral",
+    "Region": "Uncharted",
+    "Sector": "Gate",
+    "SecurityLevel": "Wild",
+    "SpectralClass": "N",
+    "Spice": "None",
+    "Connections": [
+      "Arosiah"
+    ],
+    "Name": "G-06",
+    "Planets": 1,
+    "hidden": true,
+    "gate_type": "intact"
+  },
+  "G-07": {
+    "Faction": "Neutral",
+    "Region": "Uncharted",
+    "Sector": "Gate",
+    "SecurityLevel": "Wild",
+    "SpectralClass": "N",
+    "Spice": "None",
+    "Connections": [
+      "Io Zadkia"
+    ],
+    "Name": "G-07",
+    "Planets": 1,
+    "hidden": true,
+    "gate_type": "intact"
+  },
+  "G-08": {
+    "Faction": "Neutral",
+    "Region": "Uncharted",
+    "Sector": "Gate",
+    "SecurityLevel": "Wild",
+    "SpectralClass": "N",
+    "Spice": "None",
+    "Connections": [
+      "Droku"
+    ],
+    "Name": "G-08",
+    "Planets": 1,
+    "hidden": true,
+    "gate_type": "intact"
+  },
+  "G-09": {
+    "Faction": "Neutral",
+    "Region": "Uncharted",
+    "Sector": "Gate",
+    "SecurityLevel": "Wild",
+    "SpectralClass": "N",
+    "Spice": "None",
+    "Connections": [
+      "Delta Anca"
+    ],
+    "Name": "G-09",
+    "Planets": 1,
+    "hidden": true,
+    "gate_type": "destroyed"
+  }
 }

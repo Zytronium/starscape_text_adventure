@@ -357,7 +357,8 @@ def default_data():
         },
         "tutorial_progress": {
             "completed": True  # there is no tutorial, so we skip it if the save is loaded in a future version with tutorial
-        }
+        },
+        "destination": "",  # Current navigation destination
     }
 
 
@@ -1266,6 +1267,30 @@ def main_screen(save_name, data):
     system["Name"] = system_name
     system_security = system["SecurityLevel"]
 
+    gate_mapping = {
+        "Hualt": "G-01",
+        "Vesma": "G-02",
+        "Arpirom": "G-03",
+        "Toracas": "G-04",
+        "Lisaer": "G-05",
+        "Arosiah": "G-06",
+        "Io Zadkia": "G-07",
+        "Droku": "G-08",
+        "Delta Anca": "G-09"
+    }
+
+    if system_name in gate_mapping:
+        gate_name = gate_mapping[system_name]
+        # Show discovery message
+        clear_screen()
+        print()
+        set_color("cyan")
+        print(f"  ⚬ ANOMALOUS SIGNATURE DETECTED ⚬")
+        print(f"  New system discovered: {gate_name}")
+        reset_color()
+        print()
+        sleep(2)
+
     if data["docked_at"] != "":
         # get index of station docked at
         stations = system["Stations"]
@@ -1292,19 +1317,23 @@ def main_screen(save_name, data):
     old_stdout = sys.stdout
     sys.stdout = content_buffer
 
-    # Chance for enemy encounter
+    # Check if current system is a gate (starts with "G-")
+    is_gate_system = system_name.startswith("G-")
+
+    # Chance for enemy encounter (0 for gate systems)
     enemy_encounter_chance = 0.0
-    match system_security:
-        case "Core":
-            enemy_encounter_chance = 0.0
-        case "Secure":
-            enemy_encounter_chance = 1/8
-        case "Contested":
-            enemy_encounter_chance = 1/4
-        case "Unsecure":
-            enemy_encounter_chance = 1/2
-        case "Wild":
-            enemy_encounter_chance = 5/6
+    if not is_gate_system:  # Only generate encounters in non-gate systems
+        match system_security:
+            case "Core":
+                enemy_encounter_chance = 0.0
+            case "Secure":
+                enemy_encounter_chance = 1/8
+            case "Contested":
+                enemy_encounter_chance = 1/4
+            case "Unsecure":
+                enemy_encounter_chance = 1/2
+            case "Wild":
+                enemy_encounter_chance = 5/6
 
     rng = random.random()
     if rng <= enemy_encounter_chance:
@@ -1487,8 +1516,207 @@ def view_status_screen(data):
     input("Press Enter to continue...")
 
 
+def warp_to_gate_system(gate_name, save_name, data):
+    """Special warp sequence for entering gate systems with lore and ASCII art"""
+    clear_screen()
+
+    # Store the previous system before entering the gate
+    previous_system = data["current_system"]
+    data["previous_system"] = previous_system
+
+    # Different lore for G-09 vs other gates
+    if gate_name == "G-09":
+        # G-09 specific lore - the destroyed gate
+        lore_lines = [
+            "Jumping to system...",
+            "",
+            "...",
+            "",
+            "You have arrived here. But where is here? Everything is pitch black.",
+            "Your scanner struggles against unexplained interference.",
+            "Static electricity fills the void, occasionally releasing as lightning,",
+            "powerful enough for you to hear the thunder through empty space.",
+            "",
+            "In the distance, a faint neutron star pulses rhythmically.",
+            "",
+            "Then, you see it...",
+            "What is that?",
+            "It looks like some sort of dying planet. Totally cracked and coming apart.",
+            "",
+            "Then you look around and something else catches your eye.",
+            "",
+            "A battlefield, practically frozen in time.",
+            "Fighter wrecks scattered in the debris.",
+            "Three massive capital ships, their hulls bearing names:",
+            "",
+            "  - 'Blade of Perseus'",
+            "  - 'Singularity'  ",
+            "  - 'Blue Space'",
+            "",
+            "And at the center... a stargate, but this one is not like the others.",
+            "It's completely destroyed. Torn into pieces.",
+            "Its pieces floating around like a shattered monument to those who died here.",
+            "",
+            "...",
+            "",
+            "What happened here?",
+            "",
+            "It looks like there was some sort of space battle over the stargate.",
+            "You've never seen ships of this design. Who were these people? ",
+            "Who were they fighting? And why?",
+            "",
+            "You move your ship closer to the wreckage and get a peak inside",
+            "one of the capital ships torn in half. You see alien bodies in",
+            "some sort of armor, just floating lifeless in the exposed vacuum",
+            "inside the ship, and the captain still sitting in his seat, helmet cracked.",
+            "",
+            "You take a good look at the gate...",
+            "",
+            "...",
+            "",
+        ]
+    else:
+        # Standard gate lore
+        lore_lines = [
+            "Jumping to system...",
+            "",
+            "...",
+            "",
+            "You have arrived here. But where is here? Everything is pitch black.",
+            "Your scanner struggles against unexplained interference.",
+            "The only thing here is a black nebula, slightly illuminated by a",
+            "faint neutron star in the distance, pulsing rhythmically, casting",
+            "a flickering light across the star system.",
+            "",
+            "You wander around for a while looking for something, anything.",
+            "",
+            "...",
+            "",
+            "What's that in the distance?",
+            "As you approach, it reveals itself:",
+            "",
+            "An ancient stargate.",
+            "Inactive, (as far as you know) just sitting there.",
+            "",
+            "What's its purpose? Who built it? You may never know.",
+            "",
+            "...",
+        ]
+
+    # Display lore with typing effect
+    for line in lore_lines:
+        if line == "":
+            print()
+        else:
+            for char in line:
+                print(char, end='', flush=True)
+                sleep(0.03)
+            print()
+        sleep(0.3)
+
+    print()
+    sleep(5)
+
+    # Update player location
+    data["current_system"] = gate_name
+
+    # Regenerate shields slightly when warping
+    player_ship = get_active_ship(data)
+    max_shield = get_max_shield(player_ship)
+    shield_regen = int(max_shield * 0.03)
+    if player_ship["shield_hp"] < max_shield:
+        player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, max_shield)
+
+    save_data(save_name, data)
+
+    # Loop ASCII art animation until Enter is pressed
+    if gate_name == "G-09":
+        # Animated ASCII art for G-09
+        ascii_files = [f"g_09-{i}.txt" for i in range(1, 10)]
+
+        # Use threading for non-blocking input check
+        import threading
+        stop_animation = threading.Event()
+
+        def wait_for_enter():
+            input()  # Wait for any key press
+            stop_animation.set()
+
+        # Start input thread
+        input_thread = threading.Thread(target=wait_for_enter, daemon=True)
+        input_thread.start()
+
+        # Animation loop
+        while not stop_animation.is_set():
+            clear_screen()
+            random_file = random.choice(ascii_files)
+            try:
+                with open(resource_path(f'ascii_art/{random_file}'), 'r', encoding='utf-8') as f:
+                    art = f.read()
+                print(art)
+            except FileNotFoundError:
+                print(f"[ASCII art file {random_file} not found]")
+
+            print()
+            print(f"Press ENTER to return to {previous_system}")
+            print()
+
+            # Wait for frame duration or until stop signal
+            stop_animation.wait(timeout=0.125)
+
+        # Warp back to previous system
+        data["current_system"] = previous_system
+        save_data(save_name, data)
+        return
+
+    else:
+        # Static ASCII art for other gates - loop until Enter
+        clear_screen()
+        try:
+            with open(resource_path('ascii_art/gate.txt'), 'r', encoding='utf-8') as f:
+                art = f.read()
+            print(art)
+        except FileNotFoundError:
+            print("[Gate ASCII art not found]")
+            print()
+            print("     ═══════════════════════════")
+            print("    ║                           ║")
+            print("    ║     ANCIENT STARGATE      ║")
+            print("    ║                           ║")
+            print("     ═══════════════════════════")
+
+        print()
+        print(f"Press ENTER to return to {previous_system}")
+
+        # Wait for Enter key
+        input()
+
+        # Warp back to previous system
+        data["current_system"] = previous_system
+        save_data(save_name, data)
+        return
+
+
 def warp_menu(system, save_name, data):
     connected_systems = system["Connections"]
+
+    # Gates have one-way connections pointing to regular systems
+    # We need to search all systems to find which gates connect here
+    with open(resource_path('system_data.json'), 'r') as f:
+        all_systems_data = json.load(f)
+
+    current_system_name = data["current_system"]
+
+    # Find any hidden systems (gates) that connect to our current system
+    for sys_name, sys_info in all_systems_data.items():
+        if sys_info.get("hidden", False):  # This is a hidden gate
+            # Check if this gate connects to our current system
+            if current_system_name in sys_info.get("Connections", []):
+                # Add this gate to our connection list if not already there
+                if sys_name not in connected_systems:
+                    connected_systems.append(sys_name)
+    # === END FIX ===
+
     options = connected_systems + [f"{UNSECURE_COLOR}x{RESET_COLOR} Cancel"]
 
     # Load all systems data for route checking
@@ -1543,6 +1771,12 @@ def warp_menu(system, save_name, data):
 
     # If Cancel was selected
     if choice == len(connected_systems):
+        return
+
+    # Check if warping to a gate system - use special sequence
+    target_system = connected_systems[choice]
+    if target_system.startswith("G-"):
+        warp_to_gate_system(target_system, save_name, data)
         return
 
     total_padding1 = 80 - len(connected_systems[choice]) - 14
@@ -2993,6 +3227,10 @@ def search_systems(all_systems_data):
     matches = []
 
     for system_name, system_info in all_systems_data.items():
+        # Skip hidden gates unless discovered
+        if system_info.get("hidden", False):
+            continue
+
         # Match by name
         if fuzzy_match(query, system_name):
             matches.append(system_name)
@@ -3229,10 +3467,40 @@ def display_spatial_map(center_system, all_systems_data, current_system,
     systems_by_distance_dict = get_systems_within_jumps(center_system, 2,
                                                         all_systems_data)
 
+    # Filter out undiscovered gates
+    filtered_systems = {}
+    for system, distance in systems_by_distance_dict.items():
+        system_info = all_systems_data.get(system, {})
+        # Include system if it's not hidden OR if it's a discovered gate
+        if not system_info.get("hidden", False):
+            filtered_systems[system] = distance
+
+    systems_by_distance_dict = filtered_systems
+
+    # Gates have one-way connections pointing to regular systems
+    # We need to search ALL systems to find which gates connect to our visible systems
+    additional_gates = {}
+
+    # Search through all systems in the galaxy
+    for sys_name, sys_info in all_systems_data.items():
+        if sys_info.get("hidden", False):  # This is a hidden gate
+            # Check if this gate connects to any of our visible systems
+            for connected in sys_info.get("Connections", []):
+                if connected in systems_by_distance_dict:
+                    # This gate connects to a visible system!
+                    if sys_name not in systems_by_distance_dict:
+                        # Add it at distance+1 from the system it connects to
+                        additional_gates[sys_name] = systems_by_distance_dict[connected] + 1
+                    break  # Only need to find one connection
+
+    # Merge additional gates into the main dictionary
+    systems_by_distance_dict.update(additional_gates)
+
     # Organize by jump distance
     systems_by_distance = {0: [], 1: [], 2: [], 3: []}
     for system, distance in systems_by_distance_dict.items():
-        systems_by_distance[distance].append(system)
+        if distance <= 3:  # Only include systems within 3 jumps
+            systems_by_distance[distance].append(system)
 
     # Sort alphabetically within each distance
     for distance in systems_by_distance:
