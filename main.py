@@ -3516,12 +3516,182 @@ def marketplace_buy(save_name, data, items_data):
 
 def marketplace_sell(save_name, data, items_data):
     """Sell items to marketplace"""
-    clear_screen()
-    title("MARKETPLACE - SELL")
-    print()
-    print("This feature is not yet implemented.")
-    print()
-    input("Press Enter to continue...")
+    while True:
+        clear_screen()
+        title("MARKETPLACE - SELL")
+        print()
+        print(f"Credits: {data['credits']}")
+        print()
+        print("=" * 60)
+        print()
+
+        # Ask whether to sell from inventory or storage
+        options = [
+            "Sell from Inventory",
+            "Sell from Storage",
+            "Back"
+        ]
+
+        # Capture current screen for display
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        print(f"MARKETPLACE - SELL")
+        print()
+        print(f"Credits: {data['credits']}")
+        print()
+        print("=" * 60)
+
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        choice = arrow_menu("Sell from:", options, previous_content)
+
+        if choice == 2:
+            # Back
+            return
+
+        # Determine source (inventory or storage)
+        source_name = "inventory" if choice == 0 else "storage"
+        source = data.get(source_name, {})
+
+        if not source:
+            clear_screen()
+            title("MARKETPLACE - SELL")
+            print()
+            print(f"Your {source_name} is empty.")
+            print()
+            input("Press Enter to continue...")
+            continue
+
+        # Get all sellable items from the chosen source
+        sellable_items = []
+        for item_name, quantity in source.items():
+            if quantity > 0:
+                item_info = items_data.get(item_name, {})
+                if item_info.get('sell_price') and item_info['sell_price'] != "":
+                    sellable_items.append((item_name, item_info, quantity))
+
+        if not sellable_items:
+            clear_screen()
+            title("MARKETPLACE - SELL")
+            print()
+            print(f"No sellable items in your {source_name}.")
+            print()
+            input("Press Enter to continue...")
+            continue
+
+        # Sort by sell price (descending)
+        sellable_items.sort(key=lambda x: int(x[1]['sell_price']), reverse=True)
+
+        # Display items
+        while True:
+            clear_screen()
+            title(f"MARKETPLACE - SELL FROM {source_name.upper()}")
+            print()
+            print(f"Credits: {data['credits']}")
+            print()
+            print("=" * 60)
+            print()
+
+            options = []
+            for item_name, item_info, quantity in sellable_items:
+                price = item_info['sell_price']
+                item_type = item_info.get('type', 'Unknown')
+                options.append(f"{item_name} - {price} CR ({item_type}) [Have: {quantity}]")
+
+            options.append("Back")
+
+            # Capture current screen for display
+            content_buffer = StringIO()
+            old_stdout = sys.stdout
+            sys.stdout = content_buffer
+
+            print(f"MARKETPLACE - SELL FROM {source_name.upper()}")
+            print()
+            print(f"Credits: {data['credits']}")
+            print()
+            print("=" * 60)
+
+            previous_content = content_buffer.getvalue()
+            sys.stdout = old_stdout
+
+            item_choice = arrow_menu("Select item to sell:", options, previous_content)
+
+            if item_choice == len(options) - 1:
+                # Back
+                break
+
+            # Show item details and sale confirmation
+            item_name, item_info, available_quantity = sellable_items[item_choice]
+            price = int(item_info['sell_price'])
+
+            clear_screen()
+            title("SELL ITEM")
+            print()
+            print(f"Item: {item_name}")
+            print(f"Type: {item_info.get('type', 'Unknown')}")
+            print(f"Description: {item_info.get('description', 'No description available.')}")
+            print()
+            print(f"Sell Price: {price} CR (each)")
+            print(f"Available: {available_quantity}")
+            print(f"Your Credits: {data['credits']} CR")
+            print()
+
+            # Ask how many to sell
+            print(f"Enter quantity to sell (0 to cancel, max {available_quantity}): ", end="")
+            try:
+                quantity = int(input())
+                if quantity <= 0:
+                    continue
+
+                if quantity > available_quantity:
+                    print()
+                    print("You don't have that many!")
+                    print()
+                    input("Press Enter to continue...")
+                    continue
+
+                # Process sale
+                total_value = price * quantity
+                data['credits'] += total_value
+                data[source_name][item_name] -= quantity
+
+                # Remove item from source if quantity reaches 0
+                if data[source_name][item_name] <= 0:
+                    del data[source_name][item_name]
+                    # Update sellable_items list to reflect the removal
+                    sellable_items = [(name, info, qty) for name, info, qty in sellable_items if name != item_name]
+                else:
+                    # Update the quantity in sellable_items
+                    for i, (name, info, qty) in enumerate(sellable_items):
+                        if name == item_name:
+                            sellable_items[i] = (name, info, qty - quantity)
+                            break
+
+                save_data(save_name, data)
+
+                print()
+                print(f"Sold {quantity}x {item_name} for {total_value} CR")
+                print()
+                input("Press Enter to continue...")
+
+                # If no more sellable items, break out
+                if not sellable_items:
+                    clear_screen()
+                    title("MARKETPLACE - SELL")
+                    print()
+                    print(f"No more sellable items in your {source_name}.")
+                    print()
+                    input("Press Enter to continue...")
+                    break
+
+            except ValueError:
+                print()
+                print("Invalid input!")
+                print()
+                input("Press Enter to continue...")
 
 
 def view_inventory(data):

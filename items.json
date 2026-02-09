@@ -88,21 +88,21 @@
       "name": "Gellium Ore",
       "description": "Unrefined Gellium ore.",
       "type": "Ore",
-      "sell_price": "27",
+      "sell_price": "18",
       "buy_price": ""
     },
     {
       "name": "Gellium Ore (Superior)",
       "description": "Unrefined Gellium ore (superior quality).",
       "type": "Ore",
-      "sell_price": "40",
+      "sell_price": "27",
       "buy_price": ""
     },
     {
       "name": "Gellium Ore (Pristine)",
       "description": "Unrefined Gellium ore (pristine quality).",
       "type": "Ore",
-      "sell_price": "54",
+      "sell_price": "36",
       "buy_price": ""
     },
     {
@@ -166,7 +166,7 @@
       "name": "Gellium",
       "description": "Refined Gellium material.",
       "type": "Material",
-      "sell_price": "15",
+      "sell_price": "10",
       "buy_price": ""
     },
     {
