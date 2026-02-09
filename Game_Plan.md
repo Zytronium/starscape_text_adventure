@@ -169,7 +169,7 @@ others depending on system security status, anomaly type, or ore type.
     after being buried in the asteroid for ages. If using a high-intensity laser
     blast, the artifact may be vaporized. Otherwise, the artifact can be sold
     for a high price at a marketplace.
-  - This event is more likely in wild space.
+  - This event is more likely in wild space and less likely in secure space.
 - Proximity-based Mine Encountered
   - This asteroid has been mined! No, no, the ore is intact, but someone has
     attached an explosive mine to this asteroid. Should you try to defuse it, 

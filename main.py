@@ -345,6 +345,8 @@ def default_data():
             "combat_xp": 0,   # XP towards next combat level
             "piloting": 0,    # Increases evasion chance and escape success rate
             "piloting_xp": 0, # XP towards next piloting level
+            "mining": 0,      # Increases mining efficiency and stability management
+            "mining_xp": 0,   # XP towards next mining level
         },
         "standing": {
             "Core Sec": 0,
@@ -415,7 +417,7 @@ def add_skill_xp(data, skill_name, xp_amount):
 
     Args:
         data: Game data dictionary
-        skill_name: 'combat' or 'piloting'
+        skill_name: 'combat', 'piloting', or 'mining'
         xp_amount: Amount of XP to add
 
     Returns:
@@ -423,7 +425,9 @@ def add_skill_xp(data, skill_name, xp_amount):
     """
     xp_key = f"{skill_name}_xp"
 
-    # Initialize XP if it doesn't exist (for old saves)
+    # Initialize skill & XP if it doesn't exist (for old saves)
+    if skill_name not in data["skills"]:
+        data["skills"][skill_name] = 0
     if xp_key not in data["skills"]:
         data["skills"][xp_key] = 0
 
@@ -1043,6 +1047,38 @@ def apply_damage_to_enemy(enemy, damage):
             reset_color()
 
 
+def apply_damage_to_player(player_ship, damage):
+    """Apply damage to player ship, shields first then hull
+
+    Returns:
+        bool: True if ship was destroyed, False otherwise
+    """
+    remaining_damage = damage
+
+    # Damage shields first
+    if player_ship["shield_hp"] > 0:
+        shield_damage = min(remaining_damage, player_ship["shield_hp"])
+        player_ship["shield_hp"] -= shield_damage
+        remaining_damage -= shield_damage
+        set_color("cyan")
+        print(f"     Shield damaged: -{shield_damage} HP")
+        reset_color()
+
+    # Then damage hull
+    if remaining_damage > 0:
+        player_ship["hull_hp"] -= remaining_damage
+        set_color("red")
+        print(f"     Hull damaged: -{remaining_damage} HP")
+        reset_color()
+
+        # Check if ship is destroyed
+        if player_ship["hull_hp"] <= 0:
+            player_ship["hull_hp"] = 0
+            return True
+
+    return False
+
+
 def enemy_attacks(enemies, player_ship, piloting_skill):
     """All enemies attack the player"""
     clear_screen()
@@ -1379,6 +1415,8 @@ def scan_for_anomalies(save_name, data):
 
     # Consume the probe
     data["inventory"]["System Probe"] -= 1
+    if data["inventory"]["System Probe"] <= 0:
+        del data["inventory"]["System Probe"]
 
     current_system = data["current_system"]
 
@@ -1554,15 +1592,19 @@ def mine_anomaly(save_name, data, anomaly):
             ore_type = random.choice(config["ores"])
             # Adjust quantity based on anomaly type
             if anomaly_type == "VX":
-                quantity = random.randint(2, 6)
+                quantity = random.randint(4, 8)
             elif anomaly_type == "CM":
-                quantity = random.randint(4, 10)
+                quantity = random.randint(8, 24)
             else:
-                quantity = random.randint(16, 48)
-            asteroids.append({"ore": ore_type, "quantity": quantity, "mined": 0})
+                quantity = random.randint(32, 96)
+            asteroids.append({"ore": ore_type, "quantity": quantity, "mined": 0, "anomaly_type": anomaly_type})
         anomaly["asteroids"] = asteroids
     else:
         asteroids = anomaly["asteroids"]
+        # Add anomaly_type to existing asteroids if not present
+        for asteroid in asteroids:
+            if "anomaly_type" not in asteroid:
+                asteroid["anomaly_type"] = anomaly_type
 
     # Check for crystalline entities at VX anomalies
     vexnium_guarded = anomaly_type == "VX" and random.random() < 0.8
@@ -1640,7 +1682,7 @@ def mine_anomaly(save_name, data, anomaly):
 
 
 def mine_asteroid(save_name, data, asteroid, guarded=False):
-    """Mine a single asteroid with progress bar animation"""
+    """Mine a single asteroid with interactive laser intensity, stability, and random events"""
     ore_name = asteroid["ore"]
     total_quantity = asteroid["quantity"]
     current_mined = asteroid["mined"]
@@ -1652,38 +1694,45 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
     ship_stats = ship_data.get("stats", {})
     dps = ship_stats.get("DPS", 100)
 
-    # Calculate base mining time based on ore type and quantity
-    if ore_name == "Water Ice":
-        # 60 seconds for 10 units of water ice
-        base_time = (total_quantity / 10.0) * 60
-    else:
-        # 60 seconds for 30 units of regular ore
-        base_time = (total_quantity / 30.0) * 60
+    # Check if ship is a miner
+    if ship_class != "Miner":
+        clear_screen()
+        title("INEFFICIENT MINING SHIP")
+        print()
+        set_color("yellow")
+        print("  ⚠ WARNING: This ship is not designed for mining!")
+        reset_color()
+        print()
+        print(f"  Your {player_ship.get('nickname', player_ship['name'].title())} ({ship_class})")
+        print("  is poorly equipped for mining operations.")
+        print()
+        print("  Mining will be extremely slow and inefficient.")
+        print("  Consider using a Miner-class ship for better results.")
+        print()
+        input("Press Enter to continue anyway...")
 
-    # Calculate mining speed multiplier based on ship class
-    if ship_class == "Miner":
-        speed_multiplier = 1.0 + (dps / 500)  # Fast mining with DPS bonus
-    else:
-        speed_multiplier = 0.25 * (0.5 + (dps / 1000))  # Painfully slow with smaller DPS bonus
+    # Get current system and security level for random events
+    current_system = data.get("current_system", "Unknown")
+    try:
+        with open(resource_path('system_data.json'), 'r') as f:
+            all_systems_data = json.load(f)
+        security_level = all_systems_data.get(current_system, {}).get("SecurityLevel", "Secure")
+    except:
+        security_level = "Secure"
 
-    # Final mining time
-    mining_time = base_time / speed_multiplier
+    # Get mining skill level
+    mining_skill = data.get("skills", {}).get("mining", 0)
 
-    clear_screen()
-    title("MINING ASTEROID")
-    print()
-    print(f"  Ore: {ore_name}")
-    print(f"  Ship: {player_ship.get('nickname', player_ship['name'].title())} ({ship_class})")
-    print(f"  Estimated time: {int(mining_time)} seconds")
-    print()
-    print("  Press ESC at any time to stop mining")
-    print()
-    sleep(1)
-
-    # Mining animation loop
-    progress = 0.0
+    # Asteroid state
+    stability = 100.0
+    remaining_ore = total_quantity - current_mined
     units_collected = current_mined
-    start_time = time()
+
+    # Base mining efficiency based on ship class
+    if ship_class == "Miner":
+        base_efficiency = 1.0 + (dps / 500) + (mining_skill * 0.05)
+    else:
+        base_efficiency = 0.15 * (0.5 + (dps / 1000)) + (mining_skill * 0.02)
 
     # Trigger crystalline guardian attack if guarded
     if guarded and random.random() < 0.8:
@@ -1733,77 +1782,563 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
             # Escaped
             return "escaped"
 
-    while progress < 1.0:
-        # Check for ESC key (non-blocking)
-        if os.name == 'nt':
-            import msvcrt
-            if msvcrt.kbhit():
-                key = msvcrt.getch()
-                if key == b'\x1b':  # ESC
-                    break
-        else:
-            import select
-            if select.select([sys.stdin], [], [], 0)[0]:
-                import termios
-                import tty
-                fd = sys.stdin.fileno()
-                old_settings = termios.tcgetattr(fd)
-                try:
-                    tty.setraw(fd)
-                    ch = sys.stdin.read(1)
-                    if ch == '\x1b':  # ESC
-                        break
-                finally:
-                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    # Mining loop
+    total_xp_gained = 0
 
-        # Update progress
-        elapsed = time() - start_time
-        progress = min(1.0, elapsed / mining_time)
-        units_collected = current_mined + int(progress * (total_quantity - current_mined))
-
-        # Draw progress bar
+    while remaining_ore > 0 and stability > 0:
         clear_screen()
+        update_discord_presence(data=data, context="mining")
         title("MINING ASTEROID")
         print()
         print(f"  Ore: {ore_name}")
-        print(f"  Units collected: {units_collected}/{total_quantity}")
+        print(f"  Ship: {player_ship.get('nickname', player_ship['name'].title())} ({ship_class})")
+        print(f"  Mining Skill: Level {mining_skill}")
         print()
 
-        # Progress bar
-        bar_width = 50
-        filled = int(progress * bar_width)
-        empty = bar_width - filled
-        bar = f"[{'█' * filled}{'░' * empty}] {int(progress * 100)}%"
-        print(f"  {bar}")
-        print()
-        print("  Press ESC to stop mining")
+        # Display ore and stability status
+        ore_percent = (remaining_ore / total_quantity) * 100
+        stability_color = get_stability_color(stability)
+
+        print(f"  Ore Remaining: {int(remaining_ore)}/{total_quantity} ({ore_percent:.1f}%)")
+        print(f"  Asteroid Stability: {stability_color}{stability:.1f}%{RESET_COLOR}")
         print()
 
-        sleep(0.1)
+        # Stability bar
+        stability_bar_width = 40
+        stability_filled = int((stability / 100) * stability_bar_width)
+        stability_empty = stability_bar_width - stability_filled
+        stability_bar = f"[{stability_color}{'█' * stability_filled}{'░' * stability_empty}{RESET_COLOR}]"
+        print(f"  {stability_bar}")
+        print()
+
+        print("=" * 60)
+        print()
+        print("  Select Mining Laser Intensity:")
+        print()
+        print("  [1] Very Low   - Safest, slowest      (+stability)")
+        print("  [2] Low        - Safe, slow           (neutral)")
+        print("  [3] Medium     - Balanced             (-5% stability)")
+        print("  [4] High       - Fast, risky          (-10% stability)")
+        print("  [5] Very High  - Fastest, dangerous   (-20% stability)")
+        print()
+        print("  [ESC] Stop mining and leave")
+        print()
+        print("=" * 60)
+
+        # Get player choice
+        choice = None
+        while choice not in ['1', '2', '3', '4', '5', 'esc']:
+            key = get_key()
+            if key in ['1', '2', '3', '4', '5']:
+                choice = key
+            elif key == 'esc':
+                choice = 'esc'
+
+        if choice == 'esc':
+            break
+
+        intensity = int(choice)
+
+        # Calculate mining results based on intensity
+        # Intensity affects: mining speed, stability loss, ore vaporization risk
+        intensity_data = {
+            1: {"speed": 0.5, "stability_loss": 0, "stability_gain": 2, "vaporize_chance": 0},
+            2: {"speed": 1.0, "stability_loss": 0, "stability_gain": 0, "vaporize_chance": 0},
+            3: {"speed": 1.8, "stability_loss": 5, "stability_gain": 0, "vaporize_chance": 0.02},
+            4: {"speed": 2.8, "stability_loss": 10, "stability_gain": 0, "vaporize_chance": 0.05},
+            5: {"speed": 4.0, "stability_loss": 20, "stability_gain": 0, "vaporize_chance": 0.10},
+        }
+
+        int_data = intensity_data[intensity]
+
+        # Base ore extraction
+        base_extraction = 2 + (intensity * 1.5)
+        ore_extracted = base_extraction * int_data["speed"] * 0.1 * base_efficiency
+
+        # Vaporization check
+        vaporized = 0
+        if random.random() < int_data["vaporize_chance"]:
+            vaporize_percent = random.uniform(0.05, 0.15)
+            vaporized = int(ore_extracted * vaporize_percent)
+            ore_extracted -= vaporized
+
+        ore_extracted = min(ore_extracted, remaining_ore)
+
+        # Update stability
+        stability_change = int_data["stability_gain"] - int_data["stability_loss"]
+
+        # Mining skill reduces stability loss
+        if stability_change < 0:
+            stability_change *= (1.0 - mining_skill * 0.02)
+
+        stability += stability_change
+        stability = max(0, min(100, stability))
+
+        # Display mining action
+        clear_screen()
+        title("MINING IN PROGRESS")
+        print()
+        set_color("cyan")
+        print(f"  Firing mining laser at intensity {intensity}...")
+        reset_color()
+        print()
+        sleep(0.5)
+
+        # Random events check
+        event_occurred = check_mining_event(data, ore_name, stability, security_level, intensity, anomaly_type=asteroid.get("anomaly_type", "AT"))
+
+        if event_occurred:
+            event_type, event_data = event_occurred
+
+            if event_type == "gas_pocket":
+                ore_lost = event_data["ore_lost"]
+                stability_lost = event_data["stability_lost"]
+                ship_damage = event_data["ship_damage"]
+
+                remaining_ore -= ore_lost
+                stability -= stability_lost
+
+                set_color("yellow")
+                print(f"  Gas Pocket Exposed!")
+                reset_color()
+                print(f"     Lost {ore_lost:.1f} units of ore")
+                print(f"     Stability decreased by {stability_lost:.1f}%")
+
+                if ship_damage > 0:
+                    ship_destroyed = apply_damage_to_player(player_ship, ship_damage)
+                    if ship_destroyed:
+                        print()
+                        set_color("red")
+                        set_color("blinking")
+                        print("     ⚠ CRITICAL: SHIP DESTROYED ⚠")
+                        reset_color()
+                        print()
+                        input("Press Enter to continue...")
+                        return "death"
+                print()
+                input("Press Enter to continue...")
+
+
+            elif event_type == "dense_formation":
+                bonus_ore = event_data["bonus_ore"]
+                ore_extracted += bonus_ore
+
+                set_color("green")
+                print(f"  Dense Mineral Formation Uncovered!")
+                reset_color()
+                print(f"     Bonus: +{bonus_ore:.1f} units of {ore_name}")
+                print()
+                input("Press Enter to continue...")
+
+
+            elif event_type == "collision":
+                ore_lost = event_data["ore_lost"]
+                recoverable = event_data["recoverable"]
+
+                remaining_ore -= ore_lost
+
+                set_color("yellow")
+                print(f"  Asteroid Collision!")
+                reset_color()
+                print(f"     {ore_lost:.1f} units of ore broke off")
+                print(f"     {recoverable:.1f} units are recoverable if you act fast!")
+                print()
+                print("  [A] Act fast to recover ore")
+                print("  [Any other key] Continue mining")
+                print()
+
+                key = get_key()
+                if key == 'a':
+                    # Quick time event - player has to spam a key
+                    print()
+                    set_color("cyan")
+                    print("  Quickly press SPACE to recover ore!")
+                    reset_color()
+                    print()
+
+                    recovered = 0
+                    start_time = time()
+                    presses = 0
+
+                    while time() - start_time < 3:
+                        key = get_key()
+                        if key == ' ':
+                            presses += 1
+                            print(f"  Press #{presses}")
+
+                    recovery_rate = min(1.0, presses / 10)
+                    recovered = recoverable * recovery_rate
+                    ore_extracted += recovered
+
+                    print()
+                    print(f"  Recovered {recovered:.1f} units! ({recovery_rate * 100:.0f}%)")
+                    print()
+                    sleep(1.5)
+
+            elif event_type == "artifact":
+                artifact_destroyed = event_data["destroyed"]
+
+                if artifact_destroyed:
+                    set_color("red")
+                    print(f"  Ancient Artifact Vaporized!")
+                    reset_color()
+                    print(f"     The high-intensity laser destroyed a valuable artifact!")
+                    print()
+                    input("Press Enter to continue...")
+                else:
+                    set_color("green")
+                    print(f"  Ancient Artifact Uncovered!")
+                    reset_color()
+                    print(f"     Added to inventory: Ancient Artifact")
+                    print(f"     This can be sold for a high price!")
+                    print()
+
+                    if "Ancient Artifact" not in data.get("inventory", {}):
+                        data["inventory"]["Ancient Artifact"] = 0
+                    data["inventory"]["Ancient Artifact"] += 1
+                    input("Press Enter to continue...")
+
+
+            elif event_type == "proximity_mine":
+                mine_defused = event_data["defused"]
+                mine_detonated = event_data["detonated"]
+
+                if mine_detonated:
+                    ship_damage = event_data["damage"]
+                    ship_destroyed = apply_damage_to_player(player_ship, ship_damage)
+                    remaining_ore = 0
+                    stability = 0
+
+                    set_color("red")
+                    print(f"  MINE DETONATED!")
+                    reset_color()
+                    print(f"     Asteroid destroyed - all remaining ore lost")
+                    print()
+
+                    if ship_destroyed:
+                        set_color("red")
+                        set_color("blinking")
+                        print("     ⚠ CRITICAL: SHIP DESTROYED ⚠")
+                        reset_color()
+                        print()
+                        input("Press Enter to continue...")
+                        return "death"
+
+                    input("Press Enter to continue...")
+                elif mine_defused:
+                    set_color("green")
+                    print(f"  Mine successfully defused!")
+                    reset_color()
+                    print()
+                    input("Press Enter to continue...")
+                else:
+                    set_color("yellow")
+                    print(f"  You decided to skip this asteroid to avoid the mine")
+                    reset_color()
+                    print()
+                    sleep(1.5)
+                    return "skipped"
+
+
+        # Update ore amounts
+        if vaporized > 0:
+            set_color("yellow")
+            print(f"  ⚠ {vaporized:.1f} units vaporized by high-intensity laser")
+            reset_color()
+            print()
+            sleep(1)
+
+        print(f"  Extracted: {ore_extracted:.1f} units of {ore_name}")
+        print()
+
+        remaining_ore -= ore_extracted
+        remaining_ore = max(0, remaining_ore)
+        units_collected += ore_extracted
+
+        # XP calculation based on ore type
+        ore_xp_values = {
+            "Korrelite Ore (Inferior)": 1,
+            "Korrelite Ore": 2,
+            "Korrelite Ore (Superior)": 3,
+            "Korrelite Ore (Pristine)": 5,
+            "Reknite Ore (Inferior)": 2,
+            "Reknite Ore": 3,
+            "Reknite Ore (Superior)": 4,
+            "Reknite Ore (Pristine)": 6,
+            "Gellium Ore": 5,
+            "Gellium Ore (Superior)": 7,
+            "Gellium Ore (Pristine)": 10,
+            "Axnit Ore": 8,
+            "Axnit Ore (Pristine)": 15,
+            "Narcor Ore": 12,
+            "Red Narcor Ore": 20,
+            "Vexnium Ore": 30,
+            "Water Ice": 3,
+        }
+
+        xp_per_unit = ore_xp_values.get(ore_name, 2)
+        xp_gain = int(ore_extracted * xp_per_unit)
+        total_xp_gained += xp_gain
+
+        sleep(1.5)
+
+        # Check for catastrophic stability failure
+        if stability <= 0:
+            clear_screen()
+            set_color("red")
+            set_color("blinking")
+            print()
+            print("  " + "=" * 56)
+            print("  ⚠ ⚠ ⚠  CRITICAL STABILITY FAILURE  ⚠ ⚠ ⚠")
+            print("  " + "=" * 56)
+            reset_color()
+            print()
+            sleep(1)
+
+            set_color("red")
+            print("  The asteroid is exploding!")
+            reset_color()
+            print()
+            sleep(1)
+
+            # Massive ship damage
+            explosion_damage = int(player_ship["hull_hp"] * 0.6)
+            ship_destroyed = apply_damage_to_player(player_ship, explosion_damage)
+
+            print(f"  ⚠ All remaining ore vaporized")
+            print()
+
+            if ship_destroyed:
+                set_color("red")
+                set_color("blinking")
+                print("  ⚠ CRITICAL: SHIP DESTROYED ⚠")
+                reset_color()
+                print()
+                input("Press Enter to continue...")
+                return "death"
+
+            input("Press Enter to continue...")
+
+            remaining_ore = 0
+            break
 
     # Add collected ore to inventory
-    ore_collected = units_collected - current_mined
+    ore_collected = int(units_collected - current_mined)
     if ore_collected > 0:
         if ore_name not in data.get("inventory", {}):
             data["inventory"][ore_name] = 0
         data["inventory"][ore_name] += ore_collected
+
+    # Award mining XP
+    if total_xp_gained > 0:
+        old_level = mining_skill
+        old_xp = data.get("skills", {}).get("mining_xp", 0)
+        levels_gained = add_skill_xp(data, "mining", total_xp_gained)
+        new_level = data["skills"]["mining"]
+        new_xp = data["skills"]["mining_xp"]
 
         clear_screen()
         title("MINING COMPLETE")
         print()
         print(f"  Collected {ore_collected}x {ore_name}!")
         print()
+
+        display_xp_gain("mining", total_xp_gained, levels_gained, new_level, new_xp)
+
+        print()
         save_data(save_name, data)
         sleep(1)
         input("Press Enter to continue...")
 
     # Update asteroid state
-    asteroid["mined"] = units_collected
+    asteroid["mined"] = int(units_collected)
 
-    if units_collected >= total_quantity:
+    if remaining_ore <= 0 or stability <= 0:
         return "completed"
     else:
         return "partial"
+
+
+def get_stability_color(stability):
+    """Get color code based on asteroid stability"""
+    if stability >= 80:
+        return "\033[32m"  # Green
+    elif stability >= 60:
+        return "\033[33m"  # Yellow
+    elif stability >= 40:
+        return "\033[38;5;208m"  # Orange
+    elif stability >= 20:
+        return "\033[31m"  # Red
+    else:
+        return "\033[1;31m"  # Bright red
+
+
+def check_mining_event(data, ore_name, stability, security_level, intensity, anomaly_type="AT"):
+    """Check for random mining events
+
+    Returns:
+        tuple: (event_type, event_data) or None if no event
+    """
+    # Base event chances (modified by various factors)
+    event_chances = {
+        "gas_pocket": 0.08,
+        "dense_formation": 0.10,
+        "collision": 0.06,
+        "artifact": 0.03,
+        "proximity_mine": 0.06,
+    }
+
+    # Modify chances based on ore type
+    if ore_name in ["Gellium Ore", "Gellium Ore (Superior)", "Gellium Ore (Pristine)", "Red Narcor Ore"]:
+        event_chances["gas_pocket"] *= 1.8
+
+    if ore_name in ["Vexnium Ore", "Axnit Ore", "Axnit Ore (Pristine)",
+                    "Korrelite Ore (Pristine)", "Reknite Ore (Pristine)"]:
+        event_chances["dense_formation"] *= 1.6
+
+    # Modify based on anomaly type
+    if anomaly_type in ["AL", "CM"]:
+        event_chances["collision"] *= 2.0
+    elif anomaly_type in ["VX", "MT"]:
+        event_chances["collision"] = 0
+
+    # Modify based on security level
+    if security_level == "Wild":
+        event_chances["artifact"] *= 3.0
+        event_chances["proximity_mine"] *= 2.5
+    elif security_level == "Unsecure":
+        event_chances["proximity_mine"] *= 1.5
+    elif security_level in ["Contested"]:
+        event_chances["proximity_mine"] *= 1.2
+    elif security_level == "Secure":
+        event_chances["proximity_mine"] = 0
+        event_chances["artifact"] *= 0.25
+
+    # Roll for each event
+    for event_type, chance in event_chances.items():
+        if random.random() < chance:
+            return trigger_mining_event(event_type, data, ore_name, stability, intensity)
+
+    return None
+
+
+def trigger_mining_event(event_type, data, ore_name, stability, intensity):
+    """Trigger a specific mining event
+
+    Returns:
+        tuple: (event_type, event_data)
+    """
+    if event_type == "gas_pocket":
+        # Gas pocket - loses ore and stability
+        # Worse if asteroid is already unstable
+        base_ore_loss = random.uniform(2, 5)
+        stability_factor = 1.0 + ((100 - stability) / 100)
+        ore_lost = base_ore_loss * stability_factor
+
+        base_stability_loss = random.uniform(5, 15)
+        stability_lost = base_stability_loss * stability_factor
+
+        # Ship damage if very unstable
+        ship_damage = 0
+        if stability < 40:
+            ship_damage = random.randint(20, 50)
+
+        return ("gas_pocket", {
+            "ore_lost": ore_lost,
+            "stability_lost": stability_lost,
+            "ship_damage": ship_damage
+        })
+
+    elif event_type == "dense_formation":
+        # Dense formation - extra ore
+        base_bonus = random.uniform(3, 8)
+
+        # Pristine ore gives more bonus
+        if "Pristine" in ore_name:
+            base_bonus *= 1.5
+
+        return ("dense_formation", {
+            "bonus_ore": base_bonus
+        })
+
+    elif event_type == "collision":
+        # Asteroid collision
+        ore_lost = random.uniform(4, 10)
+        recoverable = ore_lost * random.uniform(0.5, 0.9)
+
+        return ("collision", {
+            "ore_lost": ore_lost,
+            "recoverable": recoverable
+        })
+
+    elif event_type == "artifact":
+        # Ancient artifact
+        # High intensity can destroy it
+        destroyed = intensity >= 4 and random.random() < 0.6
+
+        return ("artifact", {
+            "destroyed": destroyed
+        })
+
+    elif event_type == "proximity_mine":
+        # Proximity mine
+        clear_screen()
+        set_color("red")
+        set_color("blinking")
+        print()
+        print("  " + "=" * 56)
+        print("  ⚠ ⚠ ⚠  PROXIMITY MINE DETECTED  ⚠ ⚠ ⚠")
+        print("  " + "=" * 56)
+        reset_color()
+        print()
+        sleep(1)
+
+        print("  This asteroid has an explosive mine attached!")
+        print()
+        print("  What do you want to do?")
+        print()
+        print("  [D] Attempt to defuse the mine (risky)")
+        print("  [S] Skip this asteroid entirely")
+        print()
+
+        choice = None
+        while choice not in ['d', 's']:
+            choice = get_key()
+
+        if choice == 'd':
+            # Defuse attempt
+            mining_skill = data.get("skills", {}).get("mining", 0)
+            success_chance = 0.5 + (mining_skill * 0.03)  # 50% base, +3% per level
+
+            print()
+            set_color("cyan")
+            print("  Attempting to defuse...")
+            reset_color()
+            sleep(2)
+
+            if random.random() < success_chance:
+                return ("proximity_mine", {
+                    "defused": True,
+                    "detonated": False,
+                    "damage": 0
+                })
+            else:
+                # Detonation
+                damage = random.randint(150, 300)
+                return ("proximity_mine", {
+                    "defused": False,
+                    "detonated": True,
+                    "damage": damage
+                })
+        else:
+            # Skip asteroid
+            return ("proximity_mine", {
+                "defused": False,
+                "detonated": False,
+                "damage": 0
+            })
+
+    return None
 
 
 def visit_refinery(save_name, data):
@@ -1903,6 +2438,8 @@ def visit_refinery(save_name, data):
 
             # Process the refinement
             data["inventory"][item_name] -= amount
+            if data["inventory"][item_name] <= 0:
+                del data["inventory"][item_name]
 
             if item_name == "Metal Scraps":
                 # Metal scraps special processing
