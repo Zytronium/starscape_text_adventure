@@ -208,7 +208,7 @@
       "name": "Ancient Artifact",
       "description": "A mysterious artifact from an ancient spacefaring civilization. Highly valuable to collectors.",
       "type": "Artifact",
-      "sell_price": "2000",
+      "sell_price": "2500",
       "buy_price": ""
     }
   ]
