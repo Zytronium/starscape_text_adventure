@@ -957,10 +957,8 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
                 save_data(save_name, data)
                 return "death"
             elif retreat_result == "failed":
-                # Take extra damage and continue combat
-                print()
-                print("  Retreat failed! Taking extra damage...")
-                sleep(1)
+                # Damage already applied in attempt_retreat_from_combat
+                continue
             # If "impossible", just continue combat
             continue
 
@@ -1316,9 +1314,36 @@ def attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data):
     else:
         print()
         print("  Retreat failed!")
+        print("  You took some damage while attempting to jump away!")
+        print()
+        sleep(1)
+
+        # Take damage from enemy's opportunity attack
+        player_ship = get_active_ship(data)
+        damage_taken = int(enemy_fleet["total_firepower"] * 0.5 * random.uniform(0.8, 1.2))
+
+        print(f"  Incoming damage: {damage_taken}")
+        print()
+
+        if player_ship["shield_hp"] > 0:
+            shield_damage = min(damage_taken, player_ship["shield_hp"])
+            player_ship["shield_hp"] -= shield_damage
+            damage_taken -= shield_damage
+            max_shield = get_max_shield(player_ship)
+            print(f"  Shield HP: {player_ship['shield_hp']}/{max_shield} (-{shield_damage})")
+
+        if damage_taken > 0:
+            player_ship["hull_hp"] -= damage_taken
+            max_hull = get_max_hull(player_ship)
+            print(f"  Hull HP: {player_ship['hull_hp']}/{max_hull} (-{damage_taken})")
+
+        print()
         print("  You remain engaged in combat.")
         print()
         input("Press Enter to continue...")
+
+        if player_ship["hull_hp"] <= 0:
+            return "death"
         return "failed"
 
 
