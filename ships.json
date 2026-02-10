@@ -10,6 +10,7 @@
         "Hull": 200,
         "Energy": 100,
         "Speed": 260,
+        "Agility": 110,
         "Warp Speed": 1.00
       },
       "sell_price": "",
@@ -25,6 +26,7 @@
         "Hull": 250,
         "Energy": 80,
         "Speed": 410,
+        "Agility": 112,
         "Warp Speed": 1.30
       },
       "sell_price": "750",
@@ -40,6 +42,7 @@
         "Hull": 250,
         "Energy": 110,
         "Speed": 445,
+        "Agility": 115,
         "Warp Speed": 1.50
       },
       "sell_price": "1000",
@@ -55,6 +58,7 @@
         "Hull": 600,
         "Energy": 75,
         "Speed": 300,
+        "Agility": 86,
         "Warp Speed": 1.00
       },
       "sell_price": "1100",
@@ -70,6 +74,7 @@
         "Hull": 200,
         "Energy": 100,
         "Speed": 320,
+        "Agility": 97,
         "Warp Speed": 1.10
       },
       "sell_price": "800",
@@ -115,6 +120,7 @@
         "Shield": 10000,
         "Hull": 10000,
         "Speed": 500,
+        "Agility": 200,
         "Warp Speed": 10.0
       },
       "sell_price": "",
@@ -125,9 +131,11 @@
       "description": "Enhanced version of the Spectator ship for advanced testing.",
       "class": "Special",
       "stats": {
-        "Shield": 20000,
-        "Hull": 20000,
+        "DPS": 13250,
+        "Shield": 10000,
+        "Hull": 10000,
         "Speed": 600,
+        "Agility": 200,
         "Warp Speed": 12.0
       },
       "sell_price": "",

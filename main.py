@@ -773,6 +773,60 @@ def ignore_enemies(enemy_fleet, system, save_name, data):
     return "continue"
 
 
+def perform_evasive_maneuvers_turn(player_ship, piloting_skill, data):
+    """Perform evasive maneuvers during a combat turn - recharge shields, skip attack"""
+    clear_screen()
+    title("MAKING EVASIVE MANEUVERS")
+    print()
+
+    print("  You make evasive maneuvers to avoid enemy fire, giving")
+    print("  your shields time to recharge.")
+    print()
+    sleep(1)
+
+    # Get ship stats
+    ship_stats = get_ship_stats(player_ship['name'])
+    ship_agility = ship_stats.get('Agility', 100)  # Default to 100 if not present
+    max_shield = get_max_shield(player_ship)
+
+    # Calculate shield recharge - max 10% of max shields or 50 HP, whichever is less
+    base_recharge = min(max_shield * 0.1, 50)
+
+    # Add bonus from agility (higher agility = better recharge)
+    agility_bonus = (ship_agility / 100) * 10  # +10% per 100 agility
+
+    # Add bonus from piloting skill
+    piloting_bonus = piloting_skill * 2  # +2% per level
+
+    # Add random factor (±20%)
+    random_factor = random.uniform(0.8, 1.2)
+
+    total_recharge = int(base_recharge * (1 + (agility_bonus + piloting_bonus) / 100) * random_factor)
+
+    # Apply shield recharge
+    old_shield = player_ship["shield_hp"]
+    player_ship["shield_hp"] = min(player_ship["shield_hp"] + total_recharge, max_shield)
+    actual_recharge = player_ship["shield_hp"] - old_shield
+
+    if actual_recharge > 0:
+        set_color("cyan")
+        print(f"  Shields recharged: +{actual_recharge} HP")
+        reset_color()
+        print(f"  Shield HP: {player_ship['shield_hp']}/{max_shield}")
+    else:
+        print("  Shields already at maximum capacity.")
+
+    print()
+    print("  You maintain evasive flight patterns to avoid incoming fire...")
+    print()
+    sleep(1)
+
+    # Small piloting XP for using evasive maneuvers
+    add_skill_xp(data, "piloting", 3)
+
+    input("Press Enter to continue...")
+
+
 def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
     """Main turn-based combat loop"""
     # Update Discord presence for combat
@@ -786,6 +840,9 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
     combat_ongoing = True
 
     while combat_ongoing:
+        # Track if player is evading this turn
+        is_evading = False
+
         # Regenerate shields slightly each turn (10% of max shields)
         max_shield = get_max_shield(player_ship)
         shield_regen = int(max_shield * 0.10)
@@ -830,6 +887,7 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
         options = [
             "Fire Weapons (All Targets)",
             "Focus Fire (Single Target)",
+            "Evasive Maneuvers",
             "Attempt Retreat",
             "View Detailed Stats"
         ]
@@ -878,6 +936,11 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
             player_damage_focused(alive_enemies[target_choice], combat_skill, data)
 
         elif choice == 2:
+            # Evasive maneuvers - skip attack but recharge shields and take less damage
+            perform_evasive_maneuvers_turn(player_ship, piloting_skill, data)
+            is_evading = True
+
+        elif choice == 3:
             # Attempt retreat
             retreat_result = attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data)
 
@@ -901,7 +964,7 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
             # If "impossible", just continue combat
             continue
 
-        elif choice == 3:
+        elif choice == 4:
             # View detailed stats
             show_detailed_combat_stats(player_ship, enemy_fleet, data)
             continue
@@ -935,7 +998,7 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
             return "continue"
 
         # Enemy turn - they attack
-        enemy_attacks(alive_enemies, player_ship, piloting_skill)
+        enemy_attacks(alive_enemies, player_ship, piloting_skill, is_evading)
 
         # Check if player died
         if player_ship["hull_hp"] <= 0:
@@ -1079,35 +1142,68 @@ def apply_damage_to_player(player_ship, damage):
     return False
 
 
-def enemy_attacks(enemies, player_ship, piloting_skill):
-    """All enemies attack the player"""
+def enemy_attacks(enemies, player_ship, piloting_skill, is_evading=False):
+    """All enemies attack the player
+
+    Args:
+        enemies: List of enemy ships
+        player_ship: Player's ship data
+        piloting_skill: Player's piloting skill level
+        is_evading: If True, player took evasive maneuvers this turn and damage is reduced
+    """
     clear_screen()
     title("ENEMY TURN")
     print()
 
-    print("  Enemy fleet is attacking!")
+    if is_evading:
+        print("  Enemy fleet is attacking, but you're evading!")
+    else:
+        print("  Enemy fleet is attacking!")
     print()
     sleep(0.8)
 
     total_damage = 0
+
+    # Get ship agility for evasion calculations
+    ship_stats = get_ship_stats(player_ship['name'])
+    ship_agility = ship_stats.get('Agility', 100)
 
     for enemy in enemies:
         # Base damage with variance
         damage = int(enemy["damage"] * random.uniform(0.8, 1.2))
 
         # Piloting skill gives evasion chance
-        evasion_chance = min(piloting_skill * 0.02, 0.25)  # Max 25% evasion
+        base_evasion_chance = min(piloting_skill * 0.02, 0.25)  # Max 25% evasion normally
+
+        # If evading, greatly increase evasion chance
+        if is_evading:
+            # Agility factor - higher agility = more evasion
+            agility_factor = (ship_agility - 67) / 150  # Normalize to 0-0.35 range
+            # Piloting factor - higher skill = more evasion
+            piloting_factor = piloting_skill * 0.02  # Up to 0.4 at level 20
+
+            evasion_chance = min(base_evasion_chance + 0.4 + agility_factor + piloting_factor, 0.85)  # Max 85% evasion when evading
+        else:
+            evasion_chance = base_evasion_chance
 
         if random.random() < evasion_chance:
             print(f"  {enemy['name']}'s attack missed! (Evaded)")
             sleep(0.3)
         else:
+            # If evading, reduce damage significantly even on hits
+            if is_evading:
+                damage = int(damage * 0.3)  # Only 30% damage on hits while evading
+
             total_damage += damage
             print(f"  {enemy['name']} deals {damage} damage!")
             sleep(0.3)
 
     print()
     print(f"  Total incoming damage: {total_damage}")
+    if is_evading and total_damage > 0:
+        set_color("cyan")
+        print("  (Damage greatly reduced by evasive maneuvers)")
+        reset_color()
     print()
     sleep(0.5)
 
