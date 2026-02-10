@@ -1815,11 +1815,11 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
         print()
         print("  Select Mining Laser Intensity:")
         print()
-        print("  [1] Very Low   - Safest, slowest      (+stability)")
+        print("  [1] Minimum    - Safest, slowest      (+5% stability)")
         print("  [2] Low        - Safe, slow           (neutral)")
         print("  [3] Medium     - Balanced             (-5% stability)")
         print("  [4] High       - Fast, risky          (-10% stability)")
-        print("  [5] Very High  - Fastest, dangerous   (-20% stability)")
+        print("  [5] Maximum    - Fastest, dangerous   (-20% stability)")
         print()
         print("  [ESC] Stop mining and leave")
         print()
@@ -1842,7 +1842,7 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
         # Calculate mining results based on intensity
         # Intensity affects: mining speed, stability loss, ore vaporization risk
         intensity_data = {
-            1: {"speed": 0.5, "stability_loss": 0, "stability_gain": 2, "vaporize_chance": 0},
+            1: {"speed": 0.5, "stability_loss": 0, "stability_gain": 5, "vaporize_chance": 0},
             2: {"speed": 1.0, "stability_loss": 0, "stability_gain": 0, "vaporize_chance": 0},
             3: {"speed": 1.8, "stability_loss": 5, "stability_gain": 0, "vaporize_chance": 0.02},
             4: {"speed": 2.8, "stability_loss": 10, "stability_gain": 0, "vaporize_chance": 0.05},
