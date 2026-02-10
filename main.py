@@ -4469,6 +4469,28 @@ def delete_save_screen():
     input("Press Enter to continue...")
 
 
+def about_screen():
+    clear_screen()
+    title("ABOUT")
+    print("Starscape Text Adventure is a text-based game based on the")
+    print("Roblox game, Starscape, by Zolar Keth, aka Ethan Witt.")
+    print("Almost all of the game mechanics are the same between these")
+    print("two games, besides the fact that this one is purely")
+    print("text-based.")
+    print()
+    print("In Starscape, you get to wander around a vast galaxy with")
+    print("over 4,500 procedurally generated star systems. You can")
+    print("do just about anything from fighting ancient drones to")
+    print("mining materials to build a new ship. Oh, and unlike in")
+    print("the Roblox version of Starscape, mining is actually fun.")
+    print()
+    print("This game is open-source and can be found on GitHub at")
+    print("https://github.com/Zytronium/starscape_text_adventure.")
+    print()
+
+    input("Press Enter to return to main menu...")
+
+
 def animated_death_screen(save_name, data):
     """Animated death and cloning sequence with glitch effects"""
     import random
@@ -5226,6 +5248,7 @@ def main():
                 "New Game",
                 "Continue Game",
                 "Delete Save",
+                "About",
                 "Exit"
             ]
 
@@ -5251,7 +5274,9 @@ def main():
                 continue_game()
             elif choice == 2:
                 delete_save_screen()
-            elif choice == 3:
+            elif choice ==3:
+                about_screen()
+            elif choice == 4:
                 clear_screen()
                 print("Exiting...")
                 break
