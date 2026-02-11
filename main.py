@@ -523,12 +523,19 @@ def generate_small_group(security_level, combat_skill):
                 base_hp = 45
                 base_damage = 15
                 ship_type = "Drone Fighter"
-            else:
+            elif random.random() < 0.5:
                 fleet["type"] = "Pirate Patrol"
                 fleet["size"] = random.randint(3, 5)
                 base_hp = 75
                 base_damage = 25
                 ship_type = "Pirate Fighter"
+            else:
+                fleet["type"] = "Dread Pirate Patrol"
+                fleet["size"] = random.randint(3, 4)
+                base_hp = 115
+                base_damage = 30
+                ship_type = "Dread Pirate Fighter"
+
 
         case _:
             return None
