@@ -468,8 +468,8 @@ def generate_enemy_fleet(security_level, data):
     combat_skill = data.get("skills", {}).get("combat", 0)
 
     # Determine encounter type based on security level
-    # 40% small groups, 60% wave-based groups
-    is_small_group = random.random() < 0.4
+    # 75% small groups, 25% wave-based groups
+    is_small_group = random.random() < 0.75
 
     if is_small_group:
         return generate_small_group(security_level, combat_skill)
