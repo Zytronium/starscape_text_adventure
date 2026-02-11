@@ -23,7 +23,11 @@ except ImportError:
     print("Install with: pip install pypresence")
     sleep(3)
 
-VERSION_CODE = 2
+# Version codes
+APP_VERSION_CODE = "0.1.1.2"  # 0.1.x = alpha; 0.2.x = beta; 1.x = release
+SAVE_VERSION_CODE = 2         # Save format version code
+
+# Color codes
 CORE_COLOR = "\033[1;32m"     # lime
 SECURE_COLOR = "\033[36m"     # cyan
 CONTESTED_COLOR = "\033[33m"  # orange/brown
@@ -192,7 +196,43 @@ def close_discord_rpc():
         except:
             pass
         discord_rpc = None
+        
 
+def is_version_newer(new_version_code):
+    """Checks if the given app version code is newer than the current known one"""
+    if not isinstance(new_version_code, str):
+        return False  # silently fail. This is a text adventure game after all.
+
+    # Identical version codes
+    if new_version_code == APP_VERSION_CODE:
+        return False
+
+    # Convert to integer lists
+    new_version_split = [int(x) for x in new_version_code.split(".")]
+    current_version_split = [int(x) for x in APP_VERSION_CODE.split(".")]
+
+    # Pad the shorter list with zeros
+    version_len = max(len(new_version_split), len(current_version_split))
+    new_version_split += [0] * (version_len - len(new_version_split))
+    current_version_split += [0] * (version_len - len(current_version_split))
+
+    for i in range(version_len):
+        if current_version_split[i] < new_version_split[i]:
+            return True  # new version is newer
+        elif current_version_split[i] > new_version_split[i]:
+            return False  # new version is older
+
+    # No difference found, though shouldn't happen here normally
+    return False
+
+
+def check_for_updates():
+    pass
+    # todo: make an API request to cdn.zytronium.dev/starscape_text_adventure/version_code
+    #       it returns in format `{"app": str, "save": int}`
+    #       check is_version_newer(app_version_code) where app_version_code is the value of "app" from the response
+    #       if the version is newer, download from cdn.zytronium.dev/starscape_text_adventure/download/windows/starscape_text_adventure.exe or cdn.zytronium.dev/starscape_text_adventure/download/linux/starscape_text_adventure depending on which OS this is. If this is MacOS, don't download anything and instead tell the user their OS is not compatible with automatic updates.
+    #       replace the currently running executable, if it's an executable instead of a python script, with the newly downloaded executable and restart or exit the program.
 
 def read_data(save_name):
     """Load game data from save file"""
@@ -322,7 +362,7 @@ def arrow_menu(title, options, previous_content=""):
 def default_data():
     """Return default game data structure"""
     return {
-        "v": VERSION_CODE,  # save version code.
+        "v": SAVE_VERSION_CODE,  # save version code.
         "player_name": "Player",
         "credits": 5000,
         "current_system": "The Citadel",
@@ -2973,7 +3013,7 @@ def visit_refinery(save_name, data):
 
 def game_loop(save_name, data):
     clear_screen()
-    if data["v"] < VERSION_CODE:
+    if data["v"] < SAVE_VERSION_CODE:
         title("CONTINUE GAME")
         print()
         print("ERROR: Save file is of an older data format.")
@@ -5713,6 +5753,7 @@ def main():
                 "Continue Game",
                 "Delete Save",
                 "About",
+                "Check For Updates",
                 "Exit"
             ]
 
@@ -5738,9 +5779,11 @@ def main():
                 continue_game()
             elif choice == 2:
                 delete_save_screen()
-            elif choice ==3:
+            elif choice == 3:
                 about_screen()
             elif choice == 4:
+                check_for_updates()
+            elif choice == 5:
                 clear_screen()
                 print("Exiting...")
                 break
