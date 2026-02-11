@@ -115,36 +115,36 @@ def get_adaptive_presence(data, context="default"):
 
     elif context == "docked":
         docked_at = data.get("docked_at", "a space station")
-        return (f"Docked at {docked_at}", security_text)
+        return f"Docked at {docked_at}", security_text
 
     elif context == "combat":
-        return ("Engaged in combat", security_text)
+        return "Engaged in combat", security_text
 
     elif context == "traveling":
-        return (f"Piloting a {ship_name}", security_text)
+        return f"Piloting a {ship_name}", security_text
 
     elif context == "mining":
-        return ("Mining asteroids", security_text)
+        return "Mining asteroids", security_text
 
     elif context == "menu":
-        return ("Navigating menus", "In Main Menu")
+        return "Navigating menus", "In Main Menu"
 
     elif context == "galaxy_map":
-        return ("Viewing galaxy map", f"planning route in {current_system}")
+        return "Viewing galaxy map", f"planning route in {current_system}"
 
     elif context == "station_menu":
         docked_at = data.get("docked_at", "a space station")
-        return (f"Managing affairs at {docked_at}", security_text)
+        return f"Managing affairs at {docked_at}", security_text
 
     elif context == "trading":
-        return ("Trading goods", security_text)
+        return "Trading goods", security_text
 
     elif context == "outfitting":
-        return ("Outfitting ship", f"at {data.get('docked_at', 'station')}")
+        return "Outfitting ship", f"at {data.get('docked_at', 'station')}"
 
     # Default: flying around
     else:
-        return (f"Piloting a {ship_name}", security_text)
+        return f"Piloting a {ship_name}", security_text
 
 
 def update_discord_presence(state=None, details=None, data=None, context=None):
