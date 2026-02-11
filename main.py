@@ -7,10 +7,15 @@ import random
 import sys
 import json
 import os
+import platform
+import subprocess
+import shutil
 from pathlib import Path
 from io import StringIO
 from time import sleep, time
 from uuid import uuid4
+from urllib.request import urlopen, Request
+from urllib.error import URLError, HTTPError
 from colors import set_color, set_background_color, reset_color
 
 # Discord Rich Presence support
@@ -227,12 +232,254 @@ def is_version_newer(new_version_code):
 
 
 def check_for_updates():
-    pass
-    # todo: make an API request to cdn.zytronium.dev/starscape_text_adventure/version_code
-    #       it returns in format `{"app": str, "save": int}`
-    #       check is_version_newer(app_version_code) where app_version_code is the value of "app" from the response
-    #       if the version is newer, download from cdn.zytronium.dev/starscape_text_adventure/download/windows/starscape_text_adventure.exe or cdn.zytronium.dev/starscape_text_adventure/download/linux/starscape_text_adventure depending on which OS this is. If this is MacOS, don't download anything and instead tell the user their OS is not compatible with automatic updates.
-    #       replace the currently running executable, if it's an executable instead of a python script, with the newly downloaded executable and restart or exit the program.
+    """Check for updates and download/install if available"""
+    clear_screen()
+    title("CHECK FOR UPDATES")
+
+    print("Checking for updates...")
+    print()
+
+    # Check if running as executable
+    is_executable = hasattr(sys, '_MEIPASS')
+
+    try:
+        # Make API request to get version info
+        api_url = "https://cdn.zytronium.dev/starscape_text_adventure/version_code"
+        req = Request(api_url, headers={'User-Agent': 'Starscape-Text-Adventure'})
+
+        with urlopen(req, timeout=10) as response:
+            version_data = json.loads(response.read().decode())
+
+        remote_app_version = version_data.get("app")
+        remote_save_version = version_data.get("save")
+
+        if not remote_app_version:
+            print("Error: Invalid response from update server.")
+            input("\nPress Enter to return to menu...")
+            return
+
+        print(f"Current version: {APP_VERSION_CODE}")
+        print(f"Latest version:  {remote_app_version}")
+        print()
+
+        # Check if update is available
+        if not is_version_newer(remote_app_version):
+            print("You are running the latest version!")
+            input("\nPress Enter to return to menu...")
+            return
+
+        # Update available
+        print("\033[1;32mA new version is available!\033[0m")
+        print()
+
+        # Detect OS
+        system = platform.system()
+
+        if system == "Darwin":  # macOS
+            print("Unfortunately, automatic updates are not supported on macOS.")
+            print("Please download and compile the latest version manually from:")
+            print("https://github.com/Zytronium/starscape_text_adventure")
+            input("\nPress Enter to return to menu...")
+            return
+
+        # Check if running as executable (can auto-update)
+        if not is_executable:
+            print("You are running from Python source.")
+            print("Automatic updates are only available for compiled executables.")
+            print("\nPlease download the latest version from:")
+            print("https://github.com/Zytronium/starscape_text_adventure")
+            input("\nPress Enter to return to menu...")
+            return
+
+        # Determine download URL based on OS
+        if system == "Windows":
+            download_url = "https://cdn.zytronium.dev/starscape_text_adventure/download/windows/starscape_text_adventure.exe"
+            new_filename = "starscape_text_adventure_new.exe"
+            update_script = "update.bat"
+        elif system == "Linux":
+            download_url = "https://cdn.zytronium.dev/starscape_text_adventure/download/linux/starscape_text_adventure"
+            new_filename = "starscape_text_adventure_new"
+            update_script = "update.sh"
+        else:
+            print(f"Automatic updates are not supported on {system}.")
+            print("Please download and compile manually from:")
+            print("https://github.com/Zytronium/starscape_text_adventure")
+            input("\nPress Enter to return to menu...")
+            return
+
+        # Ask user if they want to update
+        print("Would you like to download and install this update?")
+        response = input("(y/n): ").strip().lower()
+
+        if response != 'y':
+            print("\nUpdate cancelled.")
+            input("\nPress Enter to return to menu...")
+            return
+
+        print("\nDownloading update...")
+
+        # Download the new version
+        req = Request(download_url, headers={'User-Agent': 'Starscape-Text-Adventure'})
+
+        # Get current executable path
+        current_exe = sys.executable
+        download_path = os.path.join(os.path.dirname(current_exe), new_filename)
+
+        # Download with progress
+        try:
+            with urlopen(req, timeout=30) as response:
+                total_size = int(response.headers.get('content-length', 0))
+                downloaded = 0
+                chunk_size = 8192
+
+                with open(download_path, 'wb') as f:
+                    while True:
+                        chunk = response.read(chunk_size)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        downloaded += len(chunk)
+
+                        if total_size > 0:
+                            percent = (downloaded / total_size) * 100
+                            print(f"\rProgress: {percent:.1f}%", end='', flush=True)
+
+            print("\n")
+
+            # Verify download completed
+            if total_size > 0 and downloaded != total_size:
+                raise Exception(f"Download incomplete: got {downloaded} bytes, expected {total_size}")
+
+            # Verify file exists and has content
+            if not os.path.exists(download_path):
+                raise Exception("Downloaded file not found")
+
+            file_size = os.path.getsize(download_path)
+            if file_size == 0:
+                raise Exception("Downloaded file is empty")
+
+            print(f"Download complete! ({file_size:,} bytes)")
+
+        except Exception as e:
+            # Clean up failed download
+            if os.path.exists(download_path):
+                os.remove(download_path)
+            raise Exception(f"Download failed: {e}")
+
+        # Make executable on Linux
+        if system == "Linux":
+            os.chmod(download_path, 0o755)
+
+        # Create update script
+        script_path = os.path.join(os.path.dirname(current_exe), update_script)
+
+        if system == "Windows":
+            # Windows batch script
+            script_content = f"""@echo off
+echo Waiting for application to close...
+timeout /t 3 /nobreak >nul
+echo Installing update...
+if exist "{current_exe}.old" del "{current_exe}.old"
+if exist "{current_exe}" move "{current_exe}" "{current_exe}.old"
+move "{download_path}" "{current_exe}"
+if errorlevel 1 (
+    echo ERROR: Failed to install update!
+    pause
+    exit /b 1
+)
+echo Update installed successfully!
+timeout /t 2 /nobreak >nul
+echo Starting application...
+start "" "{current_exe}"
+timeout /t 1 /nobreak >nul
+del "%~f0"
+"""
+        else:  # Linux
+            # Linux shell script
+            script_content = f"""#!/bin/bash
+echo "Waiting for application to close..."
+sleep 3
+echo "Installing update..."
+if [ -f "{current_exe}" ]; then
+    mv "{current_exe}" "{current_exe}.old"
+fi
+mv "{download_path}" "{current_exe}"
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to install update!"
+    echo "Restoring backup..."
+    if [ -f "{current_exe}.old" ]; then
+        mv "{current_exe}.old" "{current_exe}"
+    fi
+    echo "Press Enter to exit..."
+    read
+    exit 1
+fi
+chmod +x "{current_exe}"
+echo "Update installed successfully!"
+sleep 1
+echo "Starting application..."
+setsid "{current_exe}" > /dev/null 2>&1 &
+NEW_PID=$!
+sleep 2
+if ps -p $NEW_PID > /dev/null 2>&1; then
+    echo "Application started successfully!"
+    # Clean up old version
+    rm -f "{current_exe}.old"
+    # Clean up this script (must be last)
+    rm -f "$0"
+else
+    echo "WARNING: Application may not have started correctly"
+    sleep 2
+    # Still clean up
+    rm -f "{current_exe}.old"
+    rm -f "$0"
+fi
+"""
+
+        with open(script_path, 'w') as f:
+            f.write(script_content)
+
+        # Make script executable on Linux
+        if system == "Linux":
+            os.chmod(script_path, 0o755)
+
+        print("\nUpdate downloaded successfully!")
+        print("The application will now close and the update will be installed.")
+        print("\nPress Enter to continue...")
+        input()
+
+        # Close Discord RPC before exiting
+        close_discord_rpc()
+
+        # Launch update script and exit
+        if system == "Windows":
+            subprocess.Popen(['cmd', '/c', 'start', '/min', script_path],
+                           shell=True,
+                           creationflags=subprocess.CREATE_NEW_CONSOLE)
+        else:  # Linux
+            # Use nohup and detach properly
+            subprocess.Popen(['/bin/bash', script_path],
+                           stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL,
+                           start_new_session=True)
+
+        # Give the script time to start
+        sleep(0.5)
+
+        # Exit the application
+        sys.exit(0)
+
+    except HTTPError as e:
+        print(f"\nHTTP Error: {e.code} - {e.reason}")
+        print("Could not connect to update server.")
+        input("\nPress Enter to return to menu...")
+    except URLError as e:
+        print(f"\nNetwork Error: {e.reason}")
+        print("Could not connect to update server.")
+        input("\nPress Enter to return to menu...")
+    except Exception as e:
+        print(f"\nError checking for updates: {e}")
+        input("\nPress Enter to return to menu...")
 
 def read_data(save_name):
     """Load game data from save file"""
