@@ -467,7 +467,7 @@ fi
         sleep(0.5)
 
         # Exit the application
-        sys.exit(0)
+        exit_game()
 
     except HTTPError as e:
         print(f"\nHTTP Error: {e.code} - {e.reason}")
@@ -3470,7 +3470,7 @@ def main_screen(save_name, data):
             save_data(save_name, data)
             print("Game saved.")
             input("Press Enter to exit...")
-            sys.exit(0)
+            exit_game(False)
 
 
 def view_status_screen(data):
@@ -4083,7 +4083,7 @@ def station_screen(system, station_num, save_name, data):
             close_discord_rpc()
             print("Game saved.")
             input("Press Enter to exit...")
-            sys.exit(0)
+            exit_game(False)
 
         # All other options - not implemented yet
         clear_screen()
@@ -5985,6 +5985,13 @@ def galaxy_map(save_name, data):
                 center_system = selected_system
 
 
+def exit_game(close_rpc=True):
+    if close_rpc:
+        close_discord_rpc()
+    print("Game exited.")
+    sys.exit(0)
+
+
 def main():
     """Main debug menu"""
     # Initialize Discord Rich Presence
@@ -6037,6 +6044,7 @@ def main():
     finally:
         # Clean up Discord connection when exiting
         close_discord_rpc()
+        print("Game exited.")
 
 
 if __name__ == "__main__":
@@ -6044,5 +6052,4 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         print("\n\nGame interrupted. Exiting...")
-        close_discord_rpc()
-        sys.exit(0)
+        exit_game()
