@@ -459,90 +459,84 @@ def display_xp_gain(skill_name, xp_gained, levels_gained, current_level, current
 
 
 def generate_enemy_fleet(security_level, data):
-    """Generate an enemy fleet based on system security level and player progress"""
-    # Get player's combat skill to scale enemy difficulty
+    """Generate an enemy fleet based on system security level and player progress
+
+    Returns a fleet with either:
+    - Small group: Single wave of weak enemies
+    - Larger wave-based group: Multiple waves with escalating difficulty and command ships
+    """
     combat_skill = data.get("skills", {}).get("combat", 0)
 
-    # Base enemy stats
+    # Determine encounter type based on security level
+    # 40% small groups, 60% wave-based groups
+    is_small_group = random.random() < 0.4
+
+    if is_small_group:
+        return generate_small_group(security_level, combat_skill)
+    else:
+        return generate_wave_group(security_level, combat_skill)
+
+
+def generate_small_group(security_level, combat_skill):
+    """Generate a small group of weak enemies (single wave)"""
     fleet = {
         "type": "",
         "size": 0,
         "ships": [],
         "total_firepower": 0,
-        "warp_disruptor": False
+        "warp_disruptor": False,
+        "encounter_type": "small_group",
+        "waves": None
     }
 
-    # Determine fleet type and strength based on security
+    skill_scaling = 1.0 + (combat_skill * 0.02)  # Weaker scaling for small groups
+
     match security_level:
         case "Secure":
-            # Small drone fleets, weak
-            fleet_types = [("Light Drones", 1, 3, 25, 10), ("Drone Fireteam", 3, 5, 30, 10)]
-            chosen = random.choice(fleet_types)
-            fleet["type"] = chosen[0]
-            fleet["size"] = random.randint(chosen[1], chosen[2])
-            base_hp = chosen[3]
-            base_damage = chosen[4]
-            disruptor_chance = 0.0
+            # 1-2 weak drones
+            fleet["type"] = "Scattered Drones"
+            fleet["size"] = random.randint(1, 2)
+            base_hp = 20
+            base_damage = 8
+            ship_type = "Drone Scout"
 
-        case "Contested":
-            # Medium drone fleets or small pirate groups
-            if random.random() < 0.3:
-                fleet["type"] = "Pirate Scouts"
-                fleet["size"] = random.randint(1, 2)
-                base_hp = 100
-                base_damage = 20
-            else:
-                fleet["type"] = "Drone Squadron"
+        case "Contested" | "Unsecure":
+            # 2-4 weak drones or 1-3 weak pirates
+            if random.random() < 0.5:
+                fleet["type"] = "Drone Patrol"
                 fleet["size"] = random.randint(2, 4)
-                base_hp = 55
-                base_damage = 15
-            disruptor_chance = 0.0
-
-        case "Unsecure":
-            # Larger pirate fleets or drone swarms
-            fleet_types = [
-                ("Pirate Raiders", 2, 3, 90, 30),
-                ("Drone Swarm", 3, 5, 70, 22),
-                ("Pirate Squadron", 2, 4, 115, 40)
-            ]
-            chosen = random.choice(fleet_types)
-            fleet["type"] = chosen[0]
-            fleet["size"] = random.randint(chosen[1], chosen[2])
-            base_hp = chosen[3]
-            base_damage = chosen[4]
-            disruptor_chance = 0.2 if chosen != "Drone Swarm" else 0.0
+                base_hp = 35
+                base_damage = 12
+                ship_type = "Drone Fighter"
+            else:
+                fleet["type"] = "Pirate Scouts"
+                fleet["size"] = random.randint(1, 3)
+                base_hp = 60
+                base_damage = 18
+                ship_type = "Pirate Scout"
 
         case "Wild":
-            # Powerful pirate fleets, highly dangerous
-            fleet_types = [
-                ("Large Pirate Den", 4, 6, 180, 40),
-                ("Large Drone Fleet", 4, 7, 75, 28),
-                ("Drone Armada", 8, 14, 80, 35)
-            ]
-            chosen = random.choice(fleet_types)
-            fleet["type"] = chosen[0]
-            fleet["size"] = random.randint(chosen[1], chosen[2])
-            base_hp = chosen[3]
-            base_damage = chosen[4]
-            disruptor_chance = 0.30
+            # 4-6 drones or 3-5 pirates
+            if random.random() < 0.5:
+                fleet["type"] = "Drone Pack"
+                fleet["size"] = random.randint(4, 6)
+                base_hp = 45
+                base_damage = 15
+                ship_type = "Drone Fighter"
+            else:
+                fleet["type"] = "Pirate Patrol"
+                fleet["size"] = random.randint(3, 5)
+                base_hp = 75
+                base_damage = 25
+                ship_type = "Pirate Fighter"
 
         case _:
-            # Default case (shouldn't happen in Core space)
             return None
 
-    # Scale enemies slightly with player combat skill
-    skill_scaling = 1.0 + (combat_skill * 0.025)
-
-    # Generate individual ships in fleet
-    # Determine ship type name based on fleet type
-    if "Pirate" in fleet["type"]:
-        ship_type = "Pirate Fighter"
-    else:
-        ship_type = "Drone Fighter"
-
+    # Generate ships
     for i in range(fleet["size"]):
         max_hull = int(base_hp * skill_scaling)
-        max_shield = int(base_hp * 0.5 * skill_scaling)
+        max_shield = int(base_hp * 0.4 * skill_scaling)
 
         ship = {
             "name": f"{ship_type} #{i + 1}",
@@ -550,17 +544,262 @@ def generate_enemy_fleet(security_level, data):
             "max_hull_hp": max_hull,
             "shield_hp": max_shield,
             "max_shield_hp": max_shield,
-            "damage": int(
-                base_damage * skill_scaling * random.uniform(0.9, 1.1)),
+            "damage": int(base_damage * skill_scaling * random.uniform(0.9, 1.1)),
         }
         fleet["ships"].append(ship)
         fleet["total_firepower"] += ship["damage"]
 
-    # Chance for warp disruptor (pirates only)
-    if "Pirate" in fleet["type"] and random.random() < disruptor_chance:
-        fleet["warp_disruptor"] = True
+    return fleet
+
+
+def generate_wave_group(security_level, combat_skill):
+    """Generate a wave-based enemy group with command ships"""
+    fleet = {
+        "type": "",
+        "size": 0,
+        "ships": [],
+        "total_firepower": 0,
+        "warp_disruptor": False,
+        "encounter_type": "wave_group",
+        "current_wave": 1,
+        "total_waves": 0,
+        "command_ship_wave": 0,
+        "command_ship_type": "",
+        "wave_progression": []  # Stores how many ships per wave
+    }
+
+    skill_scaling = 1.0 + (combat_skill * 0.025)
+
+    match security_level:
+        case "Secure":
+            # Fireteams (2 waves) or Squadrons (3 waves)
+            if random.random() < 0.6:
+                # Fireteam: 2 waves + squad leader on wave 2
+                fleet["type"] = "Drone Fireteam"
+                fleet["total_waves"] = 2
+                fleet["command_ship_wave"] = 2
+                fleet["command_ship_type"] = "Squad Leader"
+                fleet["wave_progression"] = [2, 3]  # 2 ships wave 1, 3 wave 2
+                base_hp = 30
+                base_damage = 10
+                ship_type = "Drone"
+            else:
+                # Squadron: 3 waves + squad leader on wave 3
+                fleet["type"] = "Drone Squadron"
+                fleet["total_waves"] = 3
+                fleet["command_ship_wave"] = 3
+                fleet["command_ship_type"] = "Squad Leader"
+                fleet["wave_progression"] = [2, 3, 4]
+                base_hp = 35
+                base_damage = 12
+                ship_type = "Drone"
+
+        case "Contested":
+            # Squadrons (3 waves) or Fleets (4 waves)
+            if random.random() < 0.5:
+                # Squadron
+                if random.random() < 0.5:
+                    fleet["type"] = "Drone Squadron"
+                    ship_type = "Drone"
+                    base_hp = 50
+                    base_damage = 15
+                else:
+                    fleet["type"] = "Pirate Squadron"
+                    ship_type = "Pirate"
+                    base_hp = 100
+                    base_damage = 22
+                fleet["total_waves"] = 3
+                fleet["command_ship_wave"] = 3
+                fleet["command_ship_type"] = "Squad Leader"
+                fleet["wave_progression"] = [2, 3, 4]
+            else:
+                # Fleet: 4 waves + lieutenant/commander on wave 4
+                if random.random() < 0.5:
+                    fleet["type"] = "Drone Fleet"
+                    ship_type = "Drone"
+                    base_hp = 60
+                    base_damage = 18
+                    command_type = "Squad Lieutenant"
+                else:
+                    fleet["type"] = "Pirate Fleet"
+                    ship_type = "Pirate"
+                    base_hp = 110
+                    base_damage = 28
+                    command_type = "Squad Commander"
+                fleet["total_waves"] = 4
+                fleet["command_ship_wave"] = 4
+                fleet["command_ship_type"] = command_type
+                fleet["wave_progression"] = [2, 3, 4, 5]
+                disruptor_chance = 0.3 if "Pirate" in fleet["type"] else 0.0
+                if random.random() < disruptor_chance:
+                    fleet["warp_disruptor"] = True
+
+        case "Unsecure":
+            # Squadrons (3 waves) or Fleets (4 waves)
+            if random.random() < 0.4:
+                # Squadron
+                if random.random() < 0.5:
+                    fleet["type"] = "Drone Squadron"
+                    ship_type = "Drone"
+                    base_hp = 65
+                    base_damage = 20
+                else:
+                    fleet["type"] = "Pirate Squadron"
+                    ship_type = "Pirate"
+                    base_hp = 120
+                    base_damage = 30
+                fleet["total_waves"] = 3
+                fleet["command_ship_wave"] = 3
+                fleet["command_ship_type"] = "Squad Leader"
+                fleet["wave_progression"] = [3, 4, 5]
+            else:
+                # Fleet: 4 waves + lieutenant/commander on wave 4
+                if random.random() < 0.5:
+                    fleet["type"] = "Drone Fleet"
+                    ship_type = "Drone"
+                    base_hp = 75
+                    base_damage = 24
+                    command_type = "Squad Lieutenant"
+                else:
+                    fleet["type"] = "Pirate Fleet"
+                    ship_type = "Pirate"
+                    base_hp = 130
+                    base_damage = 35
+                    command_type = "Squad Commander"
+                fleet["total_waves"] = 4
+                fleet["command_ship_wave"] = 4
+                fleet["command_ship_type"] = command_type
+                fleet["wave_progression"] = [3, 4, 5, 6]
+                disruptor_chance = 0.4 if "Pirate" in fleet["type"] else 0.0
+                if random.random() < disruptor_chance:
+                    fleet["warp_disruptor"] = True
+
+        case "Wild":
+            # Fleets (4 waves) or Armadas (5 waves)
+            if random.random() < 0.4:
+                # Fleet: 4 waves
+                if random.random() < 0.5:
+                    fleet["type"] = "Drone Fleet"
+                    ship_type = "Drone"
+                    base_hp = 80
+                    base_damage = 28
+                    command_type = "Squad Lieutenant"
+                else:
+                    fleet["type"] = "Pirate Fleet"
+                    ship_type = "Pirate"
+                    base_hp = 150
+                    base_damage = 40
+                    command_type = "Squad Commander"
+                fleet["total_waves"] = 4
+                fleet["command_ship_wave"] = 4
+                fleet["command_ship_type"] = command_type
+                fleet["wave_progression"] = [4, 5, 6, 7]
+                disruptor_chance = 0.5 if "Pirate" in fleet["type"] else 0.0
+                if random.random() < disruptor_chance:
+                    fleet["warp_disruptor"] = True
+            else:
+                # Armada: 5 waves + commander/captain on wave 5
+                if random.random() < 0.5:
+                    fleet["type"] = "Drone Armada"
+                    ship_type = "Drone"
+                    base_hp = 85
+                    base_damage = 32
+                    command_type = "Commander"
+                else:
+                    fleet["type"] = "Pirate Armada"
+                    ship_type = "Pirate"
+                    base_hp = 170
+                    base_damage = 45
+                    command_type = "Captain"
+                fleet["total_waves"] = 5
+                fleet["command_ship_wave"] = 5
+                fleet["command_ship_type"] = command_type
+                fleet["wave_progression"] = [4, 5, 6, 7, 8]
+                disruptor_chance = 0.6 if "Pirate" in fleet["type"] else 0.0
+                if random.random() < disruptor_chance:
+                    fleet["warp_disruptor"] = True
+
+        case _:
+            # Default case (shouldn't happen in Core space)
+            return None
+
+    # Generate first wave ships
+    # Store wave metadata for spawning subsequent waves
+    fleet["wave_metadata"] = {
+        "base_hp": base_hp,
+        "base_damage": base_damage,
+        "ship_type": ship_type,
+        "skill_scaling": skill_scaling
+    }
+    generate_wave_ships(fleet, 1, base_hp, base_damage, ship_type, skill_scaling)
 
     return fleet
+
+
+def generate_wave_ships(fleet, wave_num, base_hp, base_damage, ship_type, skill_scaling):
+    """Generate ships for a specific wave"""
+    num_ships = fleet["wave_progression"][wave_num - 1]
+
+    # Is this the command ship wave?
+    is_command_wave = (wave_num == fleet["command_ship_wave"])
+
+    for i in range(num_ships):
+        # Last ship on command wave is the command ship
+        is_command_ship = is_command_wave and (i == num_ships - 1)
+
+        if is_command_ship:
+            # Command ships are significantly stronger
+            max_hull = int(base_hp * 2.5 * skill_scaling)
+            max_shield = int(base_hp * 1.5 * skill_scaling)
+            damage = int(base_damage * 2.0 * skill_scaling * random.uniform(0.95, 1.05))
+            ship_name = f"{ship_type} {fleet['command_ship_type']}"
+        else:
+            max_hull = int(base_hp * skill_scaling)
+            max_shield = int(base_hp * 0.5 * skill_scaling)
+            damage = int(base_damage * skill_scaling * random.uniform(0.9, 1.1))
+            ship_name = f"{ship_type} Fighter #{len(fleet['ships']) + 1}"
+
+        ship = {
+            "name": ship_name,
+            "hull_hp": max_hull,
+            "max_hull_hp": max_hull,
+            "shield_hp": max_shield,
+            "max_shield_hp": max_shield,
+            "damage": damage,
+            "is_command_ship": is_command_ship,
+            "wave": wave_num
+        }
+        fleet["ships"].append(ship)
+        fleet["total_firepower"] += ship["damage"]
+        fleet["size"] += 1
+
+
+def spawn_next_wave(fleet):
+    """Spawn the next wave of enemies for a wave-based encounter
+
+    Returns True if a new wave was spawned, False if no more waves
+    """
+    if fleet.get("encounter_type") != "wave_group":
+        return False
+
+    if fleet["current_wave"] >= fleet["total_waves"]:
+        return False
+
+    # Move to next wave
+    fleet["current_wave"] += 1
+
+    # Get wave metadata
+    metadata = fleet["wave_metadata"]
+    generate_wave_ships(
+        fleet,
+        fleet["current_wave"],
+        metadata["base_hp"],
+        metadata["base_damage"],
+        metadata["ship_type"],
+        metadata["skill_scaling"]
+    )
+
+    return True
 
 
 def enemy_encounter(enemy_fleet, system, save_name, data, previous_content=""):
@@ -581,7 +820,13 @@ def enemy_encounter(enemy_fleet, system, save_name, data, previous_content=""):
     print("=" * 60)
     print()
     print(f"  Fleet Type: {enemy_fleet['type']}")
-    print(f"  Fleet Size: {enemy_fleet['size']} ships")
+
+    # Show wave info for wave-based groups
+    if enemy_fleet.get("encounter_type") == "wave_group":
+        print(f"  Encounter Type: Multi-wave assault")
+        print(f"  Expected Waves: {enemy_fleet['total_waves']}")
+
+    print(f"  Initial Ships: {len([s for s in enemy_fleet['ships'] if s.get('wave', 1) == 1])} ships")
     print(f"  Threat Level: ", end="")
 
     # Calculate threat level based on total firepower vs player ship
@@ -633,7 +878,12 @@ def enemy_encounter(enemy_fleet, system, save_name, data, previous_content=""):
     print("=" * 60)
     print()
     print(f"  Fleet Type: {enemy_fleet['type']}")
-    print(f"  Fleet Size: {enemy_fleet['size']} ships")
+
+    if enemy_fleet.get("encounter_type") == "wave_group":
+        print(f"  Encounter Type: Multi-wave assault")
+        print(f"  Expected Waves: {enemy_fleet['total_waves']}")
+
+    print(f"  Initial Ships: {len([s for s in enemy_fleet['ships'] if s.get('wave', 1) == 1])} ships")
     print(f"  Threat Level: ", end="")
     if threat_ratio < 0.3:
         print("LOW")
@@ -749,7 +999,7 @@ def ignore_enemies(enemy_fleet, system, save_name, data):
     if remaining_damage > 0:
         player_ship["hull_hp"] -= remaining_damage
         max_hull = get_max_hull(player_ship)
-        print(f"  Hull HP: {player_ship['hull_hp']}/{max_hull} (-{remaining_damage})")
+        print(f"  Hull HP: {max(0, player_ship['hull_hp'])}/{max_hull} (-{remaining_damage})")
         sleep(0.3)
 
     print()
@@ -872,11 +1122,18 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
         print()
 
         # Display enemy fleet status
-        print(f"ENEMY FLEET ({enemy_fleet['type']}):")
+        if enemy_fleet.get("encounter_type") == "wave_group":
+            print(f"ENEMY FLEET ({enemy_fleet['type']}) - WAVE {enemy_fleet['current_wave']}/{enemy_fleet['total_waves']}:")
+        else:
+            print(f"ENEMY FLEET ({enemy_fleet['type']}):")
         alive_enemies = [ship for ship in enemy_fleet["ships"] if ship["hull_hp"] > 0]
 
         for i, ship in enumerate(alive_enemies):
-            print(f"  [{i+1}] {ship['name']}")
+            # Highlight command ships
+            name_display = ship['name']
+            if ship.get('is_command_ship', False):
+                name_display = f"\033[33m★ {name_display} ★\033[0m"  # Yellow stars
+            print(f"  [{i+1}] {name_display}")
             print(f"      Shield: {ship['shield_hp']}/{ship['max_shield_hp']} | Hull: {ship['hull_hp']}/{ship['max_hull_hp']}")
 
         print()
@@ -885,7 +1142,7 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
 
         # Combat options
         options = [
-            "Fire Weapons (All Targets)",
+            "Scatter Fire (Up to 4 Targets)",
             "Focus Fire (Single Target)",
             "Evasive Maneuvers",
             "Attempt Retreat",
@@ -906,9 +1163,15 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
         print(f"  Shield: {player_ship['shield_hp']}/{max_shield}")
         print(f"  Hull:   {player_ship['hull_hp']}/{max_hull}")
         print()
-        print(f"ENEMY FLEET ({enemy_fleet['type']}):")
+        if enemy_fleet.get("encounter_type") == "wave_group":
+            print(f"ENEMY FLEET ({enemy_fleet['type']}) - WAVE {enemy_fleet['current_wave']}/{enemy_fleet['total_waves']}:")
+        else:
+            print(f"ENEMY FLEET ({enemy_fleet['type']}):")
         for i, ship in enumerate(alive_enemies):
-            print(f"  [{i+1}] {ship['name']}")
+            name_display = ship['name']
+            if ship.get('is_command_ship', False):
+                name_display = f"★ {name_display} ★"
+            print(f"  [{i+1}] {name_display}")
             print(f"      Shield: {ship['shield_hp']}/{ship['max_shield_hp']} | Hull: {ship['hull_hp']}/{ship['max_hull_hp']}")
         print()
 
@@ -970,18 +1233,54 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
         # Check if all enemies destroyed
         alive_enemies = [ship for ship in enemy_fleet["ships"] if ship["hull_hp"] > 0]
         if not alive_enemies:
+            # Check if this is a wave-based encounter with more waves
+            if spawn_next_wave(enemy_fleet):
+                clear_screen()
+                title("WAVE CLEARED!")
+                print()
+                print(f"  Wave {enemy_fleet['current_wave'] - 1} eliminated!")
+                print()
+
+                # Show incoming wave message
+                if enemy_fleet["current_wave"] == enemy_fleet["command_ship_wave"]:
+                    set_color("red")
+                    set_color("blinking")
+                    print(f"  ⚠ ENEMY {enemy_fleet['command_ship_type'].upper()} INCOMING! ⚠")
+                    reset_color()
+                else:
+                    set_color("yellow")
+                    print(f"  → Wave {enemy_fleet['current_wave']} incoming...")
+                    reset_color()
+                print()
+
+                # Small XP for clearing wave
+                wave_xp = 10
+                add_skill_xp(data, "combat", wave_xp)
+                save_data(save_name, data)
+
+                sleep(1.5)
+                input("Press Enter to engage next wave...")
+                continue  # Continue combat with new wave
+
+            # No more waves - victory!
             clear_screen()
             title("VICTORY!")
             print()
-            print("  All enemy ships have been destroyed!")
+            if enemy_fleet.get("encounter_type") == "wave_group":
+                print(f"  All {enemy_fleet['total_waves']} waves defeated!")
+            else:
+                print("  All enemy ships have been destroyed!")
             print()
 
-            # Calculate rewards
-            credits_earned = enemy_fleet["size"] * 150 * random.randint(8, 12) // 10
-            data["credits"] += credits_earned
+            # Calculate rewards (increased for wave-based encounters)
+            if enemy_fleet.get("encounter_type") == "wave_group":
+                credits_earned = enemy_fleet["size"] * 175 * random.randint(8, 12) // 10
+                combat_xp = 30 + (enemy_fleet["size"] * 12)
+            else:
+                credits_earned = enemy_fleet["size"] * 150 * random.randint(8, 12) // 10
+                combat_xp = 20 + (enemy_fleet["size"] * 10)
 
-            # Combat XP gain - scales with fleet size
-            combat_xp = 20 + (enemy_fleet["size"] * 10)
+            data["credits"] += credits_earned
             levels_gained = add_skill_xp(data, "combat", combat_xp)
 
             print(f"  Credits earned: ¢{credits_earned}")
@@ -1043,20 +1342,27 @@ def create_health_bar(current, maximum, width, color="green"):
 
 
 def player_damage_distributed(enemies, combat_skill, data):
-    """Player attacks all enemies with distributed damage"""
+    """Player attacks enemies with distributed damage (max 4 targets)"""
     clear_screen()
     title("FIRING WEAPONS")
     print()
 
+    # Limit to 4 targets max
+    num_targets = min(len(enemies), 4)
+    targets = enemies[:num_targets]
+
     # Base damage - scales with combat skill
     base_damage = 40 + (combat_skill * 2)
-    damage_per_enemy = base_damage // len(enemies)
+    damage_per_enemy = base_damage // num_targets
 
-    print(f"  Distributing {base_damage} damage across {len(enemies)} targets...")
+    if len(enemies) > 4:
+        print(f"  Engaging {num_targets} of {len(enemies)} targets...")
+    else:
+        print(f"  Distributing {base_damage} damage across {num_targets} targets...")
     print()
     sleep(0.5)
 
-    for enemy in enemies:
+    for enemy in targets:
         # Random variance
         damage = int(damage_per_enemy * random.uniform(0.85, 1.15))
         apply_damage_to_enemy(enemy, damage)
@@ -1141,7 +1447,7 @@ def apply_damage_to_player(player_ship, damage):
 
 
 def enemy_attacks(enemies, player_ship, piloting_skill, is_evading=False):
-    """All enemies attack the player
+    """Enemies attack the player; not all ships may fire each turn
 
     Args:
         enemies: List of enemy ships
@@ -1166,7 +1472,34 @@ def enemy_attacks(enemies, player_ship, piloting_skill, is_evading=False):
     ship_stats = get_ship_stats(player_ship['name'])
     ship_agility = ship_stats.get('Agility', 100)
 
-    for enemy in enemies:
+    # Determine which enemies fire this turn
+    # If 4 or fewer: all fire
+    # If more than 4: random 50-80% fire, but command ships always fire
+    if len(enemies) <= 4:
+        attacking_enemies = enemies
+    else:
+        firing_chance = random.uniform(0.5, 0.8)
+        attacking_enemies = []
+        for enemy in enemies:
+            # Command ships always fire
+            if enemy.get('is_command_ship', False):
+                attacking_enemies.append(enemy)
+            # Regular ships have firing_chance to fire
+            elif random.random() < firing_chance:
+                attacking_enemies.append(enemy)
+
+        # Ensure at least 3 ships fire
+        if len(attacking_enemies) < 3:
+            remaining = [e for e in enemies if e not in attacking_enemies]
+            attacking_enemies.extend(random.sample(remaining, min(3 - len(attacking_enemies), len(remaining))))
+
+    non_firing = len(enemies) - len(attacking_enemies)
+    if non_firing > 0:
+        print(f"  {non_firing} enemy ships are repositioning and not firing this turn.")
+        print()
+        sleep(0.5)
+
+    for enemy in attacking_enemies:
         # Base damage with variance
         damage = int(enemy["damage"] * random.uniform(0.8, 1.2))
 
@@ -1223,7 +1556,7 @@ def enemy_attacks(enemies, player_ship, piloting_skill, is_evading=False):
         print(f"  Your hull took {remaining_damage} damage!")
         reset_color()
         max_hull = get_max_hull(player_ship)
-        print(f"  Hull HP: {player_ship['hull_hp']}/{max_hull}")
+        print(f"  Hull HP: {max(0, player_ship['hull_hp'])}/{max_hull}")
         sleep(0.3)
 
         if player_ship["hull_hp"] < max_hull * 0.2:
@@ -1303,7 +1636,7 @@ def attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data):
         if damage_taken > 0:
             player_ship["hull_hp"] -= damage_taken
             max_hull = get_max_hull(player_ship)
-            print(f"  Hull HP: {player_ship['hull_hp']}/{max_hull} (-{damage_taken})")
+            print(f"  Hull HP: {max(0, player_ship['hull_hp'])}/{max_hull} (-{damage_taken})")
 
         print()
         input("Press Enter to continue...")
@@ -1335,10 +1668,13 @@ def attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data):
         if damage_taken > 0:
             player_ship["hull_hp"] -= damage_taken
             max_hull = get_max_hull(player_ship)
-            print(f"  Hull HP: {player_ship['hull_hp']}/{max_hull} (-{damage_taken})")
+            print(f"  Hull HP: {max(0, player_ship['hull_hp'])}/{max_hull} (-{damage_taken})")
 
         print()
-        print("  You remain engaged in combat.")
+        if player_ship['hull_hp'] > 0:
+            print("  You remain engaged in combat.")
+        else:
+            print("  Your ship was destroyed in the attempt!")
         print()
         input("Press Enter to continue...")
 
@@ -3276,7 +3612,7 @@ r" & ; &&   &&    &&    &&&    X &    X $  ::  x.  & &  +  $ X  &  &&$$  &Xx&   
     spacingL2 = " " * math.ceil(total_padding2 / 2)
     spacingR2 = " " * math.floor(total_padding2 / 2)
 
-    print("—" * 60)
+    print("┌" + "—" * 58 + "┐")
     print("|" + " " * 58 + "|")
     print("|" + " " * 58 + "|")
     print("|" + " " * 58 + "|")
@@ -3290,7 +3626,7 @@ r" & ; &&   &&    &&    &&&    X &    X $  ::  x.  & &  +  $ X  &  &&$$  &Xx&   
     print("|" + " " * 58 + "|")
     print("|" + " " * 58 + "|")
     print("|" + " " * 58 + "|")
-    print("—" * 60)
+    print("└" + "—" * 58 + "┘")
     sleep(2)
 
 
