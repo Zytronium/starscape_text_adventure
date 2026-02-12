@@ -5995,6 +5995,17 @@ def main():
     # Initialize Discord Rich Presence
     init_discord_rpc()
 
+    startup_lines = [
+        "Initializing neural interface...",
+        "Loading galaxy data...",
+        "Fetching user save files...",
+        "Starting Starscape simulation...",
+        "",
+        "\033[1;32m✓ System ready!\033[0m"
+    ]
+
+    type_lines(startup_lines)
+
     try:
         while True:
             # Update Discord status to show we're in main menu
