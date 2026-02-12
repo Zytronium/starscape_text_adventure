@@ -9,7 +9,6 @@ import json
 import os
 import platform
 import subprocess
-import shutil
 from pathlib import Path
 from io import StringIO
 from time import sleep, time
