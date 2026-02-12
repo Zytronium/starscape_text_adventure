@@ -69,12 +69,15 @@ def init_discord_rpc():
         discord_rpc.connect()
 
         # Set initial presence
-        discord_rpc.update(
-            state="In Main Menu",
-            details="Playing Starscape Text Adventure",
-            large_text="Starscape: Text Adventure",
-            start=int(time())
-        )
+        settings = get_settings()
+
+        if settings.get("adaptive_discord_presence", True):
+            discord_rpc.update(
+                state="In Main Menu",
+                details="Playing Starscape Text Adventure",
+                large_text="Starscape: Text Adventure",
+                start=int(time())
+            )
         return True
     except Exception as e:
         print(f"Warning: Could not connect to Discord: {e}")
@@ -170,13 +173,22 @@ def update_discord_presence(state=None, details=None, data=None, context=None):
         return
 
     try:
+        # Load settings to check if adaptive presence is enabled
+        settings = get_settings()
+
         update_args = {
             "large_text": "Starscape: Text Adventure"
         }
 
-        # Use adaptive presence if data and context provided
-        if data and context:
+        # Use adaptive presence if enabled in settings and data/context provided
+        if settings.get("adaptive_discord_presence", True) and data and context:
             details, state = get_adaptive_presence(data, context)
+        elif not settings.get("adaptive_discord_presence", True):
+            # If adaptive presence is disabled, use simple generic presence
+            if not details:
+                details = "Playing Starscape Text Adventure"
+            if not state and context == "menu":
+                state = "In Main Menu"
 
         if state:
             update_args["state"] = state
@@ -5219,6 +5231,109 @@ def delete_save_screen():
     input("Press Enter to continue...")
 
 
+def get_settings():
+    """Load settings from file, or return defaults if file doesn't exist"""
+    settings_path = Path.home() / ".starscape_text_adventure" / "settings.json"
+
+    # Default settings
+    default_settings = {
+        "display_startup_dialog": True,
+        "adaptive_discord_presence": True
+    }
+
+    # Load existing settings or use defaults
+    if settings_path.exists():
+        try:
+            with open(settings_path, 'r') as f:
+                settings = json.load(f)
+            # Ensure all default keys exist
+            for key, value in default_settings.items():
+                if key not in settings:
+                    settings[key] = value
+            return settings
+        except:
+            return default_settings.copy()
+    else:
+        return default_settings.copy()
+
+
+def settings_screen():
+    """Settings menu for configuring game options"""
+    settings_path = Path.home() / ".starscape_text_adventure" / "settings.json"
+
+    # Default settings
+    default_settings = {
+        "display_startup_dialog": True,
+        "adaptive_discord_presence": True
+    }
+
+    # Load existing settings or create defaults
+    if settings_path.exists():
+        try:
+            with open(settings_path, 'r') as f:
+                settings = json.load(f)
+            # Ensure all default keys exist
+            for key, value in default_settings.items():
+                if key not in settings:
+                    settings[key] = value
+        except:
+            settings = default_settings.copy()
+    else:
+        settings = default_settings.copy()
+
+    # Save settings to file
+    def save_settings():
+        settings_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(settings_path, 'w') as f:
+            json.dump(settings, f, indent=4)
+
+    while True:
+        # Build menu options based on current settings
+        startup_dialog_status = "ON" if settings["display_startup_dialog"] else "OFF"
+        discord_presence_status = "ON" if settings["adaptive_discord_presence"] else "OFF"
+
+        options = [
+            f"Display dialog on startup: {startup_dialog_status}",
+            f"Adaptive Discord rich presence: {discord_presence_status}",
+            "Reset settings to default",
+            "Save and exit to menu"
+        ]
+
+        choice = arrow_menu("SETTINGS", options)
+
+        if choice == 0:
+            # Toggle startup dialog
+            settings["display_startup_dialog"] = not settings["display_startup_dialog"]
+
+        elif choice == 1:
+            # Toggle Discord presence
+            settings["adaptive_discord_presence"] = not settings["adaptive_discord_presence"]
+
+        elif choice == 2:
+            # Reset settings to default
+            clear_screen()
+            title("RESET SETTINGS")
+            print()
+            print("This will reset all settings to their default values.")
+            print("Type 'RESET' to confirm.")
+            print()
+
+            confirmation = input("> ").strip()
+
+            if confirmation == "RESET":
+                settings = default_settings.copy()
+                print("\nSettings reset to default.")
+                input("Press Enter to continue...")
+            else:
+                print("\nReset cancelled.")
+                input("Press Enter to continue...")
+
+        elif choice == 3:
+            # Save and exit
+            save_settings()
+            return
+
+
 def about_screen():
     clear_screen()
     title("ABOUT")
@@ -5992,19 +6107,24 @@ def exit_game(close_rpc=True):
 
 def main():
     """Main debug menu"""
+    # Load settings
+    settings = get_settings()
+
     # Initialize Discord Rich Presence
     init_discord_rpc()
 
-    startup_lines = [
-        "Initializing neural interface...",
-        "Loading galaxy data...",
-        "Fetching user save files...",
-        "Starting Starscape simulation...",
-        "",
-        "\033[1;32m✓ System ready!\033[0m"
-    ]
+    # Display startup dialog if enabled in settings
+    if settings.get("display_startup_dialog", True):
+        startup_lines = [
+            "Initializing neural interface...",
+            "Loading galaxy data...",
+            "Fetching user save files...",
+            "Starting Starscape simulation...",
+            "",
+            "\033[1;32m✓ System ready!\033[0m"
+        ]
 
-    type_lines(startup_lines)
+        type_lines(startup_lines)
 
     try:
         while True:
@@ -6015,6 +6135,7 @@ def main():
                 "New Game",
                 "Continue Game",
                 "Delete Save",
+                "Settings",
                 "About",
                 "Check For Updates",
                 "Exit"
@@ -6043,10 +6164,12 @@ def main():
             elif choice == 2:
                 delete_save_screen()
             elif choice == 3:
-                about_screen()
+                settings_screen()
             elif choice == 4:
-                check_for_updates()
+                about_screen()
             elif choice == 5:
+                check_for_updates()
+            elif choice == 6:
                 clear_screen()
                 print("Exiting...")
                 break
