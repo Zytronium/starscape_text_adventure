@@ -5988,7 +5988,6 @@ def galaxy_map(save_name, data):
 def exit_game(close_rpc=True):
     if close_rpc:
         close_discord_rpc()
-    print("Game exited.")
     sys.exit(0)
 
 
