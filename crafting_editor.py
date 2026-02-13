@@ -306,11 +306,75 @@ class CraftingRecipeEditor:
                 json.dump(recipes, f, indent=2)
 
             action = "updated" if updated else "added"
+
+            # If this is a ship recipe, also create/update the ship item in items.json
+            if self.type_var.get() == "ship":
+                self.create_ship_item(name)
+
             messagebox.showinfo("Success",
                                 f"Recipe '{name}' {action} in crafting.json")
 
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save recipe: {e}")
+
+    def create_ship_item(self, ship_name):
+        """Create or update a ship item in items.json"""
+        try:
+            items_file = Path("items.json")
+
+            # Load existing items
+            items_data = {"items": []}
+            if items_file.exists():
+                with open(items_file, 'r') as f:
+                    items_data = json.load(f)
+
+            # Check if ship item already exists
+            ship_item_exists = False
+            for item in items_data['items']:
+                if item['name'] == ship_name:
+                    ship_item_exists = True
+                    break
+
+            # Only create if it doesn't exist
+            if not ship_item_exists:
+                # Try to get description from ships.json
+                description = f"A {ship_name} class ship."
+                try:
+                    ships_file = Path("ships.json")
+                    if ships_file.exists():
+                        with open(ships_file, 'r') as f:
+                            ships_data = json.load(f)
+                            for ship in ships_data.get('ships', []):
+                                if ship['name'] == ship_name:
+                                    description = ship.get('description', description)
+                                    break
+                except:
+                    pass  # If we can't load ships.json, just use the default description
+
+                # Create new ship item
+                new_item = {
+                    "name": ship_name,
+                    "description": description,
+                    "type": "Ship",
+                    "sell_price": "",
+                    "buy_price": ""
+                }
+
+                items_data['items'].append(new_item)
+
+                # Save back to items.json
+                with open(items_file, 'w') as f:
+                    json.dump(items_data, f, indent=2)
+
+                # Reload valid items
+                self.valid_items = self.load_items()
+
+        except Exception as e:
+            # Don't fail the recipe save if item creation fails
+            # Just show a warning
+            messagebox.showwarning("Warning",
+                                 f"Recipe saved but failed to create ship item: {e}")
+
 
     def load_recipe(self):
         """Load a recipe from crafting.json"""

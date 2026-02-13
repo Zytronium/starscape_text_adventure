@@ -4741,6 +4741,7 @@ def view_item_details(data):
 def visit_ship_vendor(save_name, data):
     """Visit ship vendor to buy ships"""
     ships_data = load_ships_data()
+    items_data = load_items_data()
 
     while True:
         clear_screen()
@@ -4750,14 +4751,17 @@ def visit_ship_vendor(save_name, data):
         print()
         print("=" * 60)
 
-        # Get all purchasable ships (ships with buy_price specified)
+        # Get all purchasable ships (ship items with buy_price specified in items.json)
         purchasable_ships = []
         for ship_name_lower, ship_info in ships_data.items():
-            if ship_info.get('buy_price') and ship_info['buy_price'] != "":
-                purchasable_ships.append((ship_name_lower, ship_info))
+            ship_name = ship_info['name']
+            # Look up the ship in items.json to get pricing
+            ship_item = items_data.get(ship_name)
+            if ship_item and ship_item.get('buy_price') and ship_item['buy_price'] != "":
+                purchasable_ships.append((ship_name_lower, ship_info, ship_item))
 
         # Sort by price
-        purchasable_ships.sort(key=lambda x: int(x[1]['buy_price']))
+        purchasable_ships.sort(key=lambda x: int(x[2]['buy_price']))
 
         if not purchasable_ships:
             print("No ships available for purchase.")
@@ -4769,8 +4773,8 @@ def visit_ship_vendor(save_name, data):
         print("Available Ships:")
         print()
 
-        for ship_name_lower, ship_info in purchasable_ships:
-            price = ship_info['buy_price']
+        for ship_name_lower, ship_info, ship_item in purchasable_ships:
+            price = ship_item['buy_price']
             ship_class = ship_info.get('class', 'Unknown')
             ship_name = ship_info['name']
 
@@ -4784,7 +4788,7 @@ def visit_ship_vendor(save_name, data):
 
         print("=" * 60)
 
-        options = [f"{ship_info['name']} - {ship_info['buy_price']} CR" for _, ship_info in purchasable_ships]
+        options = [f"{ship_info['name']} - {ship_item['buy_price']} CR" for _, ship_info, ship_item in purchasable_ships]
         options.append("Back")
 
         # Capture current screen
@@ -4808,8 +4812,8 @@ def visit_ship_vendor(save_name, data):
             return
 
         # Show ship purchase confirmation
-        ship_name_lower, ship_info = purchasable_ships[choice]
-        price = int(ship_info['buy_price'])
+        ship_name_lower, ship_info, ship_item = purchasable_ships[choice]
+        price = int(ship_item['buy_price'])
         ship_name = ship_info['name']
 
         clear_screen()
@@ -4839,32 +4843,23 @@ def visit_ship_vendor(save_name, data):
             input("Press Enter to continue...")
             continue
 
-        # Ask for ship nickname
-        print("Enter a nickname for this ship (press Enter for default): ", end="")
-        nickname = input().strip()
-        if not nickname:
-            nickname = ship_name
-
         # Process purchase
         data['credits'] -= price
 
-        # Create new ship entry
-        new_ship = {
-            "id": str(uuid4()),
-            "name": ship_name_lower,
-            "nickname": nickname,
-            "hull_hp": stats.get('Hull', 200),
-            "shield_hp": stats.get('Shield', 200),
-            "modules_installed": [],
-        }
+        # Add ship item to inventory
+        if 'inventory' not in data:
+            data['inventory'] = {}
 
-        data['ships'].append(new_ship)
+        if ship_name not in data['inventory']:
+            data['inventory'][ship_name] = 0
+        data['inventory'][ship_name] += 1
 
         save_data(save_name, data)
 
         print()
-        print(f"Purchased {ship_name} '{nickname}' for {price} CR")
-        print("Your new ship is now available. Use 'Switch Ships' to select it.")
+        print(f"Purchased {ship_name} for {price} CR")
+        print(f"The {ship_name} item has been added to your inventory.")
+        print("You can assemble it to create a usable ship.")
         print()
         input("Press Enter to continue...")
 

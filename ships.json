@@ -11,10 +11,8 @@
         "Energy": 100,
         "Speed": 260,
         "Agility": 110,
-        "Warp Speed": 1.00
-      },
-      "sell_price": "",
-      "buy_price": ""
+        "Warp Speed": 1.0
+      }
     },
     {
       "name": "Zenith",
@@ -27,10 +25,8 @@
         "Energy": 80,
         "Speed": 410,
         "Agility": 112,
-        "Warp Speed": 1.30
-      },
-      "sell_price": "750",
-      "buy_price": "1500"
+        "Warp Speed": 1.3
+      }
     },
     {
       "name": "Falcon",
@@ -43,10 +39,8 @@
         "Energy": 110,
         "Speed": 445,
         "Agility": 115,
-        "Warp Speed": 1.50
-      },
-      "sell_price": "1000",
-      "buy_price": "2000"
+        "Warp Speed": 1.5
+      }
     },
     {
       "name": "Sabre",
@@ -59,10 +53,8 @@
         "Energy": 75,
         "Speed": 300,
         "Agility": 86,
-        "Warp Speed": 1.00
-      },
-      "sell_price": "1100",
-      "buy_price": "2200"
+        "Warp Speed": 1.0
+      }
     },
     {
       "name": "Aurora",
@@ -75,10 +67,8 @@
         "Energy": 100,
         "Speed": 320,
         "Agility": 97,
-        "Warp Speed": 1.10
-      },
-      "sell_price": "800",
-      "buy_price": "1600"
+        "Warp Speed": 1.1
+      }
     },
     {
       "name": "Marlin",
@@ -91,10 +81,8 @@
         "Energy": 90,
         "Speed": 420,
         "Agility": 120,
-        "Warp Speed": 1.50
-      },
-      "sell_price": "500",
-      "buy_price": "1000"
+        "Warp Speed": 1.5
+      }
     },
     {
       "name": "Badger",
@@ -107,14 +95,12 @@
         "Energy": 100,
         "Speed": 350,
         "Agility": 67,
-        "Warp Speed": 1.40
-      },
-      "sell_price": "700",
-      "buy_price": "1400"
+        "Warp Speed": 1.4
+      }
     },
     {
       "name": "Spectator",
-      "description": "Admin spectating ship with extreme stats — not normally usable in play.",
+      "description": "Admin spectating ship with extreme stats - not normally usable in play.",
       "class": "Special",
       "stats": {
         "Shield": 10000,
@@ -122,9 +108,7 @@
         "Speed": 500,
         "Agility": 200,
         "Warp Speed": 10.0
-      },
-      "sell_price": "",
-      "buy_price": ""
+      }
     },
     {
       "name": "Spectator-X",
@@ -137,9 +121,7 @@
         "Speed": 600,
         "Agility": 200,
         "Warp Speed": 12.0
-      },
-      "sell_price": "",
-      "buy_price": ""
+      }
     }
   ]
 }

@@ -16,7 +16,7 @@
   - [ ] Displays all ships, select to view details, then select either "back," "switch," "rename," or "disassemble" (and in the future, "outfit" to manage upgrades and modules)
   - [ ] Colors ships names by tier
   - [ ] Contains 2nd tab for ship assembly
-- [ ] Add items for every ship so they can be assembled and disassembled
+- [X] Add items for every ship so they can be assembled and disassembled
 - [ ] Add an "Assemble" option when viewing a ship in inventory (1 of 2 ways to assemble)
 - [ ] Implement Manufacturing Bay
   - Has 2 tabs: Items and Ships

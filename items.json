@@ -147,7 +147,6 @@
       "sell_price": "14",
       "buy_price": ""
     },
-
     {
       "name": "Korrelite",
       "description": "Refined Korrelite material.",
@@ -209,6 +208,90 @@
       "description": "A mysterious artifact from an ancient spacefaring civilization. Highly valuable to collectors.",
       "type": "Artifact",
       "sell_price": "2500",
+      "buy_price": ""
+    },
+    {
+      "name": "Zenith",
+      "description": "An agile interceptor ship with balanced speed and combat capability.",
+      "type": "Ship",
+      "sell_price": "750",
+      "buy_price": "1500"
+    },
+    {
+      "name": "Falcon",
+      "description": "Swift interceptor designed for scouting and high warp speed.",
+      "type": "Ship",
+      "sell_price": "1000",
+      "buy_price": "2000"
+    },
+    {
+      "name": "Sabre",
+      "description": "Heavy fighter with substantial firepower and durability.",
+      "type": "Ship",
+      "sell_price": "1100",
+      "buy_price": "2200"
+    },
+    {
+      "name": "Aurora",
+      "description": "General-purpose fighter spacecraft with balanced stats.",
+      "type": "Ship",
+      "sell_price": "800",
+      "buy_price": "1600"
+    },
+    {
+      "name": "Marlin",
+      "description": "A nimble vessel that is designed to mine efficiently but be capable of making a quick escape when necessary.",
+      "type": "Ship",
+      "sell_price": "500",
+      "buy_price": "1000"
+    },
+    {
+      "name": "Badger",
+      "description": "An entry-level miner-class ship best suited as a starter mining ship. While it mines more efficiently than the Marlin, it's less capable of making a quick escape.",
+      "type": "Ship",
+      "sell_price": "700",
+      "buy_price": "1400"
+    },
+    {
+      "name": "Spectator",
+      "description": "Admin spectating ship with extreme stats \u2014 not normally usable in play.",
+      "type": "Ship",
+      "sell_price": "",
+      "buy_price": ""
+    },
+    {
+      "name": "Spectator-X",
+      "description": "Enhanced version of the Spectator ship for advanced testing.",
+      "type": "Ship",
+      "sell_price": "",
+      "buy_price": ""
+    },
+    {
+      "name": "Luminar",
+      "description": "A Luminar class ship.",
+      "type": "Ship",
+      "sell_price": "",
+      "buy_price": ""
+    },
+    {
+      "name": "Paragon",
+      "description": "A Paragon class ship.",
+      "type": "Ship",
+      "sell_price": "",
+      "buy_price": ""
+    },
+    {
+      "name": "Claymore",
+      "description": "A Claymore class ship.",
+      "type": "Ship",
+      "sell_price": "",
+      "buy_price": ""
+    },
+    {
+      "name": "Polaris",
+      "description": "A Polaris class ship.",
+      "type": "Ship",
+      "sell_price": "",
       "buy_price": ""
     }
   ]
