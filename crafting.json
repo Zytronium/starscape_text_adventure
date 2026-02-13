@@ -1,0 +1,15 @@
+{
+  "name": "Zenith",
+  "type": "ship",
+  "time": 150.0,
+  "materials": {
+    "Korrelite": 200,
+    "Reknite": 100,
+    "Gellium": 30,
+    "Axnit": 0,
+    "Narcor": 0,
+    "Red Narcor": 0,
+    "Vexnium": 0,
+    "Water": 0
+  }
+}

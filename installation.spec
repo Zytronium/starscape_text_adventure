@@ -6,6 +6,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('ascii_art', 'ascii_art'),
+        ('crafting.json', '.'),
         ('items.json', '.'),
         ('ships.json', '.'),
         ('system_data.json', '.'),
