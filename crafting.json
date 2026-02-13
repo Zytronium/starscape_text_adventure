@@ -1,15 +1,42 @@
-{
-  "name": "Zenith",
-  "type": "ship",
-  "time": 150.0,
-  "materials": {
-    "Korrelite": 200,
-    "Reknite": 100,
-    "Gellium": 30,
-    "Axnit": 0,
-    "Narcor": 0,
-    "Red Narcor": 0,
-    "Vexnium": 0,
-    "Water": 0
+[
+  {
+    "name": "Zenith",
+    "type": "ship",
+    "time": 150.0,
+    "materials": {
+      "Korrelite": 200,
+      "Reknite": 100,
+      "Gellium": 30
+    }
+  },
+  {
+    "name": "Falcon",
+    "type": "ship",
+    "time": 150.0,
+    "materials": {
+      "Korrelite": 300,
+      "Reknite": 120,
+      "Gellium": 30
+    }
+  },
+  {
+    "name": "Sabre",
+    "type": "ship",
+    "time": 150.0,
+    "materials": {
+      "Korrelite": 320,
+      "Reknite": 120,
+      "Gellium": 50
+    }
+  },
+  {
+    "name": "Aurora",
+    "type": "ship",
+    "time": 150.0,
+    "materials": {
+      "Korrelite": 225,
+      "Reknite": 100,
+      "Gellium": 30
+    }
   }
-}
+]
