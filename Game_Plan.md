@@ -70,10 +70,10 @@ from the global NPC marketplace. There are several types of marketplaces:
 
 ### Combat
 Upon entering a non-core system or certain anomalies, there's a random chance 
-that you will encounter hostile enemies (usually drones or pirates). You will
-get a choice to fight, run, or ignore the enemies. Your ship will take damage
-based on what ship you're in, what upgrades is has, your skill level, and how
-strong the enemies are. If you're in a destroyer and you encounter a small drone
+that you will encounter hostile enemies (drones or pirates). You will get
+a choice to fight, run, or ignore the enemies. Your ship will take damage based
+on what ship you're in, what upgrades it has, your combat skill level, and how
+strong the enemies are. If you're in a warship and you encounter a small drone
 fleet in secure space, you can easily ignore the drones while taking minimal 
 shield damage. However, a smaller ship like a Stratos or a Falcon may have to 
 fight or run. 
@@ -86,7 +86,7 @@ in the future). Choosing to ignore the fleet can be dangerous depending on the
 situation, but is the fastest option if your ship is strong enough, however,
 it has no effect on skill level.
 
-Combat plays out in segments, allowing you to retreat if things aren't going your
+Combat plays out in turns, allowing you to retreat if things aren't going your
 way rather than taking a higher gamble at the start of the fight if you 
 underestimate the enemy fleet.
 
@@ -95,6 +95,29 @@ underestimate the enemy fleet.
 ##### Enemy Fleet Encounter
 As mentioned previously, warping to a system or anomaly can sometimes trigger
 en enemy fleet encounter. 
+
+- Chance to encounter smaller groups of enemy NPC ships instead of larger fleets
+  - 1-2 weak drones in secure
+  - 2-4 weak drones or 1-3 weak pirates in unsecure and contested (less weak than in secure, but still weak)
+  - 4-6 drones or 3-5 pirates in wild
+- Wave-based groups
+  - **Fireteams**: 2 waves + squad leader on wave 2
+    - Only found in secure systems.
+  - **Squadrons**: 3 waves + squad leader on wave 3
+    - Found in secure, contested, and unsecure systems.
+  - **Dens/Factories**: Infinite waves until the pirate den or drone factory structure is destroyed.
+    - No command ship
+    - Found in all systems except core, but more difficult in less secure space.
+  - **Fleets**: 4 waves + squad lieutenant or commander on wave 4
+    - Found in contested, unsecure, and wild systems
+  - **Armadas**: 5 waves + commander or captain on wave 5
+    - Only found in wild systems.
+    - If this was a drone armada, there's a 10% chance upon defeating the command ship for a drone battleship to warp in.
+      - Drone battleships are treated as large structures with infinite waves of enemy ships guarding them.
+      - Drone battleships are the only structure capable of fighting back, and are extremely powerful.
+      - Drone battleships will have unique combat tactics available, including falling back to a safer distance to let shields recharge.
+  - Each wave has more ships than the last wave.
+  - Not all ships in the group will fire on the player every turn
 
 ##### Warp Disruption
 Pirates can sometimes disrupt your warp drive, preventing you from escaping.
