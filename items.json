@@ -4,8 +4,8 @@
       "name": "System Probe",
       "description": "An autonomous probe which scans for anomalies throughout a star system.",
       "type": "Deployable",
-      "sell_price": "30",
-      "buy_price": "50"
+      "sell_price": "15",
+      "buy_price": "30"
     },
     {
       "name": "Metal Scraps",

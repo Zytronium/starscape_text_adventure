@@ -1,5 +1,14 @@
 [
   {
+    "name": "System Probe",
+    "type": "item",
+    "time": 1.0,
+    "materials": {
+      "Korrelite": 10,
+      "Gellium": 5
+    }
+  },
+  {
     "name": "Zenith",
     "type": "ship",
     "time": 150.0,

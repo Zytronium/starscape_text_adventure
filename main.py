@@ -28,7 +28,7 @@ except ImportError:
     sleep(3)
 
 # Version codes
-APP_VERSION_CODE = "0.1.1.4"  # 0.1.x = alpha; 0.2.x = beta; 1.x = release
+APP_VERSION_CODE = "0.1.2"    # 0.1.x = alpha; 0.2.x = beta; 1.x = release
 SAVE_VERSION_CODE = 2         # Save format version code
 
 # Color codes
@@ -212,7 +212,7 @@ def close_discord_rpc():
         except:
             pass
         discord_rpc = None
-        
+
 
 def is_version_newer(new_version_code):
     """Checks if the given app version code is newer than the current known one"""
@@ -736,6 +736,7 @@ def default_data():
         },
         "destination": "",  # Current navigation destination
         "anomalies": {},  # Discovered anomalies per system: {system_name: [anomaly1, anomaly2, ...]}
+        "manufacturing_jobs": {},  # Active manufacturing jobs per station: {station_name: [job1, job2, ...]}
     }
 
 
@@ -759,6 +760,44 @@ def load_items_data():
     with open(resource_path('items.json'), 'r') as f:
         items_data = json.load(f)
     return {item['name']: item for item in items_data['items']}
+
+
+def load_crafting_data():
+    """Load crafting recipe data from crafting.json"""
+    with open(resource_path('crafting.json'), 'r') as f:
+        crafting_data = json.load(f)
+    return {recipe['name']: recipe for recipe in crafting_data}
+
+
+def wrap_text(text, max_width=60):
+    """Wrap text to a maximum width, breaking only at word boundaries"""
+    if not text:
+        return ""
+
+    words = text.split()
+    lines = []
+    current_line = []
+    current_length = 0
+
+    for word in words:
+        word_length = len(word)
+        # +1 for the space before the word (except for first word)
+        space_needed = word_length + (1 if current_line else 0)
+
+        if current_length + space_needed <= max_width:
+            current_line.append(word)
+            current_length += space_needed
+        else:
+            if current_line:
+                lines.append(' '.join(current_line))
+            current_line = [word]
+            current_length = word_length
+
+    if current_line:
+        lines.append(' '.join(current_line))
+
+    return '\n'.join(lines)
+
 
 
 def get_ship_stats(ship_name):
@@ -3345,6 +3384,464 @@ def visit_refinery(save_name, data):
             input("Press Enter to continue...")
 
 
+def visit_manufacturing_bay(save_name, data):
+    """Visit the Manufacturing Bay to craft items and ships"""
+    # Ensure manufacturing_jobs exists in save data
+    if "manufacturing_jobs" not in data:
+        data["manufacturing_jobs"] = {}
+
+    while True:
+        # Capture content for display
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        title("MANUFACTURING BAY")
+        print()
+
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        # Show options
+        options = ["Craft Items", "Craft Ships", "View Manufacturing Jobs", "Back"]
+        choice = arrow_menu("Select:", options, previous_content)
+
+        if choice == 0:
+            manufacturing_craft_menu(save_name, data, "item")
+        elif choice == 1:
+            manufacturing_craft_menu(save_name, data, "ship")
+        elif choice == 2:
+            view_manufacturing_jobs(save_name, data)
+        elif choice == 3:
+            return
+
+
+def manufacturing_craft_menu(save_name, data, craft_type):
+    """Show craftable items or ships with pagination and search"""
+    crafting_data = load_crafting_data()
+    items_data = load_items_data()
+    ships_data = load_ships_data()
+
+    # Filter recipes by type
+    recipes = {name: recipe for name, recipe in crafting_data.items()
+               if recipe.get('type') == craft_type}
+
+    if not recipes:
+        clear_screen()
+        title(f"MANUFACTURING - {craft_type.upper()}S")
+        print()
+        print(f"No {craft_type}s available for crafting.")
+        print()
+        input("Press Enter to continue...")
+        return
+
+    # Sort recipes alphabetically
+    sorted_recipes = sorted(recipes.items(), key=lambda x: x[0])
+
+    page_size = 10
+    current_page = 0
+
+    while True:
+        # Pagination
+        max_page = (len(sorted_recipes) - 1) // page_size
+        current_page = min(current_page, max_page)
+        start_idx = current_page * page_size
+        end_idx = min(start_idx + page_size, len(sorted_recipes))
+        page_recipes = sorted_recipes[start_idx:end_idx]
+
+        # Capture content for display
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        # Build display
+        title(f"MANUFACTURING - {craft_type.upper()}S")
+        print()
+        print(f"Page {current_page + 1}/{max_page + 1}")
+        print()
+        print("=" * 60)
+
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        # Build options
+        options = []
+        for name, recipe in page_recipes:
+            materials = recipe.get('materials', {})
+            time_str = f"{recipe.get('time', 0):.0f}s"
+
+            # Check if player has materials
+            has_all_materials = True
+            has_some_materials = False
+            for mat_name, mat_qty in materials.items():
+                inventory_qty = data.get('inventory', {}).get(mat_name, 0)
+                storage_qty = data.get('storage', {}).get(mat_name, 0)
+                player_qty = inventory_qty + storage_qty
+
+                if player_qty < mat_qty:
+                    has_all_materials = False
+                if player_qty > 0:
+                    has_some_materials = True
+
+            # Color item name based on material availability
+            # Green if has all, yellow if has some, red if has none
+            if has_all_materials:
+                color = CORE_COLOR
+            elif has_some_materials:
+                color = CONTESTED_COLOR  # Yellow/orange
+            else:
+                color = UNSECURE_COLOR  # Red
+            options.append(f"{color}{name}{RESET_COLOR} ({time_str})")
+
+        # Add navigation options
+        if current_page > 0:
+            options.append("[←] Previous Page")
+        if current_page < max_page:
+            options.append("[→] Next Page")
+        options.append("Back")
+
+        choice = arrow_menu("Select item to view:", options, previous_content)
+
+        # Handle navigation choices
+        if choice >= len(page_recipes):
+            # It's a navigation option
+            nav_option = options[choice]
+            if "Previous Page" in nav_option:
+                current_page -= 1
+            elif "Next Page" in nav_option:
+                current_page += 1
+            elif "Back" in nav_option:
+                return
+        else:
+            # Player selected an item
+            name, recipe = page_recipes[choice]
+            show_craft_details(save_name, data, name, recipe, items_data, ships_data)
+
+
+def show_craft_details(save_name, data, item_name, recipe, items_data, ships_data):
+    """Show details about a craftable item and option to craft it"""
+    # Capture content for display
+    content_buffer = StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = content_buffer
+
+    # Build display
+    title(f"CRAFT: {item_name}")
+    print()
+
+    # Show item info
+    item_info = items_data.get(item_name, {})
+    item_type = recipe.get('type', 'Unknown').title()
+    print(f"Name: {item_name}")
+    print(f"Type: {item_type}")
+
+    # Show description
+    if recipe.get('type') == 'ship':
+        ship_info = ships_data.get(item_name.lower(), {})
+        desc = ship_info.get('description', 'No description available.')
+        wrapped_desc = wrap_text(desc, 60)
+        print(f"Description: {wrapped_desc}")
+
+        # Show ship stats
+        stats = ship_info.get('stats', {})
+        if stats:
+            print()
+            print("Ship Stats:")
+            for stat_name, stat_value in stats.items():
+                print(f"  {stat_name}: {stat_value}")
+    else:
+        desc = item_info.get('description', 'No description available.')
+        wrapped_desc = wrap_text(desc, 60)
+        print(f"Description: {wrapped_desc}")
+
+    print()
+
+    # Show crafting time
+    craft_time = recipe.get('time', 0)
+    print(f"Crafting Time: {craft_time:.0f} seconds")
+    print()
+
+    # Show required materials
+    print("Required Materials:")
+    materials = recipe.get('materials', {})
+    has_all_materials = True
+
+    for mat_name, mat_qty in materials.items():
+        inventory_qty = data.get('inventory', {}).get(mat_name, 0)
+        storage_qty = data.get('storage', {}).get(mat_name, 0)
+        player_qty = inventory_qty + storage_qty
+
+        if player_qty >= mat_qty:
+            print(f"  ✓ {mat_name}: {mat_qty} (You have: {player_qty})")
+        else:
+            print(f"  x {mat_name}: {mat_qty} (You have: {player_qty})")
+            has_all_materials = False
+
+    print()
+    print("=" * 60)
+
+    previous_content = content_buffer.getvalue()
+    sys.stdout = old_stdout
+
+    # Show options
+    if has_all_materials:
+        options = ["Craft", "Back"]
+    else:
+        options = ["Back"]
+
+    choice = arrow_menu("Select:", options, previous_content)
+
+    if choice == 0 and has_all_materials:
+        # Start crafting
+        start_crafting(save_name, data, item_name, recipe)
+
+
+def start_crafting(save_name, data, item_name, recipe):
+    """Start crafting an item"""
+    # Get current station
+    station = data.get('docked_at', 'The Citadel')
+
+    # Consume materials (from inventory first, then storage)
+    materials = recipe.get('materials', {})
+    for mat_name, mat_qty in materials.items():
+        remaining_qty = mat_qty
+
+        # First consume from inventory
+        inventory_qty = data.get('inventory', {}).get(mat_name, 0)
+        consume_from_inventory = min(inventory_qty, remaining_qty)
+        if consume_from_inventory > 0:
+            data['inventory'][mat_name] -= consume_from_inventory
+            if data['inventory'][mat_name] <= 0:
+                del data['inventory'][mat_name]
+            remaining_qty -= consume_from_inventory
+
+        # Then consume from storage if needed
+        if remaining_qty > 0:
+            storage_qty = data.get('storage', {}).get(mat_name, 0)
+            consume_from_storage = min(storage_qty, remaining_qty)
+            if consume_from_storage > 0:
+                data['storage'][mat_name] -= consume_from_storage
+                if data['storage'][mat_name] <= 0:
+                    del data['storage'][mat_name]
+                remaining_qty -= consume_from_storage
+
+    # Create crafting job
+    job = {
+        "item": item_name,
+        "station": station,
+        "start_time": time(),
+        "craft_time": recipe.get('time', 0),
+        "type": recipe.get('type', 'item')
+    }
+
+    # Add job to station's queue
+    if station not in data['manufacturing_jobs']:
+        data['manufacturing_jobs'][station] = []
+    data['manufacturing_jobs'][station].append(job)
+
+    save_data(save_name, data)
+
+    clear_screen()
+    title("CRAFTING STARTED")
+    print()
+    print(f"Started crafting: {item_name}")
+    print(f"Location: {station}")
+    print(f"Time required: {job['craft_time']:.0f} seconds")
+    print()
+    print("You can check progress in 'View Manufacturing Jobs'.")
+    print("Crafting will continue even when you're not at this station.")
+    print()
+    input("Press Enter to continue...")
+
+
+def view_manufacturing_jobs(save_name, data):
+    """View all active manufacturing jobs with progress bars"""
+    # Ensure manufacturing_jobs exists
+    if "manufacturing_jobs" not in data:
+        data["manufacturing_jobs"] = {}
+
+    # Check for completed jobs and allow collection
+    current_station = data.get('docked_at', '')
+
+    while True:
+        current_time = time()
+
+        # Collect all jobs from all stations
+        all_jobs = []
+        for station, jobs in data['manufacturing_jobs'].items():
+            for job in jobs:
+                elapsed = current_time - job['start_time']
+                progress = min(100, (elapsed / job['craft_time']) * 100)
+                is_complete = elapsed >= job['craft_time']
+                can_collect = (station == current_station or station == 'The Citadel') and is_complete
+
+                all_jobs.append({
+                    'station': station,
+                    'job': job,
+                    'progress': progress,
+                    'is_complete': is_complete,
+                    'can_collect': can_collect,
+                    'elapsed': elapsed
+                })
+
+        if not all_jobs:
+            clear_screen()
+            title("MANUFACTURING JOBS")
+            print()
+            print("  No active manufacturing jobs.")
+            print()
+            input("Press Enter to continue...")
+            return
+
+        # Capture content for display
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        # Display header and jobs
+        print("MANUFACTURING JOBS")
+        print()
+        print("Active Jobs:")
+        print()
+
+        for i, job_info in enumerate(all_jobs):
+            job = job_info['job']
+            station = job_info['station']
+            progress = job_info['progress']
+            is_complete = job_info['is_complete']
+            can_collect = job_info['can_collect']
+
+            # Progress bar
+            bar_width = 30
+            filled = int((progress / 100) * bar_width)
+            bar = "█" * filled + "░" * (bar_width - filled)
+
+            status = ""
+            if can_collect:
+                status = " [READY TO COLLECT]"
+            elif is_complete:
+                status = f" [Complete - at {station}]"
+
+            print(f"{chr(ord('a') + i)}) {job['item']} - {station}")
+            print(f"   [{bar}] {progress:.1f}%{status}")
+            print()
+
+        print("=" * 60)
+
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        # Build options
+        options = []
+        for i, job_info in enumerate(all_jobs):
+            job = job_info['job']
+            station = job_info['station']
+            progress = job_info['progress']
+            is_complete = job_info['is_complete']
+            can_collect = job_info['can_collect']
+
+            status = ""
+            if can_collect:
+                status = " [READY TO COLLECT]"
+            elif is_complete:
+                status = f" [Complete - at {station}]"
+
+            option_text = f"{job['item']} - {station} ({progress:.1f}%){status}"
+            options.append(option_text)
+
+        options.append("Back")
+
+        choice = arrow_menu("Select job to view or collect:", options, previous_content)
+
+        if choice == len(all_jobs):
+            # Back
+            return
+
+        # Handle job selection
+        selected_job_info = all_jobs[choice]
+        if selected_job_info['can_collect']:
+            # Collect the item
+            collect_crafted_item(save_name, data, selected_job_info)
+        else:
+            # Just show details
+            show_job_details(selected_job_info)
+
+
+def collect_crafted_item(save_name, data, job_info):
+    """Collect a completed crafted item"""
+    job = job_info['job']
+    station = job_info['station']
+    item_name = job['item']
+    item_type = job['type']
+
+    # Remove job from queue
+    data['manufacturing_jobs'][station] = [j for j in data['manufacturing_jobs'][station] if j != job]
+    if not data['manufacturing_jobs'][station]:
+        del data['manufacturing_jobs'][station]
+
+    # Give player the item
+    if item_type == 'ship':
+        # Add ship to player's fleet
+        ships_data = load_ships_data()
+        ship_info = ships_data.get(item_name.lower(), {})
+
+        new_ship = {
+            "id": str(uuid4()),
+            "name": item_name.lower(),
+            "nickname": item_name,
+            "hull_hp": ship_info.get('stats', {}).get('Hull', 200),
+            "shield_hp": ship_info.get('stats', {}).get('Shield', 200),
+            "modules_installed": [],
+        }
+        data['ships'].append(new_ship)
+
+        clear_screen()
+        title("SHIP CRAFTED")
+        print()
+        print(f"✓ {item_name} has been added to your fleet!")
+    else:
+        # Add item to inventory
+        if item_name not in data['inventory']:
+            data['inventory'][item_name] = 0
+        data['inventory'][item_name] += 1
+
+        clear_screen()
+        title("ITEM CRAFTED")
+        print()
+        print(f"✓ {item_name} has been added to your inventory!")
+
+    save_data(save_name, data)
+    print()
+    input("Press Enter to continue...")
+
+
+def show_job_details(job_info):
+    """Show details about a manufacturing job that isn't ready yet"""
+    job = job_info['job']
+    station = job_info['station']
+    progress = job_info['progress']
+    elapsed = job_info['elapsed']
+
+    remaining = job['craft_time'] - elapsed
+
+    clear_screen()
+    title("JOB DETAILS")
+    print()
+    print(f"Item: {job['item']}")
+    print(f"Location: {station}")
+    print(f"Progress: {progress:.1f}%")
+    print(f"Time Remaining: {remaining:.0f} seconds")
+    print()
+
+    if job_info['is_complete']:
+        print("Status: Complete! Return to this station to collect.")
+    else:
+        print("Status: In Progress")
+
+    print()
+    input("Press Enter to continue...")
+
+
 def game_loop(save_name, data):
     clear_screen()
     if data["v"] < SAVE_VERSION_CODE:
@@ -4151,6 +4648,10 @@ def station_screen(system, station_num, save_name, data):
             visit_refinery(save_name, data)
             continue
 
+        if action == "manufacturing":
+            visit_manufacturing_bay(save_name, data)
+            continue
+
         if action == "ship_terminal":
             ship_terminal(save_name, data)
             continue
@@ -4217,16 +4718,21 @@ def visit_marketplace(save_name, data):
     items_data = load_items_data()
 
     while True:
-        clear_screen()
+        # Capture content for display
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
         title("GENERAL MARKETPLACE")
         print()
-        print(f"Credits: {data['credits']}")
-        print()
-        print("=" * 60)
+        print(f"  Credits: {data['credits']}")
+
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
 
         # Show tabs
         options = ["Buy Items", "Sell Items", "Cancel"]
-        choice = arrow_menu("Select:", options)
+        choice = arrow_menu("Select:", options, previous_content)
 
         if choice == 0:
             # Buy tab
@@ -4242,17 +4748,12 @@ def visit_marketplace(save_name, data):
 def marketplace_buy(save_name, data, items_data):
     """Buy items from marketplace"""
     while True:
-        clear_screen()
-        title("MARKETPLACE - BUY")
-        print()
-        print(f"Credits: {data['credits']}")
-        print()
-        print("=" * 60)
-        print()
-
         # Get all buyable items (items with buy_price specified)
         buyable_items = []
         for item_name, item_info in items_data.items():
+            # Don't allow buying ships in the marketplace
+            if item_info.get('type') == 'Ship':
+                continue
             if item_info.get('buy_price') and item_info['buy_price'] != "":
                 buyable_items.append((item_name, item_info))
 
@@ -4260,10 +4761,27 @@ def marketplace_buy(save_name, data, items_data):
         buyable_items.sort(key=lambda x: int(x[1]['buy_price']))
 
         if not buyable_items:
+            clear_screen()
+            title("MARKETPLACE - BUY")
+            print()
             print("No items available for purchase.")
             print()
             input("Press Enter to continue...")
             return
+
+        # Capture current screen for display
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        print("MARKETPLACE - BUY")
+        print()
+        print(f"Credits: {data['credits']}")
+        print()
+        print("=" * 60)
+
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
 
         # Display items
         options = []
@@ -4275,20 +4793,6 @@ def marketplace_buy(save_name, data, items_data):
             options.append(f"{item_name} - {price} CR ({item_type}) [Own: {inv_count}]")
 
         options.append("Back")
-
-        # Capture current screen for display
-        content_buffer = StringIO()
-        old_stdout = sys.stdout
-        sys.stdout = content_buffer
-
-        print(f"MARKETPLACE - BUY")
-        print()
-        print(f"Credits: {data['credits']}")
-        print()
-        print("=" * 60)
-
-        previous_content = content_buffer.getvalue()
-        sys.stdout = old_stdout
 
         choice = arrow_menu("Select item to buy:", options, previous_content)
 
@@ -4305,7 +4809,8 @@ def marketplace_buy(save_name, data, items_data):
         print()
         print(f"Item: {item_name}")
         print(f"Type: {item_info.get('type', 'Unknown')}")
-        print(f"Description: {item_info.get('description', 'No description available.')}")
+        desc = item_info.get('description', 'No description available.')
+        print(f"Description: {wrap_text(desc, 60)}")
         print()
         print(f"Price: {price} CR")
         print(f"Your Credits: {data['credits']} CR")
@@ -4355,27 +4860,12 @@ def marketplace_buy(save_name, data, items_data):
 def marketplace_sell(save_name, data, items_data):
     """Sell items to marketplace"""
     while True:
-        clear_screen()
-        title("MARKETPLACE - SELL")
-        print()
-        print(f"Credits: {data['credits']}")
-        print()
-        print("=" * 60)
-        print()
-
-        # Ask whether to sell from inventory or storage
-        options = [
-            "Sell from Inventory",
-            "Sell from Storage",
-            "Back"
-        ]
-
         # Capture current screen for display
         content_buffer = StringIO()
         old_stdout = sys.stdout
         sys.stdout = content_buffer
 
-        print(f"MARKETPLACE - SELL")
+        print("MARKETPLACE - SELL")
         print()
         print(f"Credits: {data['credits']}")
         print()
@@ -4383,6 +4873,13 @@ def marketplace_sell(save_name, data, items_data):
 
         previous_content = content_buffer.getvalue()
         sys.stdout = old_stdout
+
+        # Ask whether to sell from inventory or storage
+        options = [
+            "Sell from Inventory",
+            "Sell from Storage",
+            "Back"
+        ]
 
         choice = arrow_menu("Sell from:", options, previous_content)
 
@@ -4425,22 +4922,6 @@ def marketplace_sell(save_name, data, items_data):
 
         # Display items
         while True:
-            clear_screen()
-            title(f"MARKETPLACE - SELL FROM {source_name.upper()}")
-            print()
-            print(f"Credits: {data['credits']}")
-            print()
-            print("=" * 60)
-            print()
-
-            options = []
-            for item_name, item_info, quantity in sellable_items:
-                price = item_info['sell_price']
-                item_type = item_info.get('type', 'Unknown')
-                options.append(f"{item_name} - {price} CR ({item_type}) [Have: {quantity}]")
-
-            options.append("Back")
-
             # Capture current screen for display
             content_buffer = StringIO()
             old_stdout = sys.stdout
@@ -4454,6 +4935,14 @@ def marketplace_sell(save_name, data, items_data):
 
             previous_content = content_buffer.getvalue()
             sys.stdout = old_stdout
+
+            options = []
+            for item_name, item_info, quantity in sellable_items:
+                price = item_info['sell_price']
+                item_type = item_info.get('type', 'Unknown')
+                options.append(f"{item_name} - {price} CR ({item_type}) [Have: {quantity}]")
+
+            options.append("Back")
 
             item_choice = arrow_menu("Select item to sell:", options, previous_content)
 
@@ -4470,7 +4959,8 @@ def marketplace_sell(save_name, data, items_data):
             print()
             print(f"Item: {item_name}")
             print(f"Type: {item_info.get('type', 'Unknown')}")
-            print(f"Description: {item_info.get('description', 'No description available.')}")
+            desc = item_info.get('description', 'No description available.')
+            print(f"Description: {wrap_text(desc, 60)}")
             print()
             print(f"Sell Price: {price} CR (each)")
             print(f"Available: {available_quantity}")
@@ -4499,14 +4989,11 @@ def marketplace_sell(save_name, data, items_data):
                 # Remove item from source if quantity reaches 0
                 if data[source_name][item_name] <= 0:
                     del data[source_name][item_name]
-                    # Update sellable_items list to reflect the removal
-                    sellable_items = [(name, info, qty) for name, info, qty in sellable_items if name != item_name]
-                else:
-                    # Update the quantity in sellable_items
-                    for i, (name, info, qty) in enumerate(sellable_items):
-                        if name == item_name:
-                            sellable_items[i] = (name, info, qty - quantity)
-                            break
+
+                # Update sellable_items list
+                sellable_items = [(n, i, q - quantity if n == item_name else q)
+                                 for n, i, q in sellable_items]
+                sellable_items = [(n, i, q) for n, i, q in sellable_items if q > 0]
 
                 save_data(save_name, data)
 
@@ -4515,14 +5002,8 @@ def marketplace_sell(save_name, data, items_data):
                 print()
                 input("Press Enter to continue...")
 
-                # If no more sellable items, break out
+                # If no more items to sell, go back
                 if not sellable_items:
-                    clear_screen()
-                    title("MARKETPLACE - SELL")
-                    print()
-                    print(f"No more sellable items in your {source_name}.")
-                    print()
-                    input("Press Enter to continue...")
                     break
 
             except ValueError:
@@ -4557,7 +5038,11 @@ def view_inventory(data):
             item_type = item_info.get('type', 'Unknown')
             print(f"  {item_name} x{quantity} ({item_type})")
             if item_info.get('description'):
-                print(f"    {item_info['description']}")
+                desc = item_info['description']
+                wrapped_desc = wrap_text(desc, 60)
+                # Indent each line
+                for line in wrapped_desc.split('\n'):
+                    print(f"    {line}")
 
     print()
     input("Press Enter to continue...")
@@ -4794,7 +5279,8 @@ def view_item_details(data, save_name=None):
         print()
         print(f"Name: {item_name}")
         print(f"Type: {item_info.get('type', 'Unknown')}")
-        print(f"Description: {item_info.get('description', 'No description available.')}")
+        desc = item_info.get('description', 'No description available.')
+        print(f"Description: {wrap_text(desc, 60)}")
         print()
 
         inv_qty = data.get('inventory', {}).get(item_name, 0)
@@ -4870,7 +5356,12 @@ def visit_ship_vendor(save_name, data):
             ship_name = ship_info['name']
 
             print(f"  {ship_name} ({ship_class}) - {price} CR")
-            print(f"    {ship_info.get('description', '')}")
+            desc = ship_info.get('description', '')
+            if desc:
+                wrapped_desc = wrap_text(desc, 60)
+                # Indent each line
+                for line in wrapped_desc.split('\n'):
+                    print(f"    {line}")
 
             stats = ship_info.get('stats', {})
             print(f"    Stats: DPS {stats.get('DPS', '?')} | Shield {stats.get('Shield', '?')} | Hull {stats.get('Hull', '?')}")
@@ -4912,7 +5403,8 @@ def visit_ship_vendor(save_name, data):
         print()
         print(f"Ship: {ship_name}")
         print(f"Class: {ship_info.get('class', 'Unknown')}")
-        print(f"Description: {ship_info.get('description', 'No description available.')}")
+        desc = ship_info.get('description', 'No description available.')
+        print(f"Description: {wrap_text(desc, 60)}")
         print()
 
         stats = ship_info.get('stats', {})
@@ -5159,7 +5651,8 @@ def view_ship_details(save_name, data, ship_index):
         ship_info = ships_data.get(ship_name.lower(), {})
 
         print(f"Class: {ship_info.get('class', 'Unknown')}")
-        print(f"Description: {ship_info.get('description', 'No description available.')}")
+        desc = ship_info.get('description', 'No description available.')
+        print(f"Description: {wrap_text(desc, 60)}")
         print()
 
         # HP status
@@ -5207,7 +5700,8 @@ def view_ship_details(save_name, data, ship_index):
         print(f"Model: {ship_name.title()}")
         print()
         print(f"Class: {ship_info.get('class', 'Unknown')}")
-        print(f"Description: {ship_info.get('description', 'No description available.')}")
+        desc = ship_info.get('description', 'No description available.')
+        print(f"Description: {wrap_text(desc, 60)}")
         print()
         print(f"Hull: {current_hull}/{max_hull}")
         print(f"Shield: {current_shield}/{max_shield}")
@@ -5466,7 +5960,8 @@ def assemble_ship_from_item(save_name, data, ship_name):
     stats = ship_info.get('stats', {})
 
     print(f"Class: {ship_info.get('class', 'Unknown')}")
-    print(f"Description: {ship_info.get('description', 'No description available.')}")
+    desc = ship_info.get('description', 'No description available.')
+    print(f"Description: {wrap_text(desc, 60)}")
     print()
 
     # Show stats
