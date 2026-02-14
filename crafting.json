@@ -83,5 +83,25 @@
       "Narcor": 50,
       "Zenith": 1
     }
+  },
+  {
+    "name": "Marlin",
+    "type": "ship",
+    "time": 150.0,
+    "materials": {
+      "Korrelite": 140,
+      "Reknite": 60,
+      "Gellium": 20
+    }
+  },
+  {
+    "name": "Badger",
+    "type": "ship",
+    "time": 150.0,
+    "materials": {
+      "Korrelite": 300,
+      "Reknite": 60,
+      "Gellium": 30
+    }
   }
 ]
