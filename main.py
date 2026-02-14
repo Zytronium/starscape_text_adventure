@@ -5919,6 +5919,12 @@ def about_screen():
     print("This game is open-source and can be found on GitHub at")
     print("https://github.com/Zytronium/starscape_text_adventure.")
     print()
+    print("Need help finding information about the game? While this")
+    print("version doesn't have its own wiki, it shares a enough")
+    print("game mechanics with Roblox Starscape that their wiki may")
+    print("prove useful. Visit the Roblox Starscape wiki here:")
+    print("https://starscape-roblox.fandom.com/wiki/Starscape_Wiki")
+    print()
 
     input("Press Enter to return to main menu...")
 
