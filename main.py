@@ -7258,6 +7258,92 @@ def fuzzy_match(query, text):
     return query_idx == len(query)
 
 
+def find_nearest_by_security(current_system, all_systems_data):
+    """Find the nearest system of each security class from the current location"""
+    from collections import deque
+
+    clear_screen()
+    title("FIND NEAREST BY SECURITY CLASS")
+    print()
+    print("Select a security class to find the nearest system:")
+    print()
+
+    security_classes = ["Core", "Secure", "Contested", "Unsecure", "Wild"]
+
+    # Display menu
+    for i, sec_class in enumerate(security_classes):
+        letter = chr(ord('a') + i)
+        color = get_security_color(sec_class)
+        print(f"  [{letter}] {color}{sec_class}{RESET_COLOR}")
+
+    print()
+    print("Press a letter to search, or Enter to cancel")
+
+    while True:
+        key = get_key()
+        if key == 'enter':
+            return None
+        elif key and key.isalpha():
+            idx = ord(key.lower()) - ord('a')
+            if 0 <= idx < len(security_classes):
+                selected_security = security_classes[idx]
+                break
+
+    # BFS to find nearest system of selected security class
+    visited = set()
+    queue = deque([(current_system, 0, [current_system])])
+    nearest_system = None
+    nearest_distance = float('inf')
+
+    while queue:
+        system, distance, path = queue.popleft()
+
+        if system in visited:
+            continue
+        visited.add(system)
+
+        system_info = all_systems_data.get(system)
+        if not system_info:
+            continue
+
+        # Skip hidden systems
+        if system_info.get("hidden", False):
+            continue
+
+        # Check if this system matches the security class
+        if system_info.get("SecurityLevel") == selected_security and system != current_system:
+            if distance < nearest_distance:
+                nearest_system = system
+                nearest_distance = distance
+                # Found the nearest one, we can stop
+                break
+
+        # Add neighbors to queue
+        for neighbor in system_info.get("Connections", []):
+            if neighbor not in visited:
+                queue.append((neighbor, distance + 1, path + [neighbor]))
+
+    # Display result
+    clear_screen()
+    title("SEARCH RESULT")
+    print()
+
+    if nearest_system:
+        color = get_security_color(selected_security)
+        print(f"Nearest {color}{selected_security}{RESET_COLOR} system:")
+        print(f"  {color}{nearest_system}{RESET_COLOR}")
+        print(f"  Distance: {nearest_distance} jump(s)")
+        print()
+        print("Press Enter to view this system on the map")
+        get_key()
+        return nearest_system
+    else:
+        print(f"No {selected_security} systems found in the galaxy.")
+        print()
+        input("Press Enter to continue...")
+        return None
+
+
 def search_systems(all_systems_data):
     """Search for systems by name or security level"""
     clear_screen()
@@ -7610,6 +7696,8 @@ def display_spatial_map(center_system, all_systems_data, current_system,
             draw_line(grid, x1, y1, x2, y2, line_char)
 
     # Assign letters and place system markers
+    # Skip letters used for controls
+    reserved_keys = {'s', 'f'}  # Search, Find by security
     letter_map = {}
     letter_idx = 0
 
@@ -7618,12 +7706,17 @@ def display_spatial_map(center_system, all_systems_data, current_system,
         all_systems.extend(systems_by_distance[distance])
 
     for system in all_systems:
-        if letter_idx >= 26:
+        # Find next available letter (skip reserved keys)
+        while letter_idx < 26:
+            letter = chr(ord('a') + letter_idx)
+            letter_idx += 1
+            if letter not in reserved_keys:
+                break
+        else:
+            # Ran out of letters
             break
 
-        letter = chr(ord('a') + letter_idx)
         letter_map[letter] = system
-        letter_idx += 1
 
         gx, gy = grid_positions[system]
 
@@ -7717,7 +7810,7 @@ def display_spatial_map(center_system, all_systems_data, current_system,
 
     print()
     print(
-        "  [a-z] Navigate | [SHIFT+letter] Set dest | [s] Search | [ESC] Exit")
+        "  [a-z] Navigate | [SHIFT+letter] Set dest | [s] Search | [f] Find by security | [ESC] Exit")
     print("  Legend: ★ Current System  ◆ Destination  @ Viewing Center  \033[33m➜\033[0m Next in Route")
     print("=" * 60)
 
@@ -7756,6 +7849,11 @@ def galaxy_map(save_name, data):
         elif key == 's' and not is_shift:
             # Search
             result = search_systems(all_systems_data)
+            if result:
+                center_system = result
+        elif key == 'f' and not is_shift:
+            # Find nearest by security class
+            result = find_nearest_by_security(current_system, all_systems_data)
             if result:
                 center_system = result
         elif key and key in letter_map:
