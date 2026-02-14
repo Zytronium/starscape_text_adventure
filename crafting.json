@@ -103,5 +103,23 @@
       "Reknite": 60,
       "Gellium": 30
     }
+  },
+  {
+    "name": "Mako",
+    "type": "ship",
+    "time": 300.0,
+    "materials": {
+      "Narcor": 40,
+      "Marlin": 1
+    }
+  },
+  {
+    "name": "Honey Badger",
+    "type": "ship",
+    "time": 450.0,
+    "materials": {
+      "Narcor": 50,
+      "Badger": 1
+    }
   }
 ]

@@ -293,6 +293,20 @@
       "type": "Ship",
       "sell_price": "1500",
       "buy_price": ""
+    },
+    {
+      "name": "Mako",
+      "description": "An advanced upgrade of the Marlin, the Mako has an improved speed and mining rate over its predecessor.",
+      "type": "Ship",
+      "sell_price": "1000",
+      "buy_price": ""
+    },
+    {
+      "name": "Honey Badger",
+      "description": "The Honey Badger takes the ore extraction rate of the Badger and dials it up even further, creating a sturdy and extremely efficient mining ship.",
+      "type": "Ship",
+      "sell_price": "1400",
+      "buy_price": ""
     }
   ]
 }
