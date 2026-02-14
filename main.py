@@ -4483,42 +4483,6 @@ def main_screen(save_name, data):
     old_stdout = sys.stdout
     sys.stdout = content_buffer
 
-    # Check if current system is a gate (starts with "G-")
-    is_gate_system = system_name.startswith("G-")
-
-    # Chance for enemy encounter (0 for gate systems)
-    enemy_encounter_chance = 0.0
-    if not is_gate_system:  # Only generate encounters in non-gate systems
-        match system_security:
-            case "Core":
-                enemy_encounter_chance = 0.0
-            case "Secure":
-                enemy_encounter_chance = 1/8
-            case "Contested":
-                enemy_encounter_chance = 1/4
-            case "Unsecure":
-                enemy_encounter_chance = 1/2
-            case "Wild":
-                enemy_encounter_chance = 5/6
-
-    rng = random.random()
-    if rng <= enemy_encounter_chance:
-        previous_content = content_buffer.getvalue()
-        sys.stdout = old_stdout
-
-        # Generate enemy fleet based on system security
-        enemy_fleet = generate_enemy_fleet(system_security, data)
-
-        # Enemy encounter
-        result = enemy_encounter(enemy_fleet, system, save_name, data, previous_content)
-
-        if result == "death":
-            animated_death_screen(save_name, data)
-            return
-        elif result == "continue":
-            # Combat was resolved, continue to main menu
-            pass
-
     title(f"CURRENT SYSTEM: {system_name}  [{system["SecurityLevel"].upper()}]")
     print(f"  {system["Region"]} > {system["Sector"]}")
 
@@ -4555,6 +4519,42 @@ def main_screen(save_name, data):
             print(f"  Destination: {destination} (No route found)")
 
     title(f"CREDITS: ¢{data["credits"]}")
+
+    # Check if current system is a gate (starts with "G-")
+    is_gate_system = system_name.startswith("G-")
+
+    # Chance for enemy encounter (0 for gate systems)
+    enemy_encounter_chance = 0.0
+    if not is_gate_system:  # Only generate encounters in non-gate systems
+        match system_security:
+            case "Core":
+                enemy_encounter_chance = 0.0
+            case "Secure":
+                enemy_encounter_chance = 1/8
+            case "Contested":
+                enemy_encounter_chance = 1/4
+            case "Unsecure":
+                enemy_encounter_chance = 1/2
+            case "Wild":
+                enemy_encounter_chance = 5/6
+
+    rng = random.random()
+    if rng <= enemy_encounter_chance:
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        # Generate enemy fleet based on system security
+        enemy_fleet = generate_enemy_fleet(system_security, data)
+
+        # Enemy encounter
+        result = enemy_encounter(enemy_fleet, system, save_name, data, previous_content)
+
+        if result == "death":
+            animated_death_screen(save_name, data)
+            return
+        elif result == "continue":
+            # Combat was resolved, continue to main menu
+            pass
 
     if system_name == "Gatinsir":
         sys.stdout = old_stdout
