@@ -2153,8 +2153,14 @@ def show_detailed_combat_stats(player_ship, enemy_fleet, data):
     input("Press Enter to return to combat...")
 
 
-def generate_anomalies(system_name, system_security):
-    """Generate random anomalies for a star system based on security level"""
+def generate_anomalies(system_name, system_security, all_systems_data=None):
+    """Generate random anomalies for a star system based on security level
+
+    Args:
+        system_name: Name of the system to generate anomalies for
+        system_security: Security level of the system
+        all_systems_data: Optional dict of all systems data (for wormhole generation)
+    """
     anomalies = []
     current_time = time()
 
@@ -2169,19 +2175,73 @@ def generate_anomalies(system_name, system_security):
 
     num_anomalies = anomaly_counts.get(system_security, 0)
 
-    # Weighted anomaly types by security level
-    anomaly_pools = {
-        "Secure": ["AT", "AL", "CM", "BF", "SP"],
-        "Contested": ["AT", "AL", "AA", "CM", "BF", "DH", "SP", "MT"],
-        "Unsecure": ["AT", "AL", "AA", "CM", "BF", "DH", "SP", "MT", "WH"],
-        "Wild": ["AL", "AA", "AN", "VX", "CM", "BF", "DH", "SP", "MT", "WH", "FO"],
+    # Define rarity tiers
+    # Common: 50% chance, Uncommon: 30% chance, Rare: 15% chance, Very Rare: 5% chance
+    rarity_weights = {
+        "Common": 50,
+        "Uncommon": 30,
+        "Rare": 15,
+        "VeryRare": 5
     }
 
-    pool = anomaly_pools.get(system_security, [])
+    # Anomaly rarities (applies to all security levels where they can spawn)
+    anomaly_rarities = {
+        "AT": "Common",
+        "BF": "Common",
+        "AL": "Uncommon",
+        "CM": "Uncommon",
+        "DH": "Uncommon",
+        "SP": "Uncommon",
+        "MT": "Uncommon",
+        # WH handled specially below
+        "AA": "Rare",
+        "FO": "Rare",
+        "AN": "Rare",
+        "VX": "VeryRare"
+    }
+
+    # Build weighted pool based on security level and rarity
+    # Each anomaly gets a weight based on its rarity
+    weighted_pool = []
+
+    # Define which anomalies can appear in each security level
+    security_anomalies = {
+        "Secure": ["AT", "AL", "CM", "BF", "SP"],
+        "Contested": ["AT", "AL", "AA", "CM", "BF", "DH", "SP", "MT"],
+        "Unsecure": ["AT", "AL", "AA", "CM", "BF", "DH", "SP", "MT"],
+        "Wild": ["AT", "AL", "AA", "AN", "VX", "CM", "BF", "DH", "SP", "MT", "FO"],
+    }
+
+    # Add wormholes based on security level with different rarities
+    if system_security == "Wild":
+        security_anomalies["Wild"].append("WH")
+    elif system_security == "Unsecure":
+        security_anomalies["Unsecure"].append("WH")
+    elif system_security == "Secure":
+        security_anomalies["Secure"].append("WH")
+
+    available_anomalies = security_anomalies.get(system_security, [])
+
+    # Build weighted pool
+    for anomaly_type in available_anomalies:
+        if anomaly_type == "WH":
+            # Wormhole rarity varies by security
+            if system_security == "Wild":
+                weight = rarity_weights["Uncommon"]
+            elif system_security == "Unsecure":
+                weight = rarity_weights["Rare"]
+            else:  # Secure
+                weight = rarity_weights["VeryRare"]
+        else:
+            rarity = anomaly_rarities.get(anomaly_type, "Common")
+            weight = rarity_weights.get(rarity, rarity_weights["Common"])
+
+        # Add the anomaly type 'weight' times to the pool
+        weighted_pool.extend([anomaly_type] * weight)
 
     for _ in range(num_anomalies):
-        if pool:
-            anomaly_type = random.choice(pool)
+        if weighted_pool:
+            anomaly_type = random.choice(weighted_pool)
 
             # Determine duration for wormholes
             if anomaly_type == "WH":
@@ -2200,6 +2260,14 @@ def generate_anomalies(system_name, system_security):
                 "timestamp": current_time,
                 "duration": duration,
             }
+
+            # For wormholes, add additional data
+            if anomaly_type == "WH":
+                # Generate a unique ID for this wormhole pair
+                anomaly["wormhole_id"] = str(uuid4())
+                anomaly["is_origin"] = True  # This is the origin end
+                anomaly["destination_system"] = None  # Will be set when we create the pair
+
             anomalies.append(anomaly)
 
     return anomalies
@@ -2211,6 +2279,13 @@ def manage_system_anomalies(save_name, data, system_name):
     system = system_data(system_name)
     system_security = system.get("SecurityLevel", "Secure")
 
+    # Load all systems data for wormhole generation
+    try:
+        with open(resource_path('system_data.json'), 'r') as f:
+            all_systems_data = json.load(f)
+    except:
+        all_systems_data = {}
+
     # Initialize anomalies dict if needed
     if "anomalies" not in data:
         data["anomalies"] = {}
@@ -2218,6 +2293,10 @@ def manage_system_anomalies(save_name, data, system_name):
     # Initialize system visit tracking
     if "last_system_visit" not in data:
         data["last_system_visit"] = {}
+
+    # Initialize wormhole tracking
+    if "wormhole_pairs" not in data:
+        data["wormhole_pairs"] = {}
 
     # Get existing anomalies for this system
     existing_anomalies = data["anomalies"].get(system_name, [])
@@ -2230,6 +2309,11 @@ def manage_system_anomalies(save_name, data, system_name):
 
         if anomaly_age < duration:
             cleaned_anomalies.append(anomaly)
+        elif anomaly.get("type") == "WH":
+            # If wormhole expired, remove it from both sides
+            wormhole_id = anomaly.get("wormhole_id")
+            if wormhole_id and wormhole_id in data["wormhole_pairs"]:
+                del data["wormhole_pairs"][wormhole_id]
 
     # Get last visit time
     last_visit = data["last_system_visit"].get(system_name, 0)
@@ -2238,15 +2322,63 @@ def manage_system_anomalies(save_name, data, system_name):
     # Generate new anomalies if enough time has passed (every 12 hours, capped at 48 hours)
     if last_visit == 0:
         # First visit - generate anomalies
-        new_anomalies = generate_anomalies(system_name, system_security)
+        new_anomalies = generate_anomalies(system_name, system_security, all_systems_data)
         cleaned_anomalies.extend(new_anomalies)
     elif time_since_visit >= 12 * 3600:
         # Generate anomalies for each 12-hour period, capped at 48 hours
         periods_elapsed = min(int(time_since_visit / (12 * 3600)), 4)  # Cap at 4 periods (48 hours)
 
         for _ in range(periods_elapsed):
-            new_anomalies = generate_anomalies(system_name, system_security)
+            new_anomalies = generate_anomalies(system_name, system_security, all_systems_data)
             cleaned_anomalies.extend(new_anomalies)
+
+    # Process wormholes & create pairs
+    for anomaly in cleaned_anomalies:
+        if anomaly.get("type") == "WH" and anomaly.get("is_origin") and anomaly.get("destination_system") is None:
+            # This is a new wormhole that needs a pair
+            wormhole_id = anomaly.get("wormhole_id")
+
+            # Choose a random destination system (any system except the current one, and no Core systems)
+            possible_destinations = [s for s in all_systems_data.keys()
+                                   if s != system_name and all_systems_data[s].get("SecurityLevel") != "Core"]
+            if possible_destinations:
+                destination_system = random.choice(possible_destinations)
+
+                # Set destination for this wormhole
+                anomaly["destination_system"] = destination_system
+
+                # Create the paired wormhole in the destination system
+                paired_wormhole = {
+                    "type": "WH",
+                    "visited": False,
+                    "scanned": False,
+                    "timestamp": anomaly["timestamp"],
+                    "duration": anomaly["duration"],
+                    "wormhole_id": wormhole_id,
+                    "is_origin": False,  # This is the destination end
+                    "destination_system": system_name  # Points back to origin
+                }
+
+                # Add the paired wormhole to the destination system
+                if destination_system not in data["anomalies"]:
+                    data["anomalies"][destination_system] = []
+                data["anomalies"][destination_system].append(paired_wormhole)
+
+                # Track the wormhole pair
+                data["wormhole_pairs"][wormhole_id] = {
+                    "system1": system_name,
+                    "system2": destination_system,
+                    "timestamp": anomaly["timestamp"],
+                    "duration": anomaly["duration"]
+                }
+
+    # Update system anomalies
+    data["anomalies"][system_name] = cleaned_anomalies
+
+    # Update last visit time
+    data["last_system_visit"][system_name] = current_time
+
+    save_data(save_name, data)
 
     # Update system data
     data["anomalies"][system_name] = cleaned_anomalies
@@ -2338,11 +2470,19 @@ def scan_for_anomalies(save_name, data):
     else:
         print(f"  {len(anomalies)} anomal{'y' if len(anomalies) == 1 else 'ies'} detected:")
         print()
+
+        # Load system data for wormhole destinations
+        try:
+            with open(resource_path('system_data.json'), 'r') as f:
+                all_systems_data = json.load(f)
+        except:
+            all_systems_data = {}
+
         for i, anomaly in enumerate(anomalies):
             visited_str = " (Visited)" if anomaly.get("visited") else ""
             anomaly_name = get_anomaly_name(anomaly['type'])
 
-            # Show duration for wormholes
+            # Show duration and destination for wormholes
             if anomaly['type'] == "WH":
                 duration_hours = anomaly.get('duration', 48 * 3600) / 3600
                 if duration_hours >= 24:
@@ -2353,7 +2493,17 @@ def scan_for_anomalies(save_name, data):
                         duration_str = f" ({int(duration_days)} day duration)"
                 else:
                     duration_str = f" ({int(duration_hours)}h duration)"
-                print(f"    [{i+1}] {anomaly_name}{duration_str}{visited_str}")
+
+                # Show destination if available
+                dest_system = anomaly.get("destination_system", "Unknown")
+                if dest_system != "Unknown" and dest_system in all_systems_data:
+                    dest_security = all_systems_data[dest_system].get("SecurityLevel", "Unknown")
+                    dest_color = get_security_color(dest_security)
+                    dest_str = f" → {dest_color}{dest_system}{RESET_COLOR}"
+                else:
+                    dest_str = ""
+
+                print(f"    [{i+1}] {anomaly_name}{duration_str}{dest_str}{visited_str}")
             else:
                 print(f"    [{i+1}] {anomaly_name}{visited_str}")
 
@@ -2403,6 +2553,21 @@ def visit_anomalies_menu(save_name, data):
         return
 
     while True:
+        # Re-check current system in case of wormhole transit
+        current_system = data["current_system"]
+
+        # Check if we still have anomalies in this system
+        if current_system not in data.get("anomalies", {}):
+            # System changed or no anomalies - exit menu
+            return
+
+        anomalies = data["anomalies"].get(current_system, [])
+        scanned_anomalies = [a for a in anomalies if a.get("scanned", False)]
+
+        if not scanned_anomalies:
+            # No more scanned anomalies - exit menu
+            return
+
         clear_screen()
         title(f"ANOMALIES - {current_system}")
         print()
@@ -2420,8 +2585,16 @@ def visit_anomalies_menu(save_name, data):
         if choice == len(scanned_anomalies):
             return
 
+        # Store current system before visiting
+        system_before_visit = data["current_system"]
+
         # Visit the selected anomaly
         visit_anomaly(save_name, data, scanned_anomalies[choice])
+
+        # Check if system changed (wormhole transit)
+        if data["current_system"] != system_before_visit:
+            # Player used a wormhole - exit anomaly menu
+            return
 
 
 def visit_anomaly(save_name, data, anomaly):
@@ -2436,6 +2609,8 @@ def visit_anomaly(save_name, data, anomaly):
     # Ore-bearing anomalies
     if anomaly_type in ["AT", "AL", "AA", "AN", "VX", "CM", "MT"]:
         mine_anomaly(save_name, data, anomaly)
+    elif anomaly_type == "WH":
+        visit_wormhole(save_name, data, anomaly)
     else:
         clear_screen()
         title(anomaly_name.upper())
@@ -2443,6 +2618,187 @@ def visit_anomaly(save_name, data, anomaly):
         print(f"  {anomaly_name} visit not yet implemented.")
         print()
         input("Press Enter to continue...")
+
+
+def visit_wormhole(save_name, data, anomaly):
+    """Visit and interact with a wormhole"""
+    # Load system data
+    try:
+        with open(resource_path('system_data.json'), 'r') as f:
+            all_systems_data = json.load(f)
+    except:
+        all_systems_data = {}
+
+    current_system = data["current_system"]
+    destination_system = anomaly.get("destination_system", "Unknown")
+
+    while True:
+        # Capture current screen for display
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        clear_screen()
+        title("WORMHOLE")
+        print()
+        print("  You approach the wormhole... What a spectacular sight!")
+        print("  Even the fabric of space-time appears distorted here.")
+        print()
+
+        # Calculate remaining time
+        current_time = time()
+        anomaly_age = current_time - anomaly.get("timestamp", current_time)
+        duration = anomaly.get("duration", 48 * 3600)
+        remaining_time = duration - anomaly_age
+
+        # Show if already scanned
+        if anomaly.get("wormhole_scanned", False):
+            # Get destination security
+            dest_security = all_systems_data.get(destination_system, {}).get("SecurityLevel", "Unknown")
+            dest_color = get_security_color(dest_security)
+
+            print(f"  Scan Data:")
+            print(f"    Destination: {dest_color}{destination_system}{RESET_COLOR}")
+            print(f"    Security Level: {dest_color}{dest_security}{RESET_COLOR}")
+
+            # Format remaining time
+            if remaining_time > 0:
+                hours_left = int(remaining_time / 3600)
+                if hours_left >= 24:
+                    days_left = hours_left / 24
+                    if days_left >= 7:
+                        print(f"    Stability: ~{int(days_left/7)} week{'s' if int(days_left/7) != 1 else ''} remaining")
+                    else:
+                        print(f"    Stability: ~{int(days_left)} day{'s' if int(days_left) != 1 else ''} remaining")
+                else:
+                    print(f"    Stability: ~{hours_left} hour{'s' if hours_left != 1 else ''} remaining")
+            else:
+                print(f"    Stability: Collapsing soon!")
+            print()
+
+
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        options = []
+        if not anomaly.get("wormhole_scanned", False):
+            options.append("Scan Wormhole")
+        options.append("Enter Wormhole")
+        options.append("Leave")
+
+        choice = arrow_menu("What do you want to do?", options, previous_content)
+
+        # Handle choice based on dynamic menu
+        scan_option_present = not anomaly.get("wormhole_scanned", False)
+
+        if scan_option_present and choice == 0:
+            # Scan wormhole (only available if not yet scanned)
+            clear_screen()
+            title("WORMHOLE SCAN")
+            print()
+            print("  Initiating deep-space scan...")
+            sleep(0.5)
+            print("  Analyzing gravitational distortions...")
+            for i in range(3):
+                print("  .", end="", flush=True)
+                sleep(0.4)
+            print()
+            print()
+            sleep(0.3)
+
+            # Mark as scanned
+            anomaly["wormhole_scanned"] = True
+            save_data(save_name, data)
+
+            # Get destination info
+            dest_security = all_systems_data.get(destination_system, {}).get("SecurityLevel", "Unknown")
+            dest_color = get_security_color(dest_security)
+
+            print(f"  Scan complete!")
+            print()
+            print(f"  Destination: {dest_color}{destination_system}{RESET_COLOR}")
+            print(f"  Security Level: {dest_color}{dest_security}{RESET_COLOR}")
+
+            # Format remaining time
+            if remaining_time > 0:
+                hours_left = int(remaining_time / 3600)
+                if hours_left >= 24:
+                    days_left = hours_left / 24
+                    if days_left >= 7:
+                        print(f"  Estimated Stability: ~{int(days_left/7)} week{'s' if int(days_left/7) != 1 else ''}")
+                    else:
+                        print(f"  Estimated Stability: ~{int(days_left)} day{'s' if int(days_left) != 1 else ''}")
+                else:
+                    print(f"  Estimated Stability: ~{hours_left} hour{'s' if hours_left != 1 else ''}")
+            else:
+                set_color("red")
+                print(f"  Warning: Wormhole is highly unstable!")
+                reset_color()
+
+            print()
+            input("Press Enter to continue...")
+
+        elif (scan_option_present and choice == 1) or (not scan_option_present and choice == 0):
+            # Enter wormhole
+            if destination_system == "Unknown" or destination_system not in all_systems_data:
+                clear_screen()
+                title("WORMHOLE")
+                print()
+                print("  Error: Unable to establish stable connection!")
+                print()
+                input("Press Enter to continue...")
+                continue
+
+            clear_screen()
+            title("WORMHOLE TRANSIT")
+            print()
+            print("  Engaging wormhole transit sequence...")
+            sleep(0.5)
+            print("  Entering event horizon...")
+            sleep(0.7)
+            print("  Space-time displacement in progress...")
+            print()
+            for i in range(4):
+                print("  .", end="", flush=True)
+                sleep(0.5 + i * 0.25)
+            print()
+            sleep(0.5)
+
+            # Check if player is docked
+            if data.get("docked_at"):
+                clear_screen()
+                title("WORMHOLE")
+                print()
+                print("  Error: Cannot transit while docked!")
+                print("         How did you even manage to attempt this?")
+                print()
+                input("Press Enter to continue...")
+                continue
+
+            # Travel to destination
+            data["current_system"] = destination_system
+
+            # Clear destination if it was the system we just reached
+            if data.get("destination") == destination_system:
+                data["destination"] = ""
+
+            save_data(save_name, data)
+
+            print()
+            dest_security = all_systems_data.get(destination_system, {}).get("SecurityLevel", "Unknown")
+            dest_color = get_security_color(dest_security)
+            print(f"  Arrived at: {dest_color}{destination_system}{RESET_COLOR}")
+            print(f"  Security Level: {dest_color}{dest_security}{RESET_COLOR}")
+            print()
+            input("Press Enter to continue...")
+
+            # Update Discord presence
+            update_discord_presence(data=data, context="traveling")
+            return
+
+        else:
+            # Leave (last option in both cases)
+            return
 
 
 def mine_anomaly(save_name, data, anomaly):
