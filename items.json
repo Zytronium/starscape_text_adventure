@@ -4,8 +4,8 @@
       "name": "System Probe",
       "description": "An autonomous probe which scans for anomalies throughout a star system.",
       "type": "Deployable",
-      "sell_price": "30",
-      "buy_price": "50"
+      "sell_price": "15",
+      "buy_price": "30"
     },
     {
       "name": "Metal Scraps",
@@ -147,7 +147,6 @@
       "sell_price": "14",
       "buy_price": ""
     },
-
     {
       "name": "Korrelite",
       "description": "Refined Korrelite material.",
@@ -209,6 +208,90 @@
       "description": "A mysterious artifact from an ancient spacefaring civilization. Highly valuable to collectors.",
       "type": "Artifact",
       "sell_price": "2500",
+      "buy_price": ""
+    },
+    {
+      "name": "Zenith",
+      "description": "The Zenith is an agile starship developed to be able to hold its own in combat with normal fighters.",
+      "type": "Ship",
+      "sell_price": "750",
+      "buy_price": "1500"
+    },
+    {
+      "name": "Falcon",
+      "description": "The Falcon is a swift starship designed for overtaking other ships in warp and having unmatched speed on the battlefield.",
+      "type": "Ship",
+      "sell_price": "1000",
+      "buy_price": "2000"
+    },
+    {
+      "name": "Sabre",
+      "description": "The Sabre is a powerful ship that makes up for its lack in speed with impressive firepower and tanking ability.",
+      "type": "Ship",
+      "sell_price": "1100",
+      "buy_price": "2200"
+    },
+    {
+      "name": "Aurora",
+      "description": "The Aurora is a general-purpose fighter spacecraft that can perform well in a large array of situations.",
+      "type": "Ship",
+      "sell_price": "800",
+      "buy_price": "1600"
+    },
+    {
+      "name": "Marlin",
+      "description": "The Marlin is a nimble vessel that is designed to mine efficiently but be capable of making a quick escape when necessary.",
+      "type": "Ship",
+      "sell_price": "500",
+      "buy_price": "1000"
+    },
+    {
+      "name": "Badger",
+      "description": "The Badger is an entry-level miner-class ship best suited as a starter mining ship. While it mines very efficiently, it's less capable of making a quick escape.",
+      "type": "Ship",
+      "sell_price": "700",
+      "buy_price": "1400"
+    },
+    {
+      "name": "Spectator",
+      "description": "Admin spectating ship with extreme stats \u2014 not normally usable in play.",
+      "type": "Ship",
+      "sell_price": "",
+      "buy_price": ""
+    },
+    {
+      "name": "Spectator-X",
+      "description": "Enhanced version of the Spectator ship for advanced testing.",
+      "type": "Ship",
+      "sell_price": "",
+      "buy_price": ""
+    },
+    {
+      "name": "Luminar",
+      "description": "Based on the Aurora chassis, the Luminar is an advanced fighter whose heavy shields give it a distinct advantage in combat situations.",
+      "type": "Ship",
+      "sell_price": "1600",
+      "buy_price": ""
+    },
+    {
+      "name": "Paragon",
+      "description": "An advanced upgraded variant of the Falcon, the Paragon is one of the fastest and most agile ships in the galaxy.",
+      "type": "Ship",
+      "sell_price": "2100",
+      "buy_price": ""
+    },
+    {
+      "name": "Claymore",
+      "description": "The Claymore, an advanced upgrade of the successful Sabre chassis, is a hull tanking machine with remarkably strong damage output.",
+      "type": "Ship",
+      "sell_price": "2200",
+      "buy_price": ""
+    },
+    {
+      "name": "Polaris",
+      "description": "The Polaris is an advanced upgrade of the Zenith design that generally improves upon its speed, offense, and defense.",
+      "type": "Ship",
+      "sell_price": "1500",
       "buy_price": ""
     }
   ]

@@ -1,0 +1,87 @@
+[
+  {
+    "name": "System Probe",
+    "type": "item",
+    "time": 1.0,
+    "materials": {
+      "Korrelite": 10,
+      "Gellium": 5
+    }
+  },
+  {
+    "name": "Zenith",
+    "type": "ship",
+    "time": 150.0,
+    "materials": {
+      "Korrelite": 200,
+      "Reknite": 100,
+      "Gellium": 30
+    }
+  },
+  {
+    "name": "Falcon",
+    "type": "ship",
+    "time": 150.0,
+    "materials": {
+      "Korrelite": 300,
+      "Reknite": 120,
+      "Gellium": 30
+    }
+  },
+  {
+    "name": "Sabre",
+    "type": "ship",
+    "time": 150.0,
+    "materials": {
+      "Korrelite": 320,
+      "Reknite": 120,
+      "Gellium": 50
+    }
+  },
+  {
+    "name": "Aurora",
+    "type": "ship",
+    "time": 150.0,
+    "materials": {
+      "Korrelite": 225,
+      "Reknite": 100,
+      "Gellium": 30
+    }
+  },
+  {
+    "name": "Luminar",
+    "type": "ship",
+    "time": 300.0,
+    "materials": {
+      "Narcor": 50,
+      "Aurora": 1
+    }
+  },
+  {
+    "name": "Paragon",
+    "type": "ship",
+    "time": 300.0,
+    "materials": {
+      "Narcor": 60,
+      "Falcon": 1
+    }
+  },
+  {
+    "name": "Claymore",
+    "type": "ship",
+    "time": 300.0,
+    "materials": {
+      "Narcor": 65,
+      "Sabre": 1
+    }
+  },
+  {
+    "name": "Polaris",
+    "type": "ship",
+    "time": 300.0,
+    "materials": {
+      "Narcor": 50,
+      "Zenith": 1
+    }
+  }
+]
