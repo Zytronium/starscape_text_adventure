@@ -3321,14 +3321,20 @@ def visit_refinery(save_name, data):
             print("Metal Scraps have a 20% chance to refine into a random material.")
             print("Higher tier materials are rarer.")
             print()
-            print("How many would you like to process? (0 to cancel): ", end="")
+            print(f"How many would you like to process? (0 to cancel, Enter for max [{quantity}]): ", end="")
         else:
             print(f"Refines into: {material} (x{yield_amount} per ore)")
             print()
-            print("How many would you like to refine? (0 to cancel): ", end="")
+            print(f"How many would you like to refine? (0 to cancel, Enter for max [{quantity}]): ", end="")
 
         try:
-            amount = int(input())
+            user_input = input().strip()
+
+            # Default to max if Enter is pressed
+            if user_input == "":
+                amount = quantity
+            else:
+                amount = int(user_input)
             if amount <= 0:
                 continue
             if amount > quantity:
@@ -5023,14 +5029,34 @@ def marketplace_buy(save_name, data, items_data):
             input("Press Enter to continue...")
             continue
 
+        # Calculate max affordable quantity
+        max_affordable = data['credits'] // price
+
         # Ask how many to buy
-        print("Enter quantity to purchase (0 to cancel): ", end="")
+        print(f"Enter quantity to purchase (0 to cancel, Enter for max [{max_affordable}]): ", end="")
         try:
-            quantity = int(input())
+            user_input = input().strip()
+
+            # Default to max affordable if Enter is pressed
+            if user_input == "":
+                quantity = max_affordable
+                total_cost = price * quantity
+
+                # Confirm purchase of max quantity
+                print()
+                print(f"Purchase {quantity}x {item_name} for {total_cost} CR?")
+                print(f"(This will use {int(total_cost/data['credits']*100)}% of your credits)")
+                print()
+                confirm = input("Confirm? (y/n): ").strip().lower()
+                if confirm != 'y':
+                    continue
+            else:
+                quantity = int(user_input)
+                total_cost = price * quantity
+
             if quantity <= 0:
                 continue
 
-            total_cost = price * quantity
             if data['credits'] < total_cost:
                 print()
                 print("You don't have enough credits for that quantity!")
@@ -5169,9 +5195,15 @@ def marketplace_sell(save_name, data, items_data):
             print()
 
             # Ask how many to sell
-            print(f"Enter quantity to sell (0 to cancel, max {available_quantity}): ", end="")
+            print(f"Enter quantity to sell (0 to cancel, Enter for max [{available_quantity}]): ", end="")
             try:
-                quantity = int(input())
+                user_input = input().strip()
+
+                # Default to max if Enter is pressed
+                if user_input == "":
+                    quantity = available_quantity
+                else:
+                    quantity = int(user_input)
                 if quantity <= 0:
                     continue
 
@@ -5394,10 +5426,16 @@ def transfer_items(save_name, data, source_key, dest_key):
         print(f"Item: {item_name}")
         print(f"Available: {available_quantity}")
         print()
-        print("Enter quantity to transfer (0 to cancel): ", end="")
+        print(f"Enter quantity to transfer (0 to cancel, Enter for max [{available_quantity}]): ", end="")
 
         try:
-            quantity = int(input())
+            user_input = input().strip()
+
+            # Default to max if Enter is pressed
+            if user_input == "":
+                quantity = available_quantity
+            else:
+                quantity = int(user_input)
 
             if quantity <= 0:
                 continue
