@@ -34,7 +34,7 @@ SAVE_VERSION_CODE = 2         # Save format version code
 # Color codes
 CORE_COLOR = "\033[1;32m"     # lime
 SECURE_COLOR = "\033[36m"     # cyan
-CONTESTED_COLOR = "\033[33m"  # orange/brown
+CONTESTED_COLOR = "\033[33m"  # yellow/brown
 UNSECURE_COLOR = "\033[31m"   # red
 WILD_COLOR = "\033[35m"       # purple
 RESET_COLOR = "\033[0m"       # reset
@@ -3593,18 +3593,57 @@ def show_craft_details(save_name, data, item_name, recipe, items_data, ships_dat
 
     if choice == 0 and has_all_materials:
         # Start crafting
-        start_crafting(save_name, data, item_name, recipe)
+        item_type = recipe.get('type', 'item')
+
+        # For items (not ships), ask for quantity
+        if item_type != 'ship':
+            # Calculate max quantity based on materials
+            max_quantity = float('inf')
+            materials = recipe.get('materials', {})
+            for mat_name, mat_qty in materials.items():
+                inventory_qty = data.get('inventory', {}).get(mat_name, 0)
+                storage_qty = data.get('storage', {}).get(mat_name, 0)
+                player_qty = inventory_qty + storage_qty
+                max_quantity = min(max_quantity, player_qty // mat_qty)
+
+            max_quantity = int(max_quantity)
+
+            clear_screen()
+            title(f"CRAFT: {item_name}")
+            print()
+            print(f"How many would you like to craft? (Max: {max_quantity})")
+            print("Press Enter for 1, or type a number:")
+            print()
+
+            try:
+                quantity_input = input("> ").strip()
+                if quantity_input == "":
+                    quantity = 1
+                else:
+                    quantity = int(quantity_input)
+                    if quantity < 1:
+                        quantity = 1
+                    elif quantity > max_quantity:
+                        quantity = max_quantity
+            except ValueError:
+                quantity = 1
+        else:
+            # Ships are crafted one at a time
+            quantity = 1
+
+        start_crafting(save_name, data, item_name, recipe, quantity)
 
 
-def start_crafting(save_name, data, item_name, recipe):
-    """Start crafting an item"""
+def start_crafting(save_name, data, item_name, recipe, quantity=1):
+    """Start crafting an item (can queue multiple jobs)"""
     # Get current station
     station = data.get('docked_at', 'The Citadel')
 
-    # Consume materials (from inventory first, then storage)
+    # Consume materials for all items (from inventory first, then storage)
     materials = recipe.get('materials', {})
     for mat_name, mat_qty in materials.items():
-        remaining_qty = mat_qty
+        total_needed = mat_qty * quantity
+        remaining_qty = total_needed
 
         # First consume from inventory
         inventory_qty = data.get('inventory', {}).get(mat_name, 0)
@@ -3625,28 +3664,34 @@ def start_crafting(save_name, data, item_name, recipe):
                     del data['storage'][mat_name]
                 remaining_qty -= consume_from_storage
 
-    # Create crafting job
-    job = {
-        "item": item_name,
-        "station": station,
-        "start_time": time(),
-        "craft_time": recipe.get('time', 0),
-        "type": recipe.get('type', 'item')
-    }
-
-    # Add job to station's queue
+    # Create multiple crafting jobs
     if station not in data['manufacturing_jobs']:
         data['manufacturing_jobs'][station] = []
-    data['manufacturing_jobs'][station].append(job)
+
+    for i in range(quantity):
+        job = {
+            "item": item_name,
+            "station": station,
+            "start_time": time(),
+            "craft_time": recipe.get('time', 0),
+            "type": recipe.get('type', 'item')
+        }
+        data['manufacturing_jobs'][station].append(job)
 
     save_data(save_name, data)
 
     clear_screen()
     title("CRAFTING STARTED")
     print()
-    print(f"Started crafting: {item_name}")
+    if quantity == 1:
+        print(f"Started crafting: {item_name}")
+    else:
+        print(f"Started crafting: {item_name} x{quantity}")
+        print(f"Queued {quantity} manufacturing jobs")
     print(f"Location: {station}")
-    print(f"Time required: {job['craft_time']:.0f} seconds")
+    print(f"Time per item: {recipe.get('time', 0):.0f} seconds")
+    if quantity > 1:
+        print(f"Total time: {recipe.get('time', 0) * quantity:.0f} seconds")
     print()
     print("You can check progress in 'View Manufacturing Jobs'.")
     print("Crafting will continue even when you're not at this station.")
@@ -3655,7 +3700,7 @@ def start_crafting(save_name, data, item_name, recipe):
 
 
 def view_manufacturing_jobs(save_name, data):
-    """View all active manufacturing jobs with progress bars"""
+    """View all active manufacturing jobs with live-updating progress bars"""
     # Ensure manufacturing_jobs exists
     if "manufacturing_jobs" not in data:
         data["manufacturing_jobs"] = {}
@@ -3663,28 +3708,69 @@ def view_manufacturing_jobs(save_name, data):
     # Check for completed jobs and allow collection
     current_station = data.get('docked_at', '')
 
+    # Helper function to get keyboard input with timeout (non-blocking)
+    def get_key_nonblocking(timeout=0.125):
+        """Get a key with timeout, returns None if no key pressed"""
+        if os.name == 'nt':  # Windows
+            import msvcrt
+            import time as time_module
+            start = time_module.time()
+            while time_module.time() - start < timeout:
+                if msvcrt.kbhit():
+                    key = msvcrt.getch()
+                    if key == b'\x1b':  # Escape
+                        return 'esc'
+                    elif key == b'\r':  # Enter
+                        return 'enter'
+                    else:
+                        try:
+                            return key.decode('utf-8').lower()
+                        except:
+                            pass
+                sleep(0.01)
+            return None
+        else:  # Unix/Linux/Mac
+            import select
+            import termios
+            import tty
+            fd = sys.stdin.fileno()
+            old_settings = termios.tcgetattr(fd)
+            try:
+                tty.setraw(fd)
+                rlist, _, _ = select.select([sys.stdin], [], [], timeout)
+                if rlist:
+                    ch = sys.stdin.read(1)
+                    if ch == '\x1b':  # Escape
+                        # Check if it's actually escape or an arrow key
+                        rlist, _, _ = select.select([sys.stdin], [], [], 0.01)
+                        if rlist:
+                            ch2 = sys.stdin.read(1)
+                            if ch2 == '[':
+                                sys.stdin.read(1)  # Consume the direction
+                                return None  # Ignore arrow keys
+                        return 'esc'
+                    elif ch == '\n' or ch == '\r':
+                        return 'enter'
+                    else:
+                        return ch.lower()
+                return None
+            finally:
+                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
     while True:
         current_time = time()
 
-        # Collect all jobs from all stations
-        all_jobs = []
+        # Collect all jobs from all stations and group by item+station
+        job_groups = {}  # Key: (item_name, station), Value: list of jobs
+
         for station, jobs in data['manufacturing_jobs'].items():
             for job in jobs:
-                elapsed = current_time - job['start_time']
-                progress = min(100, (elapsed / job['craft_time']) * 100)
-                is_complete = elapsed >= job['craft_time']
-                can_collect = (station == current_station or station == 'The Citadel') and is_complete
+                key = (job['item'], station)
+                if key not in job_groups:
+                    job_groups[key] = []
+                job_groups[key].append(job)
 
-                all_jobs.append({
-                    'station': station,
-                    'job': job,
-                    'progress': progress,
-                    'is_complete': is_complete,
-                    'can_collect': can_collect,
-                    'elapsed': elapsed
-                })
-
-        if not all_jobs:
+        if not job_groups:
             clear_screen()
             title("MANUFACTURING JOBS")
             print()
@@ -3693,78 +3779,183 @@ def view_manufacturing_jobs(save_name, data):
             input("Press Enter to continue...")
             return
 
-        # Capture content for display
-        content_buffer = StringIO()
-        old_stdout = sys.stdout
-        sys.stdout = content_buffer
+        # Process job groups
+        all_groups = []
+        for (item_name, station), jobs in job_groups.items():
+            # Calculate stats for the group
+            total_jobs = len(jobs)
+            completed_jobs = 0
+            total_progress = 0
 
-        # Display header and jobs
-        print("MANUFACTURING JOBS")
+            for job in jobs:
+                elapsed = current_time - job['start_time']
+                progress = min(100, (elapsed / job['craft_time']) * 100)
+                total_progress += progress
+                if elapsed >= job['craft_time']:
+                    completed_jobs += 1
+
+            avg_progress = total_progress / total_jobs
+            all_complete = (completed_jobs == total_jobs)
+            can_collect = (station == current_station or station == 'The Citadel') and all_complete
+
+            all_groups.append({
+                'item_name': item_name,
+                'station': station,
+                'jobs': jobs,
+                'count': total_jobs,
+                'completed_count': completed_jobs,
+                'avg_progress': avg_progress,
+                'all_complete': all_complete,
+                'can_collect': can_collect
+            })
+
+        # Sort groups: collectable first, then by progress
+        all_groups.sort(key=lambda g: (not g['can_collect'], -g['avg_progress']))
+
+        # Display jobs with live updating
+        clear_screen()
+        title("MANUFACTURING JOBS")
         print()
         print("Active Jobs:")
         print()
 
-        for i, job_info in enumerate(all_jobs):
-            job = job_info['job']
-            station = job_info['station']
-            progress = job_info['progress']
-            is_complete = job_info['is_complete']
-            can_collect = job_info['can_collect']
+        for i, group in enumerate(all_groups):
+            item_name = group['item_name']
+            station = group['station']
+            count = group['count']
+            completed_count = group['completed_count']
+            avg_progress = group['avg_progress']
+            all_complete = group['all_complete']
+            can_collect = group['can_collect']
 
             # Progress bar
             bar_width = 30
-            filled = int((progress / 100) * bar_width)
+            filled = int((avg_progress / 100) * bar_width)
             bar = "█" * filled + "░" * (bar_width - filled)
+
+            # Item display with count
+            item_display = f"{item_name}"
+            if count > 1:
+                item_display += f" x{count}"
 
             status = ""
             if can_collect:
                 status = " [READY TO COLLECT]"
-            elif is_complete:
+            elif all_complete:
                 status = f" [Complete - at {station}]"
+            elif completed_count > 0:
+                status = f" [{completed_count}/{count} done]"
 
-            print(f"{chr(ord('a') + i)}) {job['item']} - {station}")
-            print(f"   [{bar}] {progress:.1f}%{status}")
+            print(f"{chr(ord('a') + i)}) {item_display} - {station}")
+            print(f"   [{bar}] {avg_progress:.1f}%{status}")
             print()
 
         print("=" * 60)
+        print()
+        print("[a-z] Select job | [ESC] Back")
+        print()
 
-        previous_content = content_buffer.getvalue()
-        sys.stdout = old_stdout
+        # Wait for input with timeout for live updating
+        key = get_key_nonblocking(timeout=0.125)
 
-        # Build options
-        options = []
-        for i, job_info in enumerate(all_jobs):
-            job = job_info['job']
-            station = job_info['station']
-            progress = job_info['progress']
-            is_complete = job_info['is_complete']
-            can_collect = job_info['can_collect']
-
-            status = ""
-            if can_collect:
-                status = " [READY TO COLLECT]"
-            elif is_complete:
-                status = f" [Complete - at {station}]"
-
-            option_text = f"{job['item']} - {station} ({progress:.1f}%){status}"
-            options.append(option_text)
-
-        options.append("Back")
-
-        choice = arrow_menu("Select job to view or collect:", options, previous_content)
-
-        if choice == len(all_jobs):
-            # Back
+        if key == 'esc':
             return
+        elif key and key.isalpha():
+            # User selected a job group
+            idx = ord(key) - ord('a')
+            if 0 <= idx < len(all_groups):
+                selected_group = all_groups[idx]
+                if selected_group['can_collect']:
+                    # Collect all items in the group
+                    collect_crafted_items_group(save_name, data, selected_group)
+                    # After collecting, continue the loop to refresh
+                else:
+                    # Show details about the group
+                    show_job_group_details(selected_group)
+                    # After showing details, continue the loop to refresh
 
-        # Handle job selection
-        selected_job_info = all_jobs[choice]
-        if selected_job_info['can_collect']:
-            # Collect the item
-            collect_crafted_item(save_name, data, selected_job_info)
+
+def collect_crafted_items_group(save_name, data, group):
+    """Collect all completed crafted items in a group"""
+    item_name = group['item_name']
+    station = group['station']
+    jobs = group['jobs']
+    count = group['count']
+    item_type = jobs[0]['type'] if jobs else 'item'
+
+    # Remove all jobs from queue
+    for job in jobs:
+        data['manufacturing_jobs'][station] = [j for j in data['manufacturing_jobs'][station] if j != job]
+    if not data['manufacturing_jobs'][station]:
+        del data['manufacturing_jobs'][station]
+
+    # Give player all the items
+    if item_name not in data['inventory']:
+        data['inventory'][item_name] = 0
+    data['inventory'][item_name] += count
+
+    clear_screen()
+    if item_type == 'ship':
+        title("SHIPS CRAFTED")
+        print()
+        if count == 1:
+            print(f"✓ {item_name} ship item has been added to your inventory!")
         else:
-            # Just show details
-            show_job_details(selected_job_info)
+            print(f"✓ {item_name} x{count} ship items have been added to your inventory!")
+        print(f"  You can assemble them from the Shipyard.")
+    else:
+        title("ITEMS CRAFTED")
+        print()
+        if count == 1:
+            print(f"✓ {item_name} has been added to your inventory!")
+        else:
+            print(f"✓ {item_name} x{count} have been added to your inventory!")
+
+    save_data(save_name, data)
+    print()
+    input("Press Enter to continue...")
+
+
+def show_job_group_details(group):
+    """Show details about a group of manufacturing jobs"""
+    item_name = group['item_name']
+    station = group['station']
+    count = group['count']
+    completed_count = group['completed_count']
+    avg_progress = group['avg_progress']
+    jobs = group['jobs']
+
+    clear_screen()
+    title("JOB GROUP DETAILS")
+    print()
+    print(f"Item: {item_name}")
+    if count > 1:
+        print(f"Quantity: {count}")
+    print(f"Location: {station}")
+    print(f"Average Progress: {avg_progress:.1f}%")
+    print(f"Completed: {completed_count}/{count}")
+    print()
+
+    # Show individual job progress if there are multiple
+    if count > 1:
+        print("Individual Jobs:")
+        current_time = time()
+        for i, job in enumerate(jobs, 1):
+            elapsed = current_time - job['start_time']
+            progress = min(100, (elapsed / job['craft_time']) * 100)
+            remaining = max(0, job['craft_time'] - elapsed)
+
+            status = "Complete" if elapsed >= job['craft_time'] else f"{remaining:.0f}s remaining"
+            print(f"  {i}. Progress: {progress:.1f}% - {status}")
+        print()
+
+    if group['all_complete']:
+        print("Status: All jobs complete! Return to this station to collect.")
+    else:
+        print("Status: In Progress")
+
+    print()
+    input("Press Enter to continue...")
 
 
 def collect_crafted_item(save_name, data, job_info):
@@ -3780,32 +3971,17 @@ def collect_crafted_item(save_name, data, job_info):
         del data['manufacturing_jobs'][station]
 
     # Give player the item
+    if item_name not in data['inventory']:
+        data['inventory'][item_name] = 0
+    data['inventory'][item_name] += 1
+
+    clear_screen()
     if item_type == 'ship':
-        # Add ship to player's fleet
-        ships_data = load_ships_data()
-        ship_info = ships_data.get(item_name.lower(), {})
-
-        new_ship = {
-            "id": str(uuid4()),
-            "name": item_name.lower(),
-            "nickname": item_name,
-            "hull_hp": ship_info.get('stats', {}).get('Hull', 200),
-            "shield_hp": ship_info.get('stats', {}).get('Shield', 200),
-            "modules_installed": [],
-        }
-        data['ships'].append(new_ship)
-
-        clear_screen()
         title("SHIP CRAFTED")
         print()
-        print(f"✓ {item_name} has been added to your fleet!")
+        print(f"✓ {item_name} ship item has been added to your inventory!")
+        print(f"  You can assemble it from the Ship Terminal or from your inventory.")
     else:
-        # Add item to inventory
-        if item_name not in data['inventory']:
-            data['inventory'][item_name] = 0
-        data['inventory'][item_name] += 1
-
-        clear_screen()
         title("ITEM CRAFTED")
         print()
         print(f"✓ {item_name} has been added to your inventory!")
@@ -7199,6 +7375,7 @@ def main():
             "\033[1;32m✓ System ready!\033[0m"
         ]
 
+        clear_screen()
         type_lines(startup_lines)
 
     try:
