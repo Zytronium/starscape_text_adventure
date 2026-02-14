@@ -28,7 +28,7 @@ except ImportError:
     sleep(3)
 
 # Version codes
-APP_VERSION_CODE = "0.1.2.2"  # 0.1.x = alpha; 0.2.x = beta; 1.x = release
+APP_VERSION_CODE = "0.1.2.3"  # 0.1.x = alpha; 0.2.x = beta; 1.x = release
 SAVE_VERSION_CODE = 2         # Save format version code
 
 # Color codes
@@ -4247,7 +4247,7 @@ def view_manufacturing_jobs(save_name, data):
 
         if key == 'esc':
             return
-        elif key and key.isalpha():
+        elif key and len(key) == 1 and key.isalpha():
             # User selected a job group
             idx = ord(key) - ord('a')
             if 0 <= idx < len(all_groups):
