@@ -212,42 +212,42 @@
     },
     {
       "name": "Zenith",
-      "description": "An agile interceptor ship with balanced speed and combat capability.",
+      "description": "The Zenith is an agile starship developed to be able to hold its own in combat with normal fighters.",
       "type": "Ship",
       "sell_price": "750",
       "buy_price": "1500"
     },
     {
       "name": "Falcon",
-      "description": "Swift interceptor designed for scouting and high warp speed.",
+      "description": "The Falcon is a swift starship designed for overtaking other ships in warp and having unmatched speed on the battlefield.",
       "type": "Ship",
       "sell_price": "1000",
       "buy_price": "2000"
     },
     {
       "name": "Sabre",
-      "description": "Heavy fighter with substantial firepower and durability.",
+      "description": "The Sabre is a powerful ship that makes up for its lack in speed with impressive firepower and tanking ability.",
       "type": "Ship",
       "sell_price": "1100",
       "buy_price": "2200"
     },
     {
       "name": "Aurora",
-      "description": "General-purpose fighter spacecraft with balanced stats.",
+      "description": "The Aurora is a general-purpose fighter spacecraft that can perform well in a large array of situations.",
       "type": "Ship",
       "sell_price": "800",
       "buy_price": "1600"
     },
     {
       "name": "Marlin",
-      "description": "A nimble vessel that is designed to mine efficiently but be capable of making a quick escape when necessary.",
+      "description": "The Marlin is a nimble vessel that is designed to mine efficiently but be capable of making a quick escape when necessary.",
       "type": "Ship",
       "sell_price": "500",
       "buy_price": "1000"
     },
     {
       "name": "Badger",
-      "description": "An entry-level miner-class ship best suited as a starter mining ship. While it mines more efficiently than the Marlin, it's less capable of making a quick escape.",
+      "description": "The Badger is an entry-level miner-class ship best suited as a starter mining ship. While it mines very efficiently, it's less capable of making a quick escape.",
       "type": "Ship",
       "sell_price": "700",
       "buy_price": "1400"
@@ -268,30 +268,30 @@
     },
     {
       "name": "Luminar",
-      "description": "A Luminar class ship.",
+      "description": "Based on the Aurora chassis, the Luminar is an advanced fighter whose heavy shields give it a distinct advantage in combat situations.",
       "type": "Ship",
-      "sell_price": "",
+      "sell_price": "1600",
       "buy_price": ""
     },
     {
       "name": "Paragon",
-      "description": "A Paragon class ship.",
+      "description": "An advanced upgraded variant of the Falcon, the Paragon is one of the fastest and most agile ships in the galaxy.",
       "type": "Ship",
-      "sell_price": "",
+      "sell_price": "2100",
       "buy_price": ""
     },
     {
       "name": "Claymore",
-      "description": "A Claymore class ship.",
+      "description": "The Claymore, an advanced upgrade of the successful Sabre chassis, is a hull tanking machine with remarkably strong damage output.",
       "type": "Ship",
-      "sell_price": "",
+      "sell_price": "2200",
       "buy_price": ""
     },
     {
       "name": "Polaris",
-      "description": "A Polaris class ship.",
+      "description": "The Polaris is an advanced upgrade of the Zenith design that generally improves upon its speed, offense, and defense.",
       "type": "Ship",
-      "sell_price": "",
+      "sell_price": "1500",
       "buy_price": ""
     }
   ]

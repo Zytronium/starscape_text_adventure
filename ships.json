@@ -16,7 +16,7 @@
     },
     {
       "name": "Zenith",
-      "description": "An agile interceptor ship with balanced speed and combat capability.",
+      "description": "The Zenith is an agile starship developed to be able to hold its own in combat with normal fighters.",
       "class": "Interceptor",
       "stats": {
         "DPS": 180,
@@ -30,7 +30,7 @@
     },
     {
       "name": "Falcon",
-      "description": "Swift interceptor designed for scouting and high warp speed.",
+      "description": "The Falcon is a swift starship designed for overtaking other ships in warp and having unmatched speed on the battlefield.",
       "class": "Interceptor",
       "stats": {
         "DPS": 150,
@@ -44,7 +44,7 @@
     },
     {
       "name": "Sabre",
-      "description": "Heavy fighter with substantial firepower and durability.",
+      "description": "The Sabre is a powerful ship that makes up for its lack in speed with impressive firepower and tanking ability.",
       "class": "Fighter",
       "stats": {
         "DPS": 260,
@@ -58,7 +58,7 @@
     },
     {
       "name": "Aurora",
-      "description": "General-purpose fighter spacecraft with balanced stats.",
+      "description": "The Aurora is a general-purpose fighter spacecraft that can perform well in a large array of situations.",
       "class": "Fighter",
       "stats": {
         "DPS": 220,
@@ -72,7 +72,7 @@
     },
     {
       "name": "Marlin",
-      "description": "A nimble vessel that is designed to mine efficiently but be capable of making a quick escape when necessary.",
+      "description": "The Marlin is a nimble vessel that is designed to mine efficiently but be capable of making a quick escape when necessary.",
       "class": "Miner",
       "stats": {
         "DPS": 85,
@@ -86,7 +86,7 @@
     },
     {
       "name": "Badger",
-      "description": "An entry-level miner-class ship best suited as a starter mining ship. While it mines more efficiently than the Marlin, it's less capable of making a quick escape.",
+      "description": "The Badger is an entry-level miner-class ship best suited as a starter mining ship. While it mines very efficiently, it's less capable of making a quick escape.",
       "class": "Miner",
       "stats": {
         "DPS": 102,
@@ -99,8 +99,64 @@
       }
     },
     {
+      "name": "Luminar",
+      "description": "Based on the Aurora chassis, the Luminar is an advanced fighter whose heavy shields give it a distinct advantage in combat situations.",
+      "class": "Fighter",
+      "stats": {
+        "DPS": 240,
+        "Shield": 500,
+        "Hull": 200,
+        "Energy": 110,
+        "Speed": 210,
+        "Agility": 97,
+        "Warp Speed": 1.2
+      }
+    },
+    {
+      "name": "Claymore",
+      "description": "The Claymore, an advanced upgrade of the successful Sabre chassis, is a hull tanking machine with remarkably strong damage output.",
+      "class": "Fighter",
+      "stats": {
+        "DPS": 280,
+        "Shield": 150,
+        "Hull": 650,
+        "Energy": 80,
+        "Speed": 310,
+        "Agility": 90,
+        "Warp Speed": 1.1
+      }
+    },
+    {
+      "name": "Polaris",
+      "description": "The Polaris is an advanced upgrade of the Zenith design that generally improves upon its speed, offense, and defense.",
+      "class": "Interceptor",
+      "stats": {
+        "DPS": 200,
+        "Shield": 275,
+        "Hull": 250,
+        "Energy": 90,
+        "Speed": 440,
+        "Agility": 90,
+        "Warp Speed": 1.4
+      }
+    },
+    {
+      "name": "Paragon",
+      "description": "An advanced upgraded variant of the Falcon, the Paragon is one of the fastest and most agile ships in the galaxy.",
+      "class": "Interceptor",
+      "stats": {
+        "DPS": 160,
+        "Shield": 200,
+        "Hull": 250,
+        "Energy": 120,
+        "Speed": 455,
+        "Agility": 127,
+        "Warp Speed": 1.6
+      }
+    },
+    {
       "name": "Spectator",
-      "description": "Admin spectating ship with extreme stats - not normally usable in play.",
+      "description": "Admin-only ship for testing. In the orignal Starscape, it was also used for spectating events.",
       "class": "Special",
       "stats": {
         "Shield": 10000,
@@ -112,7 +168,7 @@
     },
     {
       "name": "Spectator-X",
-      "description": "Enhanced version of the Spectator ship for advanced testing.",
+      "description": "Admin-only ship for testing combat.",
       "class": "Special",
       "stats": {
         "DPS": 13250,
