@@ -15,12 +15,12 @@
 ### Adding more ships and manufacturing
 - [X] Create crafting.json that contains all crafting recipes for ships and items
 - [X] Create a GUI tool that makes it easier to add recipes to crafting.json
-- [ ] Replace the option to "switch ships" with a "ship terminal"
-  - [ ] Displays all ships, select to view details, then select either "back," "switch," "rename," or "disassemble" (and in the future, "outfit" to manage upgrades and modules)
+- [X] Replace the option to "switch ships" with a "ship terminal"
+  - [X] Displays all ships, select to view details, then select either "back," "switch," "rename," or "disassemble" (and in the future, "outfit" to manage upgrades and modules)
   - [ ] Colors ships names by tier
-  - [ ] Contains 2nd tab for ship assembly
+  - [X] Contains 2nd tab for ship assembly
 - [X] Add items for every ship so they can be assembled and disassembled
-- [ ] Add an "Assemble" option when viewing a ship in inventory (1 of 2 ways to assemble)
+- [X] Add an "Assemble" option when viewing a ship in inventory (1 of 2 ways to assemble)
 - [ ] Implement Manufacturing Bay
   - Has 2 tabs: Items and Ships
   - Lets you select from a paginated list or search for item names

@@ -617,6 +617,82 @@ def arrow_menu(title, options, previous_content=""):
             return selected
 
 
+def tabbed_interface(tab_names, tab_functions, initial_tab=0):
+    """
+    Reusable tabbed interface system
+
+    Args:
+        tab_names: List of tab names (e.g., ["Ships", "Assembly"])
+        tab_functions: List of functions to call for each tab. Each function should:
+            - Take save_name and data as parameters
+            - Return True to continue showing tabs, False to exit
+        initial_tab: Starting tab index (default 0)
+
+    Returns:
+        None
+    """
+    current_tab = initial_tab
+
+    while True:
+        # Display tabs at top
+        clear_screen()
+
+        # Draw ASCII tabs
+        tab_line = "  "
+        underline = "  "
+
+        for i, name in enumerate(tab_names):
+            tab_width = len(name) + 4
+
+            if i == current_tab:
+                # Active tab
+                tab_line += f"┌{'─' * (tab_width - 2)}┐ "
+                underline += f"│ {name} │ "
+            else:
+                # Inactive tab
+                tab_line += f"┌{'─' * (tab_width - 2)}┐ "
+                underline += f"│ {name} │ "
+
+        print(tab_line)
+        print(underline)
+
+        # Draw bottom line for active tab, close line for others
+        bottom_line = "  "
+        for i, name in enumerate(tab_names):
+            tab_width = len(name) + 4
+            if i == current_tab:
+                bottom_line += f"└{'─' * (tab_width - 2)}┘─"
+            else:
+                bottom_line += f"└{'─' * (tab_width - 2)}┘ "
+
+        # Fill rest of line
+        bottom_line += "─" * (60 - len(bottom_line))
+        print(bottom_line)
+        print()
+
+        # Show tab hints
+        tab_hints = "  "
+        for i, name in enumerate(tab_names):
+            tab_hints += f"[{i+1}] {name}  "
+        print(tab_hints)
+        print()
+
+        # Call the current tab's function
+        # The function should handle its own display and return True to continue, False to exit
+        result = tab_functions[current_tab]()
+
+        if result is False:
+            # Exit the tabbed interface
+            return
+        elif isinstance(result, int):
+            # Switch to specific tab
+            current_tab = result
+        else:
+            pass
+            # Check for tab switch input
+            # This will be handled within each tab function by returning a tab index
+
+
 def default_data():
     """Return default game data structure"""
     return {
@@ -4035,8 +4111,8 @@ def station_screen(system, station_num, save_name, data):
                         option_actions.append(action)
 
         # Always show switch ships option
-        options.append("Switch Ships")
-        option_actions.append("switch_ships")
+        options.append("Open Ship Terminal")
+        option_actions.append("ship_terminal")
 
         # Always add undock option
         options.append("Return to Ship & Undock")
@@ -4075,8 +4151,8 @@ def station_screen(system, station_num, save_name, data):
             visit_refinery(save_name, data)
             continue
 
-        if action == "switch_ships":
-            switch_ships_menu(save_name, data)
+        if action == "ship_terminal":
+            ship_terminal(save_name, data)
             continue
 
         if action == "undock":
@@ -4560,7 +4636,7 @@ def access_global_storage(save_name, data):
             transfer_items(save_name, data, "storage", "inventory")
         elif choice == 2:
             # View item details
-            view_item_details(data)
+            view_item_details(data, save_name)
         elif choice == 3:
             # Back
             return
@@ -4672,7 +4748,7 @@ def transfer_items(save_name, data, source_key, dest_key):
             input("Press Enter to continue...")
 
 
-def view_item_details(data):
+def view_item_details(data, save_name=None):
     """View detailed information about items in inventory or storage"""
     # Combine inventory and storage for viewing
     all_items = {}
@@ -4735,7 +4811,22 @@ def view_item_details(data):
             print(f"Buy Price: {item_info['buy_price']} CR")
 
         print()
-        input("Press Enter to continue...")
+
+        # If this is a ship item and we have save_name, offer to assemble it
+        if item_info.get('type') == 'Ship' and save_name and (inv_qty > 0 or stor_qty > 0):
+            print("[A] Assemble Ship  [Enter] Continue")
+            print()
+            key = get_key()
+            if key == 'a':
+                assemble_ship_from_item(save_name, data, item_name)
+                # Refresh all_items after assembly
+                all_items = {}
+                for item_name_refresh, quantity in data.get('inventory', {}).items():
+                    all_items[item_name_refresh] = all_items.get(item_name_refresh, 0) + quantity
+                for item_name_refresh, quantity in data.get('storage', {}).items():
+                    all_items[item_name_refresh] = all_items.get(item_name_refresh, 0) + quantity
+        else:
+            input("Press Enter to continue...")
 
 
 def visit_ship_vendor(save_name, data):
@@ -4864,20 +4955,88 @@ def visit_ship_vendor(save_name, data):
         input("Press Enter to continue...")
 
 
-def switch_ships_menu(save_name, data):
-    """Display a menu to switch current ship"""
+def ship_terminal(save_name, data):
+    """Ship Terminal with tabs for viewing/managing ships and assembling new ones"""
+    current_tab = 0
+
+    def draw_tabs(current):
+        """Draw ASCII art tabs"""
+        tabs = ["Ships", "Assembly"]
+        tab_line = "  "
+        name_line = "  "
+
+        for i, name in enumerate(tabs):
+            if i == current:
+                # Active tab (looks raised)
+                tab_line += "┌─────────┐ "
+                name_line += f"│ {name:^7} │ "
+            else:
+                # Inactive tab
+                tab_line += "┌─────────┐ "
+                name_line += f"│ {name:^7} │ "
+
+        print(tab_line)
+        print(name_line)
+
+        # Bottom border
+        border = "  "
+        for i, name in enumerate(tabs):
+            if i == current:
+                border += "└─────────┘─"
+            else:
+                border += "└─────────┘ "
+        border += "─" * (60 - len(border))
+        print(border)
+        print()
+        print("  [1] Ships     [2] Assembly")
+        print("=" * 60)
+        print()
+
+    while True:
+        if current_tab == 0:
+            # Ships tab - view and manage owned ships
+            result = ship_list_tab(save_name, data)
+            if result == 'exit':
+                return
+            elif result == 'tab_2':
+                current_tab = 1
+        elif current_tab == 1:
+            # Assembly tab - assemble ships from inventory
+            result = ship_assembly_tab(save_name, data)
+            if result == 'exit':
+                return
+            elif result == 'tab_1':
+                current_tab = 0
+
+
+def ship_list_tab(save_name, data):
+    """Ships tab - view and manage owned ships"""
     ships_data = load_ships_data()
 
     while True:
         clear_screen()
-        title("SWITCH SHIPS")
+        print()
+        print("  ┌─────────┐ ┌──────────┐")
+        print("  │  Ships  │ │ Assembly │")
+        print("  └─────────┴─┴──────────┴─────────────────────────────────")
+        print()
+        print("  [1] Ships     [2] Assembly")
+        print("=" * 60)
         print()
 
         # Show all owned ships
         if not data["ships"]:
             print("  No ships available!")
-            input("\n  Press Enter to continue...")
-            return
+            print()
+            print("  Options: [2] Assembly  [ESC] Back")
+            print()
+
+            key = get_key()
+            if key == '2':
+                return 'tab_2'
+            elif key == 'esc':
+                return 'exit'
+            continue
 
         # Build menu options
         options = []
@@ -4932,33 +5091,446 @@ def switch_ships_menu(save_name, data):
         print("  " + "=" * 58)
         print()
 
-        # Get user choice
-        choice = arrow_menu("Select ship to make active", options)
+        # Get user choice with custom key handling
+        from io import StringIO
+        import sys
 
-        if choice == len(options) - 1:  # Back option
-            return
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
 
-        # Switch to selected ship
-        if choice != data["active_ship"]:
+        # Recreate the screen content
+        print()
+        print("  ┌─────────┐ ┌──────────┐")
+        print("  │  Ships  │ │ Assembly │")
+        print("  └─────────┴─┴──────────┴─────────────────────────────────")
+        print()
+        print("  [1] Ships     [2] Assembly")
+        print("=" * 60)
+        print()
+
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        selected = 0
+        while True:
+            display_menu("Select ship to view details", options, selected, previous_content)
+            key = get_key()
+
+            if key == 'up':
+                selected = (selected - 1) % len(options)
+            elif key == 'down':
+                selected = (selected + 1) % len(options)
+            elif key == '1':
+                # Already on Ships tab
+                continue
+            elif key == '2':
+                return 'tab_2'
+            elif key == 'esc' or (key == 'enter' and selected == len(options) - 1):
+                return 'exit'
+            elif key == 'enter':
+                # View ship details
+                choice = selected
+                break
+
+        # Show ship details and actions
+        result = view_ship_details(save_name, data, choice)
+        if result == 'tab_2':
+            return 'tab_2'
+
+
+def view_ship_details(save_name, data, ship_index):
+    """View details of a specific ship and provide action options"""
+    ship = data["ships"][ship_index]
+    ship_name = ship["name"]
+    nickname = ship.get("nickname", ship_name.title())
+    stats = get_ship_stats(ship_name)
+
+    while True:
+        clear_screen()
+        title("SHIP DETAILS")
+        print()
+        print(f"Nickname: {nickname}")
+        print(f"Model: {ship_name.title()}")
+        print()
+
+        # Get ship info from ships.json
+        ships_data = load_ships_data()
+        ship_info = ships_data.get(ship_name.lower(), {})
+
+        print(f"Class: {ship_info.get('class', 'Unknown')}")
+        print(f"Description: {ship_info.get('description', 'No description available.')}")
+        print()
+
+        # HP status
+        max_hull = stats.get("Hull", 200)
+        max_shield = stats.get("Shield", 200)
+        current_hull = ship.get("hull_hp", max_hull)
+        current_shield = ship.get("shield_hp", max_shield)
+
+        print(f"Hull: {current_hull}/{max_hull}")
+        print(f"Shield: {current_shield}/{max_shield}")
+        print()
+
+        # Stats
+        print("Stats:")
+        print(f"  DPS: {stats.get('DPS', 'N/A')}")
+        print(f"  Shield: {stats.get('Shield', 'N/A')}")
+        print(f"  Hull: {stats.get('Hull', 'N/A')}")
+        print(f"  Energy: {stats.get('Energy', 'N/A')}")
+        print(f"  Speed: {stats.get('Speed', 'N/A')}")
+        print(f"  Agility: {stats.get('Agility', 'N/A')}")
+        print(f"  Warp Speed: {stats.get('Warp Speed', 'N/A')}")
+        print()
+
+        # Status
+        if ship_index == data["active_ship"]:
+            print("Status: ACTIVE ★")
+        else:
+            print("Status: Docked")
+        print()
+        print("=" * 60)
+        print()
+
+        # Capture current screen content for arrow_menu
+        from io import StringIO
+        import sys
+
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        # Recreate the screen content
+        title("SHIP DETAILS")
+        print()
+        print(f"Nickname: {nickname}")
+        print(f"Model: {ship_name.title()}")
+        print()
+        print(f"Class: {ship_info.get('class', 'Unknown')}")
+        print(f"Description: {ship_info.get('description', 'No description available.')}")
+        print()
+        print(f"Hull: {current_hull}/{max_hull}")
+        print(f"Shield: {current_shield}/{max_shield}")
+        print()
+        print("Stats:")
+        print(f"  DPS: {stats.get('DPS', 'N/A')}")
+        print(f"  Shield: {stats.get('Shield', 'N/A')}")
+        print(f"  Hull: {stats.get('Hull', 'N/A')}")
+        print(f"  Energy: {stats.get('Energy', 'N/A')}")
+        print(f"  Speed: {stats.get('Speed', 'N/A')}")
+        print(f"  Agility: {stats.get('Agility', 'N/A')}")
+        print(f"  Warp Speed: {stats.get('Warp Speed', 'N/A')}")
+        print()
+        if ship_index == data["active_ship"]:
+            print("Status: ACTIVE ★")
+        else:
+            print("Status: Docked")
+        print()
+        print("=" * 60)
+        print()
+
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        # Action options
+        options = []
+        if ship_index != data["active_ship"]:
+            options.append("Switch to this ship")
+        options.extend(["Rename ship", "Disassemble ship", "Back"])
+
+        choice = arrow_menu("Select action:", options, previous_content)
+
+        if options[choice] == "Switch to this ship":
+            # Switch to this ship
             old_ship = data["ships"][data["active_ship"]]
-            new_ship = data["ships"][choice]
-
-            data["active_ship"] = choice
+            data["active_ship"] = ship_index
             save_data(save_name, data)
 
             clear_screen()
             title("SHIP SWITCHED")
             print()
-            print(f"  Switched from {old_ship.get('nickname', old_ship['name'].title())} to {new_ship.get('nickname', new_ship['name'].title())}")
+            print(f"  Switched from {old_ship.get('nickname', old_ship['name'].title())} to {nickname}")
             print()
             input("  Press Enter to continue...")
-        else:
+            return
+
+        elif options[choice] == "Rename ship":
+            # Rename ship
             clear_screen()
-            title("SHIP SELECTION")
+            title("RENAME SHIP")
             print()
-            print(f"  {data['ships'][choice].get('nickname', data['ships'][choice]['name'].title())} is already your active ship.")
+            print(f"Current name: {nickname}")
             print()
-            input("  Press Enter to continue...")
+            print("Enter new nickname (press Enter to cancel): ", end="")
+            new_nickname = input().strip()
+
+            if new_nickname:
+                data["ships"][ship_index]["nickname"] = new_nickname
+                save_data(save_name, data)
+
+                clear_screen()
+                title("SHIP RENAMED")
+                print()
+                print(f"Ship renamed to: {new_nickname}")
+                print()
+                input("Press Enter to continue...")
+                return
+
+        elif options[choice] == "Disassemble ship":
+            # Disassemble ship (return to inventory)
+            if ship_index == data["active_ship"]:
+                clear_screen()
+                title("CANNOT DISASSEMBLE")
+                print()
+                print("You cannot disassemble your active ship!")
+                print("Please switch to another ship first.")
+                print()
+                input("Press Enter to continue...")
+                continue
+
+            clear_screen()
+            title("DISASSEMBLE SHIP")
+            print()
+            print(f"Are you sure you want to disassemble {nickname}?")
+            print(f"This will return the {ship_name.title()} item to your inventory.")
+            print()
+            print("Type 'yes' to confirm, or anything else to cancel: ", end="")
+            confirmation = input().strip().lower()
+
+            if confirmation == 'yes':
+                # Get proper ship name for item
+                ships_data = load_ships_data()
+                proper_ship_name = ships_data.get(ship_name.lower(), {}).get('name', ship_name.title())
+
+                # Add ship item to inventory
+                if 'inventory' not in data:
+                    data['inventory'] = {}
+                if proper_ship_name not in data['inventory']:
+                    data['inventory'][proper_ship_name] = 0
+                data['inventory'][proper_ship_name] += 1
+
+                # Remove ship from ships list
+                data['ships'].pop(ship_index)
+
+                # Adjust active ship index if needed
+                if data["active_ship"] >= len(data["ships"]) and len(data["ships"]) > 0:
+                    data["active_ship"] = len(data["ships"]) - 1
+
+                save_data(save_name, data)
+
+                clear_screen()
+                title("SHIP DISASSEMBLED")
+                print()
+                print(f"{nickname} has been disassembled.")
+                print(f"The {proper_ship_name} item has been added to your inventory.")
+                print()
+                input("Press Enter to continue...")
+                return
+
+        elif options[choice] == "Back":
+            return
+
+
+def ship_assembly_tab(save_name, data):
+    """Assembly tab - assemble ships from inventory or storage"""
+    items_data = load_items_data()
+    ships_data = load_ships_data()
+
+    while True:
+        clear_screen()
+        print()
+        print("  ┌─────────┐ ┌──────────┐")
+        print("  │  Ships  │ │ Assembly │")
+        print("  └─────────┴─┴──────────┴─────────────────────────────────")
+        print()
+        print("  [1] Ships     [2] Assembly")
+        print("=" * 60)
+        print()
+
+        # Get all ship items from inventory and storage
+        ship_items = {}
+
+        for item_name, quantity in data.get('inventory', {}).items():
+            item_info = items_data.get(item_name, {})
+            if item_info.get('type') == 'Ship':
+                ship_items[item_name] = ship_items.get(item_name, {'inv': 0, 'stor': 0})
+                ship_items[item_name]['inv'] = quantity
+
+        for item_name, quantity in data.get('storage', {}).items():
+            item_info = items_data.get(item_name, {})
+            if item_info.get('type') == 'Ship':
+                ship_items[item_name] = ship_items.get(item_name, {'inv': 0, 'stor': 0})
+                ship_items[item_name]['stor'] = quantity
+
+        if not ship_items:
+            print("  No ship items available to assemble.")
+            print()
+            print("  You can purchase ships from the Ship Vendor.")
+            print()
+            print("  Options: [1] Ships  [ESC] Back")
+            print()
+
+            key = get_key()
+            if key == '1':
+                return 'tab_1'
+            elif key == 'esc':
+                return 'exit'
+            continue
+
+        # Display available ship items
+        print("  Available Ship Items:")
+        print("  " + "=" * 58)
+
+        sorted_ships = sorted(ship_items.items())
+        for item_name, quantities in sorted_ships:
+            inv_qty = quantities['inv']
+            stor_qty = quantities['stor']
+            total = inv_qty + stor_qty
+
+            print(f"  • {item_name}")
+            print(f"    Inventory: {inv_qty}  |  Storage: {stor_qty}  |  Total: {total}")
+
+        print("  " + "=" * 58)
+        print()
+
+        # Build options
+        options = [f"{name} (Total: {qty['inv'] + qty['stor']})" for name, qty in sorted_ships]
+        options.append("Back")
+
+        # Get user choice with custom key handling
+        from io import StringIO
+        import sys
+
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        print()
+        print("  ┌─────────┐ ┌──────────┐")
+        print("  │  Ships  │ │ Assembly │")
+        print("  └─────────┴─┴──────────┴─────────────────────────────────")
+        print()
+        print("  [1] Ships     [2] Assembly")
+        print("=" * 60)
+        print()
+
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        selected = 0
+        while True:
+            display_menu("Select ship to assemble", options, selected, previous_content)
+            key = get_key()
+
+            if key == 'up':
+                selected = (selected - 1) % len(options)
+            elif key == 'down':
+                selected = (selected + 1) % len(options)
+            elif key == '1':
+                return 'tab_1'
+            elif key == '2':
+                # Already on Assembly tab
+                continue
+            elif key == 'esc' or (key == 'enter' and selected == len(options) - 1):
+                return 'exit'
+            elif key == 'enter':
+                choice = selected
+                break
+
+        # Assemble the selected ship
+        ship_name = sorted_ships[choice][0]
+        assemble_ship_from_item(save_name, data, ship_name)
+
+
+def assemble_ship_from_item(save_name, data, ship_name):
+    """Assemble a ship from an item in inventory or storage"""
+    items_data = load_items_data()
+    ships_data = load_ships_data()
+
+    # Check quantities
+    inv_qty = data.get('inventory', {}).get(ship_name, 0)
+    stor_qty = data.get('storage', {}).get(ship_name, 0)
+
+    if inv_qty + stor_qty == 0:
+        print("No ship items available!")
+        return
+
+    clear_screen()
+    title("ASSEMBLE SHIP")
+    print()
+    print(f"Ship: {ship_name}")
+
+    # Get ship info
+    ship_name_lower = ship_name.lower()
+    ship_info = ships_data.get(ship_name_lower, {})
+    stats = ship_info.get('stats', {})
+
+    print(f"Class: {ship_info.get('class', 'Unknown')}")
+    print(f"Description: {ship_info.get('description', 'No description available.')}")
+    print()
+
+    # Show stats
+    print("Stats:")
+    print(f"  DPS: {stats.get('DPS', 'N/A')}")
+    print(f"  Shield: {stats.get('Shield', 'N/A')}")
+    print(f"  Hull: {stats.get('Hull', 'N/A')}")
+    print(f"  Speed: {stats.get('Speed', 'N/A')}")
+    print(f"  Warp Speed: {stats.get('Warp Speed', 'N/A')}")
+    print()
+
+    print(f"Available: {inv_qty} in inventory, {stor_qty} in storage")
+    print()
+
+    # Ask for source
+    if inv_qty > 0 and stor_qty > 0:
+        print("Assemble from: [1] Inventory  [2] Storage  [ESC] Cancel")
+        key = get_key()
+        if key == '1':
+            source = 'inventory'
+        elif key == '2':
+            source = 'storage'
+        else:
+            return
+    elif inv_qty > 0:
+        source = 'inventory'
+    else:
+        source = 'storage'
+
+    # Ask for nickname
+    print()
+    print("Enter a nickname for this ship (press Enter for default): ", end="")
+    nickname = input().strip()
+    if not nickname:
+        nickname = ship_name
+
+    # Remove item from source
+    if source not in data:
+        data[source] = {}
+
+    data[source][ship_name] -= 1
+    if data[source][ship_name] <= 0:
+        del data[source][ship_name]
+
+    # Create assembled ship
+    new_ship = {
+        "id": str(uuid4()),
+        "name": ship_name_lower,
+        "nickname": nickname,
+        "hull_hp": stats.get('Hull', 200),
+        "shield_hp": stats.get('Shield', 200),
+        "modules_installed": [],
+    }
+
+    data['ships'].append(new_ship)
+    save_data(save_name, data)
+
+    clear_screen()
+    title("SHIP ASSEMBLED")
+    print()
+    print(f"Successfully assembled {ship_name} '{nickname}'!")
+    print("Your new ship is ready to use.")
+    print()
+    input("Press Enter to continue...")
 
 
 def visit_observatory():
