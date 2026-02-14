@@ -28,7 +28,7 @@ except ImportError:
     sleep(3)
 
 # Version codes
-APP_VERSION_CODE = "0.1.2"    # 0.1.x = alpha; 0.2.x = beta; 1.x = release
+APP_VERSION_CODE = "0.1.2.1"    # 0.1.x = alpha; 0.2.x = beta; 1.x = release
 SAVE_VERSION_CODE = 2         # Save format version code
 
 # Color codes
@@ -5905,7 +5905,10 @@ def view_ship_details(save_name, data, ship_index):
         options = []
         if ship_index != data["active_ship"]:
             options.append("Switch to this ship")
-        options.extend(["Rename ship", "Disassemble ship", "Back"])
+        if ship_name == "stratos":
+            options.extend(["Rename ship", "Back"])
+        else:
+            options.extend(["Rename ship", "Disassemble ship", "Back"])
 
         choice = arrow_menu("Select action:", options, previous_content)
 
