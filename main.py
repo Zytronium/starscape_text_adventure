@@ -262,7 +262,6 @@ def check_for_updates():
             version_data = json.loads(response.read().decode())
 
         remote_app_version = version_data.get("app")
-        remote_save_version = version_data.get("save")
 
         if not remote_app_version:
             print("Error: Invalid response from update server.")
@@ -3902,7 +3901,7 @@ def collect_crafted_items_group(save_name, data, group):
             print(f"✓ {item_name} ship item has been added to your inventory!")
         else:
             print(f"✓ {item_name} x{count} ship items have been added to your inventory!")
-        print(f"  You can assemble them from the Shipyard.")
+        print(f"  You can assemble them from the Ship Terminal or form your inventory.")
     else:
         title("ITEMS CRAFTED")
         print()
