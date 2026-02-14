@@ -28,7 +28,7 @@ except ImportError:
     sleep(3)
 
 # Version codes
-APP_VERSION_CODE = "0.1.2.1"  # 0.1.x = alpha; 0.2.x = beta; 1.x = release
+APP_VERSION_CODE = "0.1.2.2"  # 0.1.x = alpha; 0.2.x = beta; 1.x = release
 SAVE_VERSION_CODE = 2         # Save format version code
 
 # Color codes
@@ -735,6 +735,7 @@ def default_data():
         },
         "destination": "",  # Current navigation destination
         "anomalies": {},  # Discovered anomalies per system: {system_name: [anomaly1, anomaly2, ...]}
+        "scanned_systems": [],  # List of systems that have been scanned for anomalies
         "manufacturing_jobs": {},  # Active manufacturing jobs per station: {station_name: [job1, job2, ...]}
     }
 
@@ -2195,6 +2196,7 @@ def generate_anomalies(system_name, system_security):
             anomaly = {
                 "type": anomaly_type,
                 "visited": False,
+                "scanned": False,
                 "timestamp": current_time,
                 "duration": duration,
             }
@@ -2310,7 +2312,16 @@ def scan_for_anomalies(save_name, data):
     # Manage anomalies (cleanup expired + generate new if needed)
     manage_system_anomalies(save_name, data, current_system)
 
+    # Mark all current anomalies in this system as scanned
     anomalies = data.get("anomalies", {}).get(current_system, [])
+    for anomaly in anomalies:
+        anomaly["scanned"] = True
+
+    # Also mark this system as having been scanned at least once
+    if "scanned_systems" not in data:
+        data["scanned_systems"] = []
+    if current_system not in data["scanned_systems"]:
+        data["scanned_systems"].append(current_system)
 
     # Display results
     clear_screen()
@@ -2355,6 +2366,17 @@ def visit_anomalies_menu(save_name, data):
     """Menu to visit discovered anomalies in current system"""
     current_system = data["current_system"]
 
+    # Check if system has been scanned
+    if current_system not in data.get("scanned_systems", []):
+        clear_screen()
+        title("ANOMALIES")
+        print()
+        print("  No anomalies have been scanned in this system yet.")
+        print("  Use a System Probe to scan for anomalies.")
+        print()
+        input("Press Enter to continue...")
+        return
+
     if current_system not in data.get("anomalies", {}):
         clear_screen()
         title("ANOMALIES")
@@ -2367,11 +2389,15 @@ def visit_anomalies_menu(save_name, data):
 
     anomalies = data["anomalies"][current_system]
 
-    if not anomalies:
+    # Filter to only show scanned anomalies
+    scanned_anomalies = [a for a in anomalies if a.get("scanned", False)]
+
+    if not scanned_anomalies:
         clear_screen()
         title("ANOMALIES")
         print()
-        print("  No anomalies detected in this system.")
+        print("  No anomalies have been scanned in this system yet.")
+        print("  Use a System Probe to scan for anomalies.")
         print()
         input("Press Enter to continue...")
         return
@@ -2380,22 +2406,22 @@ def visit_anomalies_menu(save_name, data):
         clear_screen()
         title(f"ANOMALIES - {current_system}")
         print()
-        print(f"  {len(anomalies)} anomal{'y' if len(anomalies) == 1 else 'ies'} detected:")
+        print(f"  {len(scanned_anomalies)} scanned anomal{'y' if len(scanned_anomalies) == 1 else 'ies'}:")
         print()
 
         options = []
-        for i, anomaly in enumerate(anomalies):
+        for i, anomaly in enumerate(scanned_anomalies):
             visited_str = " (Visited)" if anomaly.get("visited") else ""
             options.append(f"{get_anomaly_name(anomaly['type'])}{visited_str}")
         options.append("Back")
 
         choice = arrow_menu("Select anomaly to visit:", options)
 
-        if choice == len(anomalies):
+        if choice == len(scanned_anomalies):
             return
 
         # Visit the selected anomaly
-        visit_anomaly(save_name, data, anomalies[choice])
+        visit_anomaly(save_name, data, scanned_anomalies[choice])
 
 
 def visit_anomaly(save_name, data, anomaly):
