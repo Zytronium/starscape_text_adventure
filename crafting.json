@@ -121,5 +121,41 @@
       "Narcor": 50,
       "Badger": 1
     }
+  },
+  {
+    "name": "Infinity",
+    "type": "ship",
+    "time": 1800.0,
+    "materials": {
+      "Korrelite": 1800,
+      "Reknite": 1100,
+      "Gellium": 700,
+      "Axnit": 200,
+      "Narcor": 100
+    }
+  },
+  {
+    "name": "Radix",
+    "type": "ship",
+    "time": 1800.0,
+    "materials": {
+      "Korrelite": 1800,
+      "Reknite": 1100,
+      "Gellium": 700,
+      "Axnit": 280,
+      "Narcor": 100
+    }
+  },
+  {
+    "name": "Chevron",
+    "type": "ship",
+    "time": 1800.0,
+    "materials": {
+      "Korrelite": 2200,
+      "Reknite": 1300,
+      "Gellium": 800,
+      "Axnit": 320,
+      "Narcor": 100
+    }
   }
 ]

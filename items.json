@@ -307,6 +307,27 @@
       "type": "Ship",
       "sell_price": "1400",
       "buy_price": ""
+    },
+    {
+      "name": "Infinity",
+      "description": "The Infinity is a corvette designed with a focus around rapid response, having a comparatively flat warp speed and charge time, as well as substantial damage and shield regen. However, its lack of overall hull and shield durability make it susceptible to melting under pressure.",
+      "type": "Ship",
+      "sell_price": "",
+      "buy_price": ""
+    },
+    {
+      "name": "Radix",
+      "description": "The Radix corvette has a radical design, giving it a significant speed advantage over ships of a comparable size. It is significantly less armored, in the hopes that its speed and maneuverability allow it to avoid damage altogether.",
+      "type": "Ship",
+      "sell_price": "",
+      "buy_price": ""
+    },
+    {
+      "name": "Chevron",
+      "description": "The Chevron is a workhorse warship that makes up for its lack in agility with strength and stubbornness.",
+      "type": "Ship",
+      "sell_price": "",
+      "buy_price": ""
     }
   ]
 }
