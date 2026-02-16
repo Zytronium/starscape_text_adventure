@@ -1540,7 +1540,7 @@ def get_numpad_key(timeout=0.05):
 
     Returns:
         int: Numpad number (4-9 as integers) or regular keys 1-9 for movement
-        str: ' ' (space), 'tab', '1', '2', '3', 'q', 'e', 'esc' for special keys
+        str: ' ' (space), 'tab', '1', '2', '3', 'q', 'e', 'esc', 'up', 'down', 'left', 'right' for special keys
     """
     if os.name == 'nt':  # Windows
         import msvcrt
@@ -1558,6 +1558,15 @@ def get_numpad_key(timeout=0.05):
                     return ' '
                 elif key == b'\x00' or key == b'\xe0':  # Arrow or numpad
                     key2 = msvcrt.getch()
+                    # Arrow keys
+                    arrow_map = {
+                        b'H': 'up',
+                        b'P': 'down',
+                        b'K': 'left',
+                        b'M': 'right',
+                    }
+                    if key2 in arrow_map:
+                        return arrow_map[key2]
                     # Numpad keys with NumLock on
                     numpad_map = {
                         b'O': 1, b'P': 2, b'Q': 3,  # Bottom row
@@ -1596,7 +1605,17 @@ def get_numpad_key(timeout=0.05):
                     if rlist:
                         ch2 = sys.stdin.read(1)
                         if ch2 == '[':
-                            return None  # Ignore arrow keys
+                            # Arrow key sequences
+                            ch3 = sys.stdin.read(1)
+                            arrow_map = {
+                                'A': 'up',
+                                'B': 'down',
+                                'C': 'right',
+                                'D': 'left',
+                            }
+                            if ch3 in arrow_map:
+                                return arrow_map[ch3]
+                            return None  # Ignore other escape sequences
                     return 'esc'
                 elif ch == '\t':
                     return 'tab'
@@ -1611,6 +1630,56 @@ def get_numpad_key(timeout=0.05):
             return None
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+
+def calculate_arrow_position(current_pos, arrow_direction):
+    """Calculate new position based on arrow key press
+
+    Grid layout (like numpad):
+    7 8 9
+    4 5 6
+    1 2 3
+
+    Args:
+        current_pos: Current position (1-9)
+        arrow_direction: 'up', 'down', 'left', 'right'
+
+    Returns:
+        New position (1-9), or current_pos if movement not possible
+    """
+    # Define grid as rows (bottom to top)
+    grid = [
+        [1, 2, 3],  # Bottom row
+        [4, 5, 6],  # Middle row
+        [7, 8, 9],  # Top row
+    ]
+
+    # Find current position in grid
+    current_row = None
+    current_col = None
+    for row_idx, row in enumerate(grid):
+        if current_pos in row:
+            current_row = row_idx
+            current_col = row.index(current_pos)
+            break
+
+    if current_row is None:
+        return current_pos
+
+    # Calculate new position based on arrow direction
+    new_row = current_row
+    new_col = current_col
+
+    if arrow_direction == 'up':
+        new_row = min(current_row + 1, 2)  # Can't go above top row
+    elif arrow_direction == 'down':
+        new_row = max(current_row - 1, 0)  # Can't go below bottom row
+    elif arrow_direction == 'left':
+        new_col = max(current_col - 1, 0)  # Can't go past left edge
+    elif arrow_direction == 'right':
+        new_col = min(current_col + 1, 2)  # Can't go past right edge
+
+    return grid[new_row][new_col]
 
 
 def strip_ansi(text):
@@ -1779,7 +1848,7 @@ def draw_dodge_arena(player_pos, projectiles, combo, time_remaining):
     status_line = f"{combo_display:<25} {time_display:>31}"
     print(box_line(status_line, 60))
     print(box_line("", 60))
-    print(box_line("[NUMPAD 1-9] Move    [3] Emergency Evade", 60))
+    print(box_line("[NUMPAD/ARROWS 1-9] Move", 60))
     print("╚════════════════════════════════════════════════════════════╝")
 
 
@@ -1835,14 +1904,14 @@ def dodge_phase(player_ship, alive_enemies, combo, data):
                     move_start_time = current_time
                     move_duration = calculate_movement_time(ship_agility, player_pos, key)
                     is_moving = True
-            elif key == '3':
-                emergency_evade_active = True
-                projectiles.clear()
-                set_color("yellow")
-                print("\n  ⚡ EMERGENCY EVADE ACTIVATED! ⚡")
-                reset_color()
-                sleep(0.5)
-                break
+            elif key in ['up', 'down', 'left', 'right']:
+                # Arrow key movement - calculate new position relative to current
+                new_pos = calculate_arrow_position(player_pos, key)
+                if new_pos != player_pos:
+                    move_target = new_pos
+                    move_start_time = current_time
+                    move_duration = calculate_movement_time(ship_agility, player_pos, new_pos)
+                    is_moving = True
 
     total_projectiles = len(generate_projectiles(alive_enemies, difficulty))
     successful_dodges = total_projectiles - hits
@@ -2247,7 +2316,7 @@ def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=Fal
     print(box_line("", 60))
     print(box_line("CONTROLS:", 60))
     print(box_line("- HOLD [SPACE] to rapid fire", 60))
-    print(box_line("- [NUMPAD 1-9] to move position", 60))
+    print(box_line("- [NUMPAD/ARROWS 1-9] to move position", 60))
     print(box_line("- [Q] Focus Fire  [E] Spread Fire", 60))
     print(box_line("- [TAB] Cycle Target", 60))
     print(box_line("", 60))
@@ -2477,6 +2546,11 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
                 pos = int(key)
                 if pos != player_pos:
                     player_pos = pos  # Instant movement!
+            elif key in ['up', 'down', 'left', 'right']:
+                # Arrow key movement - calculate new position relative to current
+                new_pos = calculate_arrow_position(player_pos, key)
+                if new_pos != player_pos:
+                    player_pos = new_pos  # Instant movement!
 
             # Space to fire (check this separately)
             if key == ' ':
@@ -4578,7 +4652,7 @@ def trigger_mining_event(event_type, data, ore_name, stability, intensity):
         if choice == 'd':
             # Defuse attempt
             mining_skill = data.get("skills", {}).get("mining", 0)
-            success_chance = 0.5 + (mining_skill * 0.03)  # 50% base, +3% per level
+            success_chance = max(0.8, 0.5 + (mining_skill * 0.03))  # 50% base, +3% per level, caps at 80%
 
             print()
             set_color("cyan")
