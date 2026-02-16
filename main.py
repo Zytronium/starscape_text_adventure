@@ -818,6 +818,23 @@ def get_max_shield(ship):
     return stats.get('Shield', 200)
 
 
+def get_shield_regen(ship):
+    """Get shield regen rate for a ship from ships.json or ship data
+
+    Returns the shield regen stat from:
+    1. Ship's 'shield_regen' field (for NPCs like drones/pirates)
+    2. ships.json stats (for player ships)
+    3. Default of 2 if not found
+    """
+    # Check if ship has shield_regen field (NPCs)
+    if 'shield_regen' in ship:
+        return ship['shield_regen']
+
+    # Otherwise get from ships.json (player ships)
+    stats = get_ship_stats(ship['name'])
+    return stats.get('Shield Regen', 2)
+
+
 def xp_required_for_level(level):
     """Calculate XP required to reach the next level"""
     # Progressive scaling: each level requires more XP
@@ -958,6 +975,15 @@ def generate_small_group(security_level, combat_skill):
         max_hull = int(base_hp * skill_scaling)
         max_shield = int(base_hp * 0.4 * skill_scaling)
 
+        # Determine shield regen based on ship type
+        # Drones have shield_regen = 1, Pirates have shield_regen = 1.5
+        if "Drone" in ship_type:
+            shield_regen = 1.0
+        elif "Pirate" in ship_type:
+            shield_regen = 1.5
+        else:
+            shield_regen = 1.0  # Default for other types
+
         ship = {
             "name": f"{ship_type} #{i + 1}",
             "hull_hp": max_hull,
@@ -965,6 +991,7 @@ def generate_small_group(security_level, combat_skill):
             "shield_hp": max_shield,
             "max_shield_hp": max_shield,
             "damage": int(base_damage * skill_scaling * random.uniform(0.9, 1.1)),
+            "shield_regen": shield_regen
         }
         fleet["ships"].append(ship)
         fleet["total_firepower"] += ship["damage"]
@@ -1163,6 +1190,15 @@ def generate_wave_ships(fleet, wave_num, base_hp, base_damage, ship_type, skill_
     # Is this the command ship wave?
     is_command_wave = (wave_num == fleet["command_ship_wave"])
 
+    # Determine shield regen based on ship type
+    # Drones have shield_regen = 1, Pirates have shield_regen = 1.5
+    if "Drone" in ship_type:
+        shield_regen = 1.0
+    elif "Pirate" in ship_type:
+        shield_regen = 1.5
+    else:
+        shield_regen = 1.0  # Default for other types
+
     for i in range(num_ships):
         # Last ship on command wave is the command ship
         is_command_ship = is_command_wave and (i == num_ships - 1)
@@ -1187,7 +1223,8 @@ def generate_wave_ships(fleet, wave_num, base_hp, base_damage, ship_type, skill_
             "max_shield_hp": max_shield,
             "damage": damage,
             "is_command_ship": is_command_ship,
-            "wave": wave_num
+            "wave": wave_num,
+            "shield_regen": shield_regen
         }
         fleet["ships"].append(ship)
         fleet["total_firepower"] += ship["damage"]
@@ -1458,9 +1495,10 @@ def perform_evasive_maneuvers_turn(player_ship, piloting_skill, data):
     ship_stats = get_ship_stats(player_ship['name'])
     ship_agility = ship_stats.get('Agility', 100)  # Default to 100 if not present
     max_shield = get_max_shield(player_ship)
+    shield_regen_stat = get_shield_regen(player_ship)
 
-    # Calculate shield recharge - max 10% of max shields or 50 HP, whichever is less
-    base_recharge = min(max_shield * 0.1, 50)
+    # Calculate shield recharge - base is shield_regen * 3
+    base_recharge = shield_regen_stat * 3
 
     # Add bonus from agility (higher agility = better recharge)
     agility_bonus = (ship_agility / 100) * 10  # +10% per 100 agility
@@ -1513,16 +1551,16 @@ def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
         # Track if player is evading this turn
         is_evading = False
 
-        # Regenerate shields slightly each turn (10% of max shields)
+        # Regenerate shields slightly each turn (shield_regen * 2)
         max_shield = get_max_shield(player_ship)
-        shield_regen = int(max_shield * 0.10)
+        shield_regen = int(get_shield_regen(player_ship) * 2)
         if player_ship["shield_hp"] < max_shield:
             player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, max_shield)
 
-        # Also regenerate enemy shields slightly (5%)
+        # Also regenerate enemy shields (shield_regen * 2)
         for ship in enemy_fleet["ships"]:
             if ship["hull_hp"] > 0 and ship["shield_hp"] < ship["max_shield_hp"]:
-                enemy_shield_regen = int(ship["max_shield_hp"] * 0.05)
+                enemy_shield_regen = int(get_shield_regen(ship) * 2)
                 ship["shield_hp"] = min(ship["shield_hp"] + enemy_shield_regen, ship["max_shield_hp"])
 
         clear_screen()
@@ -4630,8 +4668,8 @@ def view_status_screen(data):
     max_shield = get_max_shield(player_ship)
     max_hull = get_max_hull(player_ship)
 
-    # Regenerate shields slightly when checking status (2% of max shields)
-    shield_regen = int(max_shield * 0.02)
+    # Regenerate shields slightly when checking status (shield_regen * 1)
+    shield_regen = int(get_shield_regen(player_ship) * 1)
     if player_ship["shield_hp"] < max_shield:
         player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, max_shield)
 
@@ -4816,7 +4854,7 @@ def warp_to_gate_system(gate_name, save_name, data):
     # Regenerate shields slightly when warping
     player_ship = get_active_ship(data)
     max_shield = get_max_shield(player_ship)
-    shield_regen = int(max_shield * 0.03)
+    shield_regen = int(get_shield_regen(player_ship) * 1)
     if player_ship["shield_hp"] < max_shield:
         player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, max_shield)
 

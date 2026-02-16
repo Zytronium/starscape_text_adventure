@@ -186,6 +186,13 @@ class ShipEditor:
         self.hull_entry.grid(row=row, column=1, sticky=tk.W, pady=5)
         row += 1
 
+        # Shield Regen
+        ttk.Label(editor_frame, text="Shield Regen:").grid(row=row, column=0,
+                                                   sticky=tk.W, pady=5)
+        self.regen_entry = ttk.Entry(editor_frame, width=20)
+        self.regen_entry.grid(row=row, column=1, sticky=tk.W, pady=5)
+        row += 1
+
         # Energy
         ttk.Label(editor_frame, text="Energy:").grid(row=row, column=0,
                                                      sticky=tk.W, pady=5)
@@ -480,6 +487,8 @@ class ShipEditor:
                 self.shield_entry.insert(0, str(stats['Shield']))
             if 'Hull' in stats:
                 self.hull_entry.insert(0, str(stats['Hull']))
+            if 'Shield Regen' in stats:
+                self.regen_entry.insert(0, str(stats['Shield Regen']))
             if 'Energy' in stats:
                 self.energy_entry.insert(0, str(stats['Energy']))
             if 'Speed' in stats:
@@ -665,6 +674,13 @@ class ShipEditor:
                 ship['stats']['Hull'] = float(self.hull_entry.get())
             except ValueError:
                 messagebox.showerror("Error", "Hull must be a number!")
+                return
+
+        if self.regen_entry.get().strip():
+            try:
+                ship['stats']['Shield Regen'] = float(self.regen_entry.get())
+            except ValueError:
+                messagebox.showerror("Error", "Shield Regen must be a number!")
                 return
 
         if self.energy_entry.get().strip():
@@ -862,6 +878,7 @@ class ShipEditor:
         self.dps_entry.delete(0, tk.END)
         self.shield_entry.delete(0, tk.END)
         self.hull_entry.delete(0, tk.END)
+        self.regen_entry.delete(0, tk.END)
         self.energy_entry.delete(0, tk.END)
         self.speed_entry.delete(0, tk.END)
         self.agility_entry.delete(0, tk.END)
