@@ -1,56 +1,6 @@
 """
 Starscape: Text Adventure Edition
 A text-based recreation of the Roblox game Starscape by Zolar Keth
-
-COMBAT SYSTEM OVERHAUL (Applied):
-===================================
-✅ COMPLETELY REDESIGNED to match original vision:
-
-1. UNIFIED COMBAT SYSTEM
-   - Single continuous combat round (no separate phases)
-   - Simultaneous dodging and firing
-   - Phase ends when all projectiles are cleared (not time-based)
-   - Real-time action with smooth controls
-
-2. UI MATCHING ORIGINAL DESIGN
-   - Header with shield/hull status bars
-   - 3x3 movement grid showing player position [★]
-   - Enemy list displayed alongside grid
-   - Animated projectile display showing approach
-   - Target info and energy bar
-   - Movement cooldown indicator
-   - Time/Combo/Mode status bar
-
-3. FIRING SYSTEM
-   - Hold SPACE for rapid fire (continuous shooting)
-   - Energy system: regenerates over time, consumed per shot
-   - No charge mechanics - direct rapid fire
-
-4. FIRING MODES (press 1/2/3 to switch)
-   - [1] FOCUS FIRE: High damage on single target
-   - [2] SPREAD FIRE: Moderate damage across 3 targets
-   - [3] EVASION MODE: No firing, 60% damage reduction, improved dodging
-
-5. PROJECTILE SYSTEM
-   - Continuous spawning throughout combat round
-   - 15 total projectiles per round (multiple waves)
-   - Max 6 active projectiles at once
-   - Visual progress bars showing projectile approach
-   - Phase ends only when all projectiles are dealt with
-
-6. MOVEMENT & CONTROLS
-   - Numpad 1-9 to move between grid positions
-   - Movement cooldown displayed (prevents spam)
-   - TAB to cycle through targets
-   - Responsive real-time input
-
-7. DIFFICULTY & BALANCE
-   - Projectile speed: 0.4-0.6 (slower for visibility)
-   - Shot cooldown: 0.15s (rapid but not instant)
-   - Energy cost: 2 per shot
-   - Energy regen: 5 per second
-   - Focus damage: 0.08x DPS per shot
-   - Spread damage: 0.05x DPS per target per shot
 """
 import math
 import random
@@ -65,7 +15,7 @@ from time import sleep, time
 from uuid import uuid4
 from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
-from colors import set_color, set_background_color, reset_color
+from colors import set_color, set_background_color, reset_color, get_color, get_background_color
 
 # Discord Rich Presence support
 try:
@@ -1590,7 +1540,7 @@ def get_numpad_key(timeout=0.05):
 
     Returns:
         int: Numpad number (4-9 as integers) or regular keys 1-9 for movement
-        str: ' ' (space), 'tab', '1', '2', '3', 'q', 'e', 'r', 'esc' for special keys
+        str: ' ' (space), 'tab', '1', '2', '3', 'q', 'e', 'esc' for special keys
     """
     if os.name == 'nt':  # Windows
         import msvcrt
@@ -1624,7 +1574,7 @@ def get_numpad_key(timeout=0.05):
                             if char in '123':  # These can be movement keys too
                                 return char
                             return int(char)
-                        elif char.lower() in 'qer':  # Firing mode keys
+                        elif char.lower() in 'qe':  # Firing mode keys (Q=focus, E=spread)
                             return char.lower()
                     except:
                         pass
@@ -1656,7 +1606,7 @@ def get_numpad_key(timeout=0.05):
                     if ch in '123':  # These can be movement keys too
                         return ch
                     return int(ch)
-                elif ch.lower() in 'qer':  # Firing mode keys
+                elif ch.lower() in 'qe':  # Firing mode keys (Q=focus, E=spread)
                     return ch.lower()
             return None
         finally:
@@ -1670,12 +1620,14 @@ def strip_ansi(text):
     return ansi_escape.sub('', text)
 
 
-def box_line(content, width=60):
+def box_line(content, width=60, border_color=None, text_color=None):
     """Format a line to fit exactly in a box with proper padding
 
     Args:
         content: The text content (may contain ANSI codes)
         width: Interior width of the box (default 60 for standard box)
+        border_color: Color for the border characters (║) - optional
+        text_color: Color for the text content - optional
 
     Returns:
         Formatted string: "║  content..." with proper padding "  ║"
@@ -1687,8 +1639,19 @@ def box_line(content, width=60):
     # Calculate padding needed (account for the 2 spaces at start: "║  ")
     padding_needed = width - actual_length - 2
 
-    # Return formatted line with original content (including ANSI) plus padding
-    return f"║  {content}{' ' * padding_needed}║"
+    # Apply text color if specified
+    formatted_content = content
+    if text_color:
+        formatted_content = f"{get_color(text_color)}{content}{get_color('reset')}"
+
+    # Build the line with optional border color
+    if border_color:
+        line = f"{get_color(border_color)}║{get_color('reset')}"
+        line += f"  {formatted_content}{' ' * padding_needed}"
+        line += f"{get_color(border_color)}║{get_color('reset')}"
+        return line
+    else:
+        return f"║  {formatted_content}{' ' * padding_needed}║"
 
 
 def is_warship(ship_name):
@@ -2268,7 +2231,8 @@ def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=Fal
     total_damage_dealt = 0
     total_xp_earned = 0
     current_target_idx = 0
-    firing_mode = "spread"  # spread, focus, evade
+    display_offset = 0  # For scrolling through enemy list when > 3 enemies
+    firing_mode = "spread"  # spread or focus
     player_energy = 80
     max_energy = 80
 
@@ -2284,7 +2248,7 @@ def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=Fal
     print(box_line("CONTROLS:", 60))
     print(box_line("- HOLD [SPACE] to rapid fire", 60))
     print(box_line("- [NUMPAD 1-9] to move position", 60))
-    print(box_line("- [Q] Focus Fire  [E] Spread  [R] Evade Mode", 60))
+    print(box_line("- [Q] Focus Fire  [E] Spread Fire", 60))
     print(box_line("- [TAB] Cycle Target", 60))
     print(box_line("", 60))
     print(box_line("Press Enter to begin combat...", 60))
@@ -2309,13 +2273,51 @@ def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=Fal
                     spawn_next_wave(enemy_fleet)
                     continue
 
-            # Victory!
+            # Victory! Calculate credit rewards
+            # Calculate battle difficulty based on enemy stats
+            total_enemy_firepower = 0
+            total_enemy_hp = 0
+            for ship in enemy_fleet["ships"]:
+                total_enemy_firepower += ship.get('damage', 10)
+                total_enemy_hp += ship.get('max_hull_hp', 100) + ship.get('max_shield_hp', 0)
+
+            # Base credits from enemies
+            base_credits = enemy_fleet['size'] * 50  # 50 credits per enemy
+            # Bonus for firepower
+            firepower_bonus = int(total_enemy_firepower * 2)
+            # Bonus for total HP
+            hp_bonus = int(total_enemy_hp * 0.1)
+            # Combo bonus
+            combo_bonus = int(combo * 25)
+
+            total_credits = base_credits + firepower_bonus + hp_bonus + combo_bonus
+
+            # Award credits to player
+            if 'credits' not in data:
+                data['credits'] = 0
+            data['credits'] += total_credits
+
+            # Victory screen with proper color management
+            print("\n", end="")
             set_color("green")
-            print("\n╔════════════════════════════════════════════════════════════╗")
-            print(box_line("VICTORY!", 60))
+            print("╔════════════════════════════════════════════════════════════╗")
+            reset_color()
+            print(box_line("VICTORY!", 60, border_color="green"))
+            set_color("green")
             print("╠════════════════════════════════════════════════════════════╣")
-            print(box_line(f"Total damage dealt: {total_damage_dealt}", 60))
-            print(box_line(f"Max combo reached: x{combo}", 60))
+            reset_color()
+            print(box_line(f"Total damage dealt: {total_damage_dealt}", 60, border_color="green"))
+            print(box_line(f"Max combo reached: x{combo}", 60, border_color="green"))
+            print(box_line("", 60, border_color="green"))
+            print(box_line("REWARDS:", 60, border_color="green"))
+            print(box_line(f"Base credits: {base_credits} CR", 60, border_color="green", text_color="yellow"))
+            print(box_line(f"Firepower bonus: +{firepower_bonus} CR", 60, border_color="green", text_color="yellow"))
+            print(box_line(f"Difficulty bonus: +{hp_bonus} CR", 60, border_color="green", text_color="yellow"))
+            print(box_line(f"Combo bonus: +{combo_bonus} CR", 60, border_color="green", text_color="yellow"))
+            print(box_line("─" * 58, 60, border_color="green"))
+            print(box_line(f"TOTAL EARNED: {total_credits} CR", 60, border_color="green", text_color="green"))
+            print(box_line(f"Credits: {data['credits']} CR", 60, border_color="green", text_color="green"))
+            set_color("green")
             print("╚════════════════════════════════════════════════════════════╝")
             reset_color()
 
@@ -2329,13 +2331,14 @@ def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=Fal
         # Run unified combat round
         result = unified_combat_round(
             player_ship, alive_enemies, combo, firing_mode,
-            player_energy, max_energy, current_target_idx, data
+            player_energy, max_energy, current_target_idx, display_offset, data
         )
 
         combo = result['combo']
         firing_mode = result['firing_mode']
         player_energy = result['energy']
         current_target_idx = result['target_idx']
+        display_offset = result['display_offset']
         total_damage_dealt += result['damage_dealt']
         total_xp_earned += result['xp_earned']
 
@@ -2354,7 +2357,7 @@ def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=Fal
     return "victory"
 
 
-def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_energy, max_energy, current_target_idx, data):
+def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_energy, max_energy, current_target_idx, display_offset, data):
     """Unified combat round with simultaneous dodging and firing"""
 
     # State variables
@@ -2366,10 +2369,10 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
 
     # Projectile system
     projectiles = []
-    next_projectile_spawn = time() + 0.1  # First projectiles spawn almost immediately
-    projectile_spawn_interval = 0.8
-    max_active_projectiles = 6
-    total_projectiles_to_spawn = 15  # Multiple rounds
+    next_projectile_spawn = time() + 0.5  # First projectiles spawn after half second
+    projectile_spawn_interval = 1.5  # Slower spawning - 1.5 seconds between projectiles
+    max_active_projectiles = 4  # Fewer projectiles at once
+    total_projectiles_to_spawn = 12  # Fewer total projectiles
     projectiles_spawned = 0
 
     # Combat tracking
@@ -2380,7 +2383,10 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
 
     # Fire rate limiting
     last_shot_time = 0
-    shot_cooldown = 0.15  # Time between shots when holding space
+    shot_cooldown = 0.7  # Increased to 0.7 seconds between shots
+    weapon_heat = 0.0  # Weapon heat system (0.0 to 1.0)
+    heat_per_shot = 0.3  # Heat added per shot
+    heat_decay_rate = 0.4  # Heat lost per second when not firing
 
     # Energy regen
     energy_regen_rate = 5.0  # per second
@@ -2399,11 +2405,32 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
         delta_time = current_time - last_update
         last_update = current_time
 
-        # Spawn new projectiles
-        if projectiles_spawned < total_projectiles_to_spawn and current_time >= next_projectile_spawn:
-            if len(projectiles) < max_active_projectiles:
+        # Continuously check which enemies are still alive (HP > 0)
+        # This allows us to detect mid-round when the last enemy dies
+        alive_enemies = [ship for ship in alive_enemies if ship.get('hull_hp', 0) > 0 or ship.get('shield_hp', 0) > 0]
+        alive_enemy_count = len(alive_enemies)
+
+        # Validate target index after filtering - prevent index out of range crashes
+        if alive_enemy_count > 0 and current_target_idx >= alive_enemy_count:
+            current_target_idx = alive_enemy_count - 1  # Target the last remaining enemy
+
+        # DYNAMIC PROJECTILE SYSTEM:
+        # - If no enemies left, clear all projectiles and end phase immediately
+        # - Fewer enemies = fewer max projectiles (scales down as you destroy ships)
+        if alive_enemy_count == 0:
+            projectiles.clear()
+            projectiles_spawned = total_projectiles_to_spawn  # Stop spawning
+            # End the round immediately
+            break
+
+        # Spawn new projectiles (only if enemies alive)
+        if alive_enemy_count > 0 and projectiles_spawned < total_projectiles_to_spawn and current_time >= next_projectile_spawn:
+            # Scale max projectiles based on alive enemies (fewer enemies = fewer projectiles)
+            scaled_max_projectiles = min(max_active_projectiles, max(1, alive_enemy_count))
+
+            if len(projectiles) < scaled_max_projectiles:
                 target_pos = random.randint(1, 9)
-                speed = random.uniform(0.4, 0.6)
+                speed = random.uniform(0.2, 0.35)  # Much slower projectiles
                 projectiles.append(Projectile(target_pos, speed))
                 next_projectile_spawn = current_time + projectile_spawn_interval
                 projectiles_spawned += 1
@@ -2417,19 +2444,14 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
         # Check hits
         for proj in completed_projectiles:
             if proj.target_position == player_pos:
-                # Hit! Apply damage based on firing mode
-                damage_multiplier = 1.0
-                if firing_mode == "evade":
-                    damage_multiplier = 0.4  # Reduced damage in evade mode
-
+                # Hit! Apply damage
                 damage_per_hit = sum(enemy['damage'] for enemy in alive_enemies) / len(alive_enemies)
-                damage_taken = int(damage_per_hit * damage_multiplier)
+                damage_taken = int(damage_per_hit)
                 apply_damage_to_ship(player_ship, damage_taken)
                 hits_taken += 1
 
-                # Break combo on hit unless in evade mode
-                if firing_mode != "evade":
-                    combo = 1
+                # Break combo on hit
+                combo = 1
             projectiles.remove(proj)
 
         # Check if phase is complete (no more projectiles and all spawned)
@@ -2439,8 +2461,11 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
         # Regenerate energy
         player_energy = min(max_energy, player_energy + energy_regen_rate * delta_time)
 
+        # Decay weapon heat when not firing
+        weapon_heat = max(0.0, weapon_heat - heat_decay_rate * delta_time)
+
         # Get input with full frame-time window to reliably catch single presses
-        key = get_numpad_key(timeout=0.016)  # Full 16ms window = 100% of frame time
+        key = get_numpad_key(timeout=0.033)  # Full 33ms window = 100% of frame time at 30 FPS
 
         # Process ALL key inputs immediately
         if key:
@@ -2454,48 +2479,63 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
                     player_pos = pos  # Instant movement!
 
             # Space to fire (check this separately)
-            if key == ' ' and firing_mode != "evade":
-                if current_time - last_shot_time >= shot_cooldown and player_energy >= energy_cost_per_shot:
+            if key == ' ':
+                # Check cooldown, energy, and weapon heat
+                if (current_time - last_shot_time >= shot_cooldown and
+                    player_energy >= energy_cost_per_shot and
+                    weapon_heat < 1.0):  # Can't fire if overheated
+
                     if firing_mode == "focus":
-                        target = alive_enemies[current_target_idx]
-                        damage = int(base_dps * 0.08 * combo * random.uniform(0.9, 1.1))
-                        apply_damage_to_enemy(target, damage)
-                        damage_dealt += damage
-                        shots_fired += 1
+                        # Bounds check for target index
+                        if current_target_idx < len(alive_enemies):
+                            target = alive_enemies[current_target_idx]
+                            damage = int(base_dps * 0.04 * combo * random.uniform(0.9, 1.1))  # Halved from 0.08
+                            apply_damage_to_enemy(target, damage)
+                            damage_dealt += damage
+                            shots_fired += 1
                     elif firing_mode == "spread":
                         num_targets = min(3, len(alive_enemies))
                         targets = random.sample(alive_enemies, num_targets)
                         for target in targets:
-                            damage = int(base_dps * 0.05 * combo * random.uniform(0.9, 1.1))
+                            damage = int(base_dps * 0.025 * combo * random.uniform(0.9, 1.1))  # Halved from 0.05
                             apply_damage_to_enemy(target, damage)
                             damage_dealt += damage
                         shots_fired += 1
 
                     player_energy -= energy_cost_per_shot
+                    weapon_heat = min(1.0, weapon_heat + heat_per_shot)  # Add heat
                     last_shot_time = current_time
 
-            # Firing mode switches (Q/E/R)
+            # Firing mode switches (Q/E)
             if isinstance(key, str):
                 key_lower = key.lower()
                 if key_lower == 'q':
                     firing_mode = "focus"
                 elif key_lower == 'e':
                     firing_mode = "spread"
-                elif key_lower == 'r':
-                    firing_mode = "evade"
 
-            # Tab to cycle targets
+            # Tab to cycle targets and scroll display
             if key == 'tab':
-                current_target_idx = (current_target_idx + 1) % len(alive_enemies)
+                if alive_enemies:  # Only cycle if there are enemies
+                    current_target_idx = (current_target_idx + 1) % len(alive_enemies)
+
+                    # Update display_offset to keep targeted enemy visible (within 3-slot window)
+                    # If target moves beyond the visible window, scroll the display
+                    if current_target_idx < display_offset:
+                        # Target scrolled up - adjust display to show it
+                        display_offset = current_target_idx
+                    elif current_target_idx >= display_offset + 3:
+                        # Target scrolled down beyond visible window - scroll display down
+                        display_offset = current_target_idx - 2  # Keep target in middle/bottom of window
 
         # Draw UI AFTER all input is processed
         draw_unified_combat_ui(
             player_ship, player_pos, alive_enemies, projectiles,
             combo, firing_mode, player_energy, max_energy,
-            current_target_idx, current_time - start_time
+            current_target_idx, current_time - start_time, weapon_heat, display_offset
         )
 
-        sleep(0.016)  # ~60 FPS
+        sleep(0.033)  # ~30 FPS - slower, more relaxed pace
 
     # Calculate XP and combo updates
     dodge_rate = 1.0 - (hits_taken / max(1, total_projectiles_to_spawn))
@@ -2525,14 +2565,19 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
         'firing_mode': firing_mode,
         'energy': player_energy,
         'target_idx': current_target_idx,
+        'display_offset': display_offset,
         'damage_dealt': damage_dealt,
         'xp_earned': xp_earned
     }
 
 
 def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
-                           combo, firing_mode, energy, max_energy, target_idx, elapsed_time):
-    """Draw the unified combat UI matching original design"""
+                           combo, firing_mode, energy, max_energy, target_idx, elapsed_time, weapon_heat, display_offset=0):
+    """Draw the unified combat UI matching original design
+
+    Args:
+        display_offset: Starting index for displaying enemies (for scrolling when > 3 enemies)
+    """
     print("\033[H\033[J", end="")
 
     # Get ship status
@@ -2547,7 +2592,7 @@ def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
 
     # Shield and Hull bars
     shield_bar = create_health_bar(shield_hp, max_shield, 12, "cyan")
-    hull_bar = create_health_bar(hull_hp, max_hull, 12, "green")
+    hull_bar = create_health_bar(hull_hp, max_hull, 12, "red")
     shield_text = f"Shield: {shield_bar} {shield_hp}/{max_shield}"
     hull_text = f"Hull: {hull_bar} {hull_hp}/{max_hull}"
 
@@ -2596,15 +2641,22 @@ def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
         # Calculate visual length of grid
         grid_visual_len = len(strip_ansi(grid_str))
 
-        # Enemy list
+        # Enemy list - display up to 3 enemies starting from display_offset
         enemy_str = ""
-        if row_idx < len(alive_enemies):
-            enemy = alive_enemies[row_idx]
+        display_idx = row_idx + display_offset  # Actual index in alive_enemies list
+
+        if display_idx < len(alive_enemies):
+            enemy = alive_enemies[display_idx]
+            # Only show alive enemies (those with HP > 0)
             enemy_hp = enemy.get('hull_hp', 0) + enemy.get('shield_hp', 0)
-            enemy_name = enemy['name'][:20]
-            indicator = " ⚠ TARGETING" if row_idx == target_idx else ""
-            enemy_str = f" ┃ {enemy_name} HP: {enemy_hp}{indicator}"
+            if enemy_hp > 0:
+                enemy_name = enemy['name'][:20]
+                indicator = " ⚠ TARGETING" if display_idx == target_idx else ""
+                enemy_str = f" ┃ {enemy_name} HP: {enemy_hp}{indicator}"
+            else:
+                enemy_str = " ┃"  # Dead enemy, show empty
         else:
+            enemy_str = " ┃"
             enemy_str = " ┃"
 
         # Pad grid to exactly 21 visual characters (including leading space)
@@ -2646,6 +2698,10 @@ def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
 
     # Target and Energy info
     if alive_enemies:
+        # Defensive bounds check - ensure target_idx is valid
+        if target_idx >= len(alive_enemies):
+            target_idx = len(alive_enemies) - 1
+
         target = alive_enemies[target_idx]
         target_name = target['name'][:25]
         target_line = f" Target: {target_name}"
@@ -2657,6 +2713,15 @@ def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
     energy_visual_len = len(strip_ansi(energy_text))
     energy_padding = " " * (76 - energy_visual_len)
     print(f"║{energy_text}{energy_padding}║")
+
+    # Weapon heat bar (shows cooldown)
+    heat_bar_color = "red" if weapon_heat >= 0.9 else "yellow" if weapon_heat >= 0.6 else "green"
+    weapon_heat_bar = create_health_bar(int(weapon_heat * 100), 100, 15, heat_bar_color)
+    heat_status = "OVERHEATED!" if weapon_heat >= 1.0 else "READY" if weapon_heat < 0.3 else "COOLING"
+    heat_text = f" Weapons: {weapon_heat_bar} {heat_status}"
+    heat_visual_len = len(strip_ansi(heat_text))
+    heat_padding = " " * (76 - heat_visual_len)
+    print(f"║{heat_text}{heat_padding}║")
 
     print("║" + " " * 76 + "║")
 
@@ -2672,7 +2737,7 @@ def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
 
     # Status bar
     mode_display = firing_mode.upper()
-    mode_color = "cyan" if firing_mode == "focus" else "green" if firing_mode == "spread" else "yellow"
+    mode_color = "cyan" if firing_mode == "focus" else "green"  # Focus is cyan, Spread is green
 
     status_base = f" Time: {elapsed_time:.1f}s | Combo: x{combo} | Mode: "
     set_color(mode_color)
