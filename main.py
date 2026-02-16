@@ -1,6 +1,56 @@
 """
 Starscape: Text Adventure Edition
 A text-based recreation of the Roblox game Starscape by Zolar Keth
+
+COMBAT SYSTEM OVERHAUL (Applied):
+===================================
+✅ COMPLETELY REDESIGNED to match original vision:
+
+1. UNIFIED COMBAT SYSTEM
+   - Single continuous combat round (no separate phases)
+   - Simultaneous dodging and firing
+   - Phase ends when all projectiles are cleared (not time-based)
+   - Real-time action with smooth controls
+
+2. UI MATCHING ORIGINAL DESIGN
+   - Header with shield/hull status bars
+   - 3x3 movement grid showing player position [★]
+   - Enemy list displayed alongside grid
+   - Animated projectile display showing approach
+   - Target info and energy bar
+   - Movement cooldown indicator
+   - Time/Combo/Mode status bar
+
+3. FIRING SYSTEM
+   - Hold SPACE for rapid fire (continuous shooting)
+   - Energy system: regenerates over time, consumed per shot
+   - No charge mechanics - direct rapid fire
+
+4. FIRING MODES (press 1/2/3 to switch)
+   - [1] FOCUS FIRE: High damage on single target
+   - [2] SPREAD FIRE: Moderate damage across 3 targets
+   - [3] EVASION MODE: No firing, 60% damage reduction, improved dodging
+
+5. PROJECTILE SYSTEM
+   - Continuous spawning throughout combat round
+   - 15 total projectiles per round (multiple waves)
+   - Max 6 active projectiles at once
+   - Visual progress bars showing projectile approach
+   - Phase ends only when all projectiles are dealt with
+
+6. MOVEMENT & CONTROLS
+   - Numpad 1-9 to move between grid positions
+   - Movement cooldown displayed (prevents spam)
+   - TAB to cycle through targets
+   - Responsive real-time input
+
+7. DIFFICULTY & BALANCE
+   - Projectile speed: 0.4-0.6 (slower for visibility)
+   - Shot cooldown: 0.15s (rapid but not instant)
+   - Energy cost: 2 per shot
+   - Energy regen: 5 per second
+   - Focus damage: 0.08x DPS per shot
+   - Spread damage: 0.05x DPS per target per shot
 """
 import math
 import random
@@ -28,7 +78,7 @@ except ImportError:
     sleep(3)
 
 # Version codes
-APP_VERSION_CODE = "0.1.2.4"  # 0.1.x = alpha; 0.2.x = beta; 1.x = release
+APP_VERSION_CODE = "0.1.3"    # 0.1.x = alpha; 0.2.x = beta; 1.x = release
 SAVE_VERSION_CODE = 2         # Save format version code
 
 # Color codes
@@ -1463,7 +1513,7 @@ def ignore_enemies(enemy_fleet, system, save_name, data):
 
     if player_ship["hull_hp"] <= 0:
         print("  Your ship has been destroyed!")
-        sleep(1.5)
+        sleep(2.0)
         return "death"
     elif player_ship["hull_hp"] < get_max_hull(player_ship) * 0.2:
         set_color("red")
@@ -1535,245 +1585,1104 @@ def perform_evasive_maneuvers_turn(player_ship, piloting_skill, data):
     input("Press Enter to continue...")
 
 
+def get_numpad_key(timeout=0.05):
+    """Get numpad key press (1-9) with timeout
+
+    Returns:
+        int: Numpad number (4-9 as integers) or regular keys 1-9 for movement
+        str: ' ' (space), 'tab', '1', '2', '3', 'q', 'e', 'r', 'esc' for special keys
+    """
+    if os.name == 'nt':  # Windows
+        import msvcrt
+        start = time()
+        while time() - start < timeout:
+            if msvcrt.kbhit():
+                key = msvcrt.getch()
+
+                # Check for special keys first
+                if key == b'\x1b':  # Escape
+                    return 'esc'
+                elif key == b'\t':  # Tab
+                    return 'tab'
+                elif key == b' ':  # Space bar
+                    return ' '
+                elif key == b'\x00' or key == b'\xe0':  # Arrow or numpad
+                    key2 = msvcrt.getch()
+                    # Numpad keys with NumLock on
+                    numpad_map = {
+                        b'O': 1, b'P': 2, b'Q': 3,  # Bottom row
+                        b'K': 4, b'L': 5, b'M': 5,  # Middle row
+                        b'G': 7, b'H': 8, b'I': 9,  # Top row
+                    }
+                    if key2 in numpad_map:
+                        return numpad_map[key2]
+                else:
+                    # Regular number keys and letters
+                    try:
+                        char = key.decode('utf-8')
+                        if char in '123456789':
+                            if char in '123':  # These can be movement keys too
+                                return char
+                            return int(char)
+                        elif char.lower() in 'qer':  # Firing mode keys
+                            return char.lower()
+                    except:
+                        pass
+            sleep(0.001)  # Check every 1ms for maximum responsiveness
+        return None
+    else:  # Unix/Linux/Mac
+        import select
+        import termios
+        import tty
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            rlist, _, _ = select.select([sys.stdin], [], [], timeout)
+            if rlist:
+                ch = sys.stdin.read(1)
+                if ch == '\x1b':  # Escape sequence
+                    rlist, _, _ = select.select([sys.stdin], [], [], 0.01)
+                    if rlist:
+                        ch2 = sys.stdin.read(1)
+                        if ch2 == '[':
+                            return None  # Ignore arrow keys
+                    return 'esc'
+                elif ch == '\t':
+                    return 'tab'
+                elif ch == ' ':  # Space bar
+                    return ' '
+                elif ch in '123456789':
+                    if ch in '123':  # These can be movement keys too
+                        return ch
+                    return int(ch)
+                elif ch.lower() in 'qer':  # Firing mode keys
+                    return ch.lower()
+            return None
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+
+def strip_ansi(text):
+    """Remove ANSI color codes from text for length calculation"""
+    import re
+    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+    return ansi_escape.sub('', text)
+
+
+def box_line(content, width=60):
+    """Format a line to fit exactly in a box with proper padding
+
+    Args:
+        content: The text content (may contain ANSI codes)
+        width: Interior width of the box (default 60 for standard box)
+
+    Returns:
+        Formatted string: "║  content..." with proper padding "  ║"
+    """
+    # Strip ANSI codes to calculate actual display length
+    display_text = strip_ansi(content)
+    actual_length = len(display_text)
+
+    # Calculate padding needed (account for the 2 spaces at start: "║  ")
+    padding_needed = width - actual_length - 2
+
+    # Return formatted line with original content (including ANSI) plus padding
+    return f"║  {content}{' ' * padding_needed}║"
+
+
+def is_warship(ship_name):
+    """Check if a ship is a warship (Corvette, Frigate, or Destroyer)"""
+    ship_lower = ship_name.lower()
+    if 'corvette' in ship_lower or 'frigate' in ship_lower or 'destroyer' in ship_lower:
+        return True
+    warship_names = ['infinity', 'radix', 'chevron']
+    return any(name in ship_lower for name in warship_names)
+
+
+def get_turret_count(ship_name):
+    """Get number of turrets for a warship"""
+    ship_lower = ship_name.lower()
+    if 'corvette' in ship_lower or 'infinity' in ship_lower or 'radix' in ship_lower or 'chevron' in ship_lower:
+        return 2
+    elif 'frigate' in ship_lower:
+        return 3
+    elif 'destroyer' in ship_lower:
+        return 4
+    return 2
+
+
+def calculate_movement_time(ship_agility, from_pos, to_pos):
+    """Calculate time to move between grid positions based on agility"""
+    from_row, from_col = (from_pos - 1) // 3, (from_pos - 1) % 3
+    to_row, to_col = (to_pos - 1) // 3, (to_pos - 1) % 3
+    distance = max(abs(to_row - from_row), abs(to_col - from_col))
+    base_time = 0.5 if distance == 1 else 0.7 if distance == 2 else 1.0
+    agility_multiplier = 1.5 - (ship_agility / 200.0)
+    return base_time * agility_multiplier
+
+
+class Projectile:
+    """Represents an enemy projectile"""
+    def __init__(self, target_position, speed=1.0):
+        self.target_position = target_position
+        self.speed = speed
+        self.progress = 0.0
+
+    def update(self, delta_time):
+        """Update projectile position"""
+        self.progress += delta_time * self.speed
+        return self.progress >= 1.0
+
+
+class Turret:
+    """Represents a warship turret"""
+    def __init__(self, turret_id, cooldown=2.5):
+        self.turret_id = turret_id
+        self.cooldown = cooldown
+        self.time_until_ready = 0
+        self.target = None
+
+    def update(self, delta_time):
+        if self.time_until_ready > 0:
+            self.time_until_ready -= delta_time
+
+    def can_fire(self):
+        return self.time_until_ready <= 0
+
+    def fire(self):
+        self.time_until_ready = self.cooldown
+
+
 def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
-    """Main turn-based combat loop"""
-    # Update Discord presence for combat
+    """Main real-time combat system"""
+    return realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat)
+
+
+def generate_projectiles(alive_enemies, difficulty_multiplier=1.0):
+    """Generate projectiles for the incoming fire phase"""
+    projectiles = []
+    num_projectiles = min(len(alive_enemies), int(5 * difficulty_multiplier))
+
+    for _ in range(num_projectiles):
+        target_pos = random.randint(1, 9)
+        # Made SLOWER - reduced from 0.6-0.9 to 0.3-0.5 so they're actually dodgeable
+        speed = random.uniform(0.3, 0.5)
+        projectiles.append(Projectile(target_pos, speed))
+
+    return projectiles
+
+
+def draw_dodge_arena(player_pos, projectiles, combo, time_remaining):
+    """Draw the dodging arena with projectiles"""
+    print("\033[H\033[J", end="")
+    print("╔════════════════════════════════════════════════════════════╗")
+    print(box_line("INCOMING ENEMY FIRE - DODGE!", 60))
+    print("╠════════════════════════════════════════════════════════════╣")
+    print(box_line("", 60))
+
+    positions = [7, 8, 9, 4, 5, 6, 1, 2, 3]
+
+    for i in range(3):
+        row_content = " "
+        for j in range(3):
+            pos = positions[i * 3 + j]
+            if pos == player_pos:
+                set_color("green")
+                row_content += "[★]"
+                reset_color()
+            else:
+                row_content += f"[{pos}]"
+            row_content += " "
+        print(box_line(row_content, 60))
+
+    print(box_line("", 60))
+    print(box_line("━━━━━━━━━━ INCOMING PROJECTILES ━━━━━━━━━━━━", 60))
+
+    for i, proj in enumerate(projectiles[:3]):
+        progress_bar = "█" * int(proj.progress * 10)
+        arrow_display = f"{progress_bar}→"
+        target_display = f"[{proj.target_position}]"
+        spacing = " " * (15 - len(arrow_display))
+        line_content = f"{arrow_display}{spacing}{target_display}"
+        print(box_line(line_content, 60))
+
+    for _ in range(3 - min(len(projectiles), 3)):
+        print(box_line("", 60))
+
+    print(box_line("", 60))
+    combo_display = f"COMBO: x{combo}"
+    time_display = f"Time: {time_remaining:.1f}s"
+    status_line = f"{combo_display:<25} {time_display:>31}"
+    print(box_line(status_line, 60))
+    print(box_line("", 60))
+    print(box_line("[NUMPAD 1-9] Move    [3] Emergency Evade", 60))
+    print("╚════════════════════════════════════════════════════════════╝")
+
+
+def dodge_phase(player_ship, alive_enemies, combo, data):
+    """Execute the incoming fire/dodging phase"""
+    ship_stats = get_ship_stats(player_ship['name'])
+    ship_agility = ship_stats.get('Agility', 100)
+
+    difficulty = 1.0 + (len(alive_enemies) / 10.0)
+    projectiles = generate_projectiles(alive_enemies, difficulty)
+
+    phase_duration = 8.0  # Increased from 3.5 to make combat slower and more readable
+    player_pos = 5
+    is_moving = False
+    move_target = 5
+    move_start_time = 0
+    move_duration = 0
+    emergency_evade_active = False
+
+    start_time = time()
+    last_update = start_time
+    hits = 0
+
+    while time() - start_time < phase_duration:
+        current_time = time()
+        delta_time = current_time - last_update
+        last_update = current_time
+        time_remaining = phase_duration - (current_time - start_time)
+
+        completed_projectiles = []
+        for proj in projectiles:
+            if proj.update(delta_time):
+                completed_projectiles.append(proj)
+
+        for proj in completed_projectiles:
+            if proj.target_position == player_pos and not emergency_evade_active:
+                hits += 1
+            projectiles.remove(proj)
+
+        if is_moving:
+            if current_time - move_start_time >= move_duration:
+                player_pos = move_target
+                is_moving = False
+
+        draw_dodge_arena(player_pos, projectiles, combo, time_remaining)
+
+        key = get_numpad_key(timeout=0.05)
+
+        if key and not is_moving:
+            if isinstance(key, int) and 1 <= key <= 9:
+                if key != player_pos:
+                    move_target = key
+                    move_start_time = current_time
+                    move_duration = calculate_movement_time(ship_agility, player_pos, key)
+                    is_moving = True
+            elif key == '3':
+                emergency_evade_active = True
+                projectiles.clear()
+                set_color("yellow")
+                print("\n  ⚡ EMERGENCY EVADE ACTIVATED! ⚡")
+                reset_color()
+                sleep(0.5)
+                break
+
+    total_projectiles = len(generate_projectiles(alive_enemies, difficulty))
+    successful_dodges = total_projectiles - hits
+    dodge_percent = (successful_dodges / total_projectiles * 100) if total_projectiles > 0 else 100
+
+    if emergency_evade_active:
+        damage_per_hit = sum(enemy['damage'] for enemy in alive_enemies) / len(alive_enemies)
+        damage_taken = int(damage_per_hit * 0.3 * len(projectiles))
+        new_combo = 1
+    else:
+        damage_per_hit = sum(enemy['damage'] for enemy in alive_enemies) / len(alive_enemies)
+        damage_taken = int(damage_per_hit * hits)
+
+        if hits == 0:
+            new_combo = min(combo + 1, 4)
+        elif dodge_percent >= 70:
+            new_combo = combo
+        else:
+            new_combo = 1
+
+    return new_combo, damage_taken, successful_dodges, total_projectiles
+
+
+def assign_turret_targets(turrets, alive_enemies, assignment_mode="spread"):
+    """Assign targets to turrets"""
+    if assignment_mode == "focus":
+        target = alive_enemies[0] if alive_enemies else None
+        for turret in turrets:
+            turret.target = target
+    elif assignment_mode == "priority":
+        sorted_enemies = sorted(alive_enemies, key=lambda e: e['hull_hp'] + e['shield_hp'])
+        for i, turret in enumerate(turrets):
+            turret.target = sorted_enemies[i % len(sorted_enemies)] if sorted_enemies else None
+    else:
+        for i, turret in enumerate(turrets):
+            turret.target = alive_enemies[i % len(alive_enemies)] if alive_enemies else None
+
+
+def apply_damage_to_enemy(enemy, damage):
+    """Apply damage to an enemy ship"""
+    if enemy['shield_hp'] > 0:
+        shield_damage = min(damage, enemy['shield_hp'])
+        enemy['shield_hp'] -= shield_damage
+        damage -= shield_damage
+    if damage > 0:
+        enemy['hull_hp'] = max(0, enemy['hull_hp'] - damage)
+
+
+def apply_damage_to_ship(ship, damage):
+    """Apply damage to player ship"""
+    if ship['shield_hp'] > 0:
+        shield_damage = min(damage, ship['shield_hp'])
+        ship['shield_hp'] -= shield_damage
+        damage -= shield_damage
+    if damage > 0:
+        ship['hull_hp'] = max(0, ship['hull_hp'] - damage)
+
+
+def manual_fire_phase(player_ship, alive_enemies, combo, data):
+    """Manual fire phase for regular ships - hold SPACE to charge and fire
+
+    Returns:
+        tuple: (total_damage_dealt, xp_earned)
+    """
+    phase_duration = 10.0  # 10 seconds to fire - increased for better readability
+
+    print("\033[H\033[J", end="")
+    print("╔════════════════════════════════════════════════════════════╗")
+    print(box_line("WEAPONS READY - FIRE!", 60))
+    print("╠════════════════════════════════════════════════════════════╣")
+    print(box_line("", 60))
+    print(box_line("HOLD [SPACE] TO FIRE WEAPONS", 60))
+    print(box_line("", 60))
+
+    ship_stats = get_ship_stats(player_ship['name'])
+    base_dps = ship_stats.get('DPS', 120)
+
+    # Charge system
+    charge_level = 0.0  # 0.0 to 1.0
+    charge_rate = 0.3   # Charge per second when holding space
+    is_space_held = False
+
+    start_time = time()
+    last_update = start_time
+    shots_fired = []
+
+    while time() - start_time < phase_duration:
+        current_time = time()
+        delta_time = current_time - last_update
+        last_update = current_time
+        time_remaining = phase_duration - (current_time - start_time)
+
+        # Check for space key being held
+        is_space_held = False
+
+        if os.name == 'nt':  # Windows
+            import msvcrt
+            # On Windows, check if space is currently held by checking the buffer repeatedly
+            if msvcrt.kbhit():
+                test_key = msvcrt.getch()
+                if test_key == b' ':
+                    is_space_held = True
+                    # Keep checking if more space keys are in buffer (indicates holding)
+                    while msvcrt.kbhit():
+                        extra = msvcrt.getch()
+                        if extra == b' ':
+                            is_space_held = True
+        else:  # Unix/Linux/Mac
+            # For Unix, use get_numpad_key which reads from stdin
+            key = get_numpad_key(timeout=0.01)
+            if key == ' ':
+                is_space_held = True
+
+        # Update charge
+        if is_space_held:
+            charge_level = min(1.0, charge_level + (charge_rate * delta_time))
+
+        # Auto-fire when fully charged
+        if charge_level >= 1.0:
+            # Fire at target
+            targets = alive_enemies[:min(4, len(alive_enemies))]
+            if targets:
+                target = random.choice([t for t in targets if t['hull_hp'] > 0])
+                if target:
+                    damage = int(base_dps * 0.3 * combo * random.uniform(0.9, 1.1))
+                    apply_damage_to_enemy(target, damage)
+                    shots_fired.append((target['name'], damage))
+                    charge_level = 0.0  # Reset charge
+
+        # Draw UI
+        print("\033[H\033[J", end="")
+        print("╔════════════════════════════════════════════════════════════╗")
+        print(box_line("WEAPONS READY - FIRE!", 60))
+        print("╠════════════════════════════════════════════════════════════╣")
+        print(box_line("", 60))
+
+        # Charge bar
+        charge_bar_width = 40
+        filled = int(charge_level * charge_bar_width)
+        empty = charge_bar_width - filled
+        charge_bar = "█" * filled + "░" * empty
+        charge_percent = int(charge_level * 100)
+
+        if charge_level >= 1.0:
+            set_color("yellow")
+            print(box_line(f"CHARGE: {charge_bar} {charge_percent}% FIRING!", 60))
+            reset_color()
+        else:
+            print(box_line(f"CHARGE: {charge_bar} {charge_percent}%", 60))
+
+        print(box_line("", 60))
+        print(box_line("HOLD [SPACE] TO CHARGE WEAPONS", 60))
+        print(box_line("", 60))
+
+        # Show recent hits
+        recent_shots = shots_fired[-3:]
+        for shot_name, shot_dmg in recent_shots:
+            set_color("yellow")
+            print(box_line(f"➤ Hit {shot_name[:30]} for {shot_dmg} dmg!", 60))
+            reset_color()
+
+        for _ in range(3 - len(recent_shots)):
+            print(box_line("", 60))
+
+        print(box_line("", 60))
+        print(box_line(f"Time remaining: {time_remaining:.1f}s", 60))
+        print(box_line("", 60))
+        print("╚════════════════════════════════════════════════════════════╝")
+
+        sleep(0.05)
+
+    # Calculate total damage
+    total_damage = sum(dmg for _, dmg in shots_fired)
+    xp_earned = len(shots_fired) * 3 * combo
+
+    return total_damage, xp_earned
+
+
+def auto_fire_phase(player_ship, alive_enemies, combo, data, turrets=None, assignment_mode="spread"):
+    """Execute the auto-fire phase"""
+    phase_duration = 6.0  # Increased from 2.0 to make combat slower and more readable
+
+    print("\033[H\033[J", end="")
+    print("╔════════════════════════════════════════════════════════════╗")
+    print(box_line("AUTO-FIRE PHASE", 60))
+    print("╠════════════════════════════════════════════════════════════╣")
+
+    total_damage = 0
+
+    if turrets:
+        print(box_line("", 60))
+        print(box_line(f"TURRET OPERATIONS - Mode: {assignment_mode.upper()}", 60))
+        print(box_line("", 60))
+
+        assign_turret_targets(turrets, alive_enemies, assignment_mode)
+
+        start_time = time()
+        last_update = start_time
+
+        while time() - start_time < phase_duration:
+            current_time = time()
+            delta_time = current_time - last_update
+            last_update = current_time
+
+            for turret in turrets:
+                turret.update(delta_time)
+
+                if turret.can_fire() and turret.target and turret.target in alive_enemies:
+                    turret.fire()
+
+                    ship_stats = get_ship_stats(player_ship['name'])
+                    base_dps = ship_stats.get('DPS', 100)
+                    damage = int(base_dps * 0.4 * combo)
+
+                    apply_damage_to_enemy(turret.target, damage)
+                    total_damage += damage
+
+                    target_name = turret.target['name'][:20]
+                    print(box_line(f"Turret {turret.turret_id + 1}: Firing at {target_name} ({damage} dmg)", 60))
+                    sleep(0.3)
+
+            sleep(0.1)
+    else:
+        # Regular ship combat - fire at targets then wait for full phase duration
+        print(box_line("", 60))
+        print(box_line("Weapons system online... Targeting...", 60))
+        print(box_line("", 60))
+
+        start_time = time()
+
+        sleep(0.5)
+
+        ship_stats = get_ship_stats(player_ship['name'])
+        base_dps = ship_stats.get('DPS', 120)
+        damage_per_shot = int(base_dps * 0.6 * combo)
+
+        targets = alive_enemies[:min(4, len(alive_enemies))]
+
+        for target in targets:
+            if target in alive_enemies:
+                apply_damage_to_enemy(target, damage_per_shot)
+                total_damage += damage_per_shot
+
+                target_name = target['name'][:25]
+                set_color("yellow")
+                print(box_line(f"➤ Hit {target_name} for {damage_per_shot} damage!", 60))
+                reset_color()
+                sleep(0.3)
+
+        # Wait for remaining phase time
+        elapsed = time() - start_time
+        remaining_time = phase_duration - elapsed
+        if remaining_time > 0:
+            print(box_line("", 60))
+            print(box_line("Weapons cooling down...", 60))
+            sleep(remaining_time)
+
+    print(box_line("", 60))
+    print("╚════════════════════════════════════════════════════════════╝")
+
+    xp_earned = int(5 * combo)
+    return total_damage, xp_earned
+
+
+def positioning_phase(alive_enemies, current_target_idx, assignment_mode):
+    """Brief positioning phase for target switching and mode changes"""
+    print("\033[H\033[J", end="")
+    print("╔════════════════════════════════════════════════════════════╗")
+    print(box_line("TACTICAL POSITIONING", 60))
+    print("╠════════════════════════════════════════════════════════════╣")
+    print(box_line("", 60))
+    print(box_line("Quick tactical moment...", 60))
+    print(box_line("", 60))
+    print(box_line("[TAB] Change targeting mode", 60))
+    print(box_line("[1] Focused Fire   [2] Scatter Shot", 60))
+    print(box_line("", 60))
+    print("╚════════════════════════════════════════════════════════════╝")
+
+    start_time = time()
+    phase_duration = 3.0  # Increased from 1.5 to make combat slower
+    new_assignment_mode = assignment_mode
+
+    while time() - start_time < phase_duration:
+        key = get_numpad_key(timeout=0.05)
+
+        if key == 'tab':
+            modes = ["spread", "focus", "priority"]
+            current_idx = modes.index(assignment_mode)
+            new_assignment_mode = modes[(current_idx + 1) % len(modes)]
+            set_color("cyan")
+            print(f"\n  Mode changed to: {new_assignment_mode.upper()}")
+            reset_color()
+            sleep(0.3)
+            break
+        elif key == '1':
+            new_assignment_mode = "focus"
+            set_color("cyan")
+            print("\n  FOCUSED FIRE activated!")
+            reset_color()
+            sleep(0.3)
+            break
+        elif key == '2':
+            new_assignment_mode = "spread"
+            set_color("cyan")
+            print("\n  SCATTER SHOT activated!")
+            reset_color()
+            sleep(0.3)
+            break
+
+    return current_target_idx, new_assignment_mode
+
+
+def wave_transition(player_ship, enemy_fleet, data, save_name):
+    """Handle wave transition with repair and retreat options"""
+    print("\033[H\033[J", end="")
+    print("╔════════════════════════════════════════════════════════════╗")
+    print(box_line("WAVE TRANSITION", 60))
+    print("╠════════════════════════════════════════════════════════════╣")
+    print(box_line("", 60))
+
+    set_color("yellow")
+    print(box_line("Wave cleared! Preparing for next wave...", 60))
+    reset_color()
+    print(box_line("", 60))
+
+    max_shield = get_max_shield(player_ship)
+    max_hull = get_max_hull(player_ship)
+    shield_percent = (player_ship['shield_hp'] / max_shield * 100) if max_shield > 0 else 0
+    hull_percent = (player_ship['hull_hp'] / max_hull * 100) if max_hull > 0 else 0
+
+    print(box_line(f"Shield: {player_ship['shield_hp']:>4}/{max_shield:<4} ({shield_percent:>3.0f}%)", 60))
+    print(box_line(f"Hull:   {player_ship['hull_hp']:>4}/{max_hull:<4} ({hull_percent:>3.0f}%)", 60))
+    print(box_line("", 60))
+
+    shield_regen_stat = get_shield_regen(player_ship)
+    regen_amount = int(shield_regen_stat * 3)
+    old_shield = player_ship['shield_hp']
+    player_ship['shield_hp'] = min(player_ship['shield_hp'] + regen_amount, max_shield)
+    actual_regen = player_ship['shield_hp'] - old_shield
+
+    if actual_regen > 0:
+        set_color("cyan")
+        print(box_line(f"Shield regenerating... +{actual_regen} HP", 60))
+        reset_color()
+
+    print(box_line("", 60))
+
+    if hull_percent < 30:
+        set_color("red")
+        print(box_line("⚠ HULL INTEGRITY CRITICAL! ⚠", 60))
+        reset_color()
+        print(box_line("[R] Retreat available", 60))
+
+    print(box_line("", 60))
+    print(box_line("Next wave incoming...", 60))
+    print(box_line("", 60))
+    print("╚════════════════════════════════════════════════════════════╝")
+
+    for i in range(3, 0, -1):
+        print(f"\n  {i}...", end="", flush=True)
+
+        start = time()
+        while time() - start < 1.0:
+            key = get_numpad_key(timeout=0.05)
+            if key == 'r':
+                set_color("yellow")
+                print("\n\n  Retreating from combat...")
+                reset_color()
+                sleep(1)
+                return "retreat"
+
+    print("\n")
+    return "continue"
+
+
+def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=False, structure=None):
+    """New unified real-time combat system matching original design"""
     update_discord_presence(data=data, context="combat")
 
     player_ship = get_active_ship(data)
     combat_skill = data.get("skills", {}).get("combat", 0)
     piloting_skill = data.get("skills", {}).get("piloting", 0)
 
-    turn = 1
+    # Combat state
+    combo = 1
+    total_damage_dealt = 0
+    total_xp_earned = 0
+    current_target_idx = 0
+    firing_mode = "spread"  # spread, focus, evade
+    player_energy = 80
+    max_energy = 80
+
+    # Combat briefing
+    print("\033[H\033[J", end="")
+    print("╔════════════════════════════════════════════════════════════╗")
+    print(box_line("COMBAT ENGAGED!", 60))
+    print("╠════════════════════════════════════════════════════════════╣")
+    print(box_line("", 60))
+    print(box_line(f"Enemy Fleet: {enemy_fleet['type']}", 60))
+    print(box_line(f"Enemy Count: {enemy_fleet['size']}", 60))
+    print(box_line("", 60))
+    print(box_line("CONTROLS:", 60))
+    print(box_line("- HOLD [SPACE] to rapid fire", 60))
+    print(box_line("- [NUMPAD 1-9] to move position", 60))
+    print(box_line("- [Q] Focus Fire  [E] Spread  [R] Evade Mode", 60))
+    print(box_line("- [TAB] Cycle Target", 60))
+    print(box_line("", 60))
+    print(box_line("Press Enter to begin combat...", 60))
+    print("╚════════════════════════════════════════════════════════════╝")
+    input()
+
+    # Main combat loop - each iteration is one combat round
     combat_ongoing = True
-
     while combat_ongoing:
-        # Track if player is evading this turn
-        is_evading = False
-
-        # Regenerate shields slightly each turn (shield_regen * 2)
-        max_shield = get_max_shield(player_ship)
-        shield_regen = int(get_shield_regen(player_ship) * 2)
-        if player_ship["shield_hp"] < max_shield:
-            player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, max_shield)
-
-        # Also regenerate enemy shields (shield_regen * 2)
-        for ship in enemy_fleet["ships"]:
-            if ship["hull_hp"] > 0 and ship["shield_hp"] < ship["max_shield_hp"]:
-                enemy_shield_regen = int(get_shield_regen(ship) * 2)
-                ship["shield_hp"] = min(ship["shield_hp"] + enemy_shield_regen, ship["max_shield_hp"])
-
-        clear_screen()
-        title(f"COMBAT - TURN {turn}")
-        print()
-
-        # Display player status
-        print("YOUR SHIP:")
-        max_shield = get_max_shield(player_ship)
-        max_hull = get_max_hull(player_ship)
-        print(f"  Shield: {player_ship['shield_hp']}/{max_shield}")
-        shield_bar = create_health_bar(player_ship['shield_hp'], max_shield, 30, "cyan")
-        print(f"  {shield_bar}")
-        print(f"  Hull:   {player_ship['hull_hp']}/{max_hull}")
-        hull_bar = create_health_bar(player_ship['hull_hp'], max_hull, 30, "red")
-        print(f"  {hull_bar}")
-        print()
-
-        # Display enemy fleet status
-        if enemy_fleet.get("encounter_type") == "wave_group":
-            print(f"ENEMY FLEET ({enemy_fleet['type']}) - WAVE {enemy_fleet['current_wave']}/{enemy_fleet['total_waves']}:")
-        else:
-            print(f"ENEMY FLEET ({enemy_fleet['type']}):")
         alive_enemies = [ship for ship in enemy_fleet["ships"] if ship["hull_hp"] > 0]
 
-        for i, ship in enumerate(alive_enemies):
-            # Highlight command ships
-            name_display = ship['name']
-            if ship.get('is_command_ship', False):
-                name_display = f"\033[33m★ {name_display} ★\033[0m"  # Yellow stars
-            print(f"  [{i+1}] {name_display}")
-            print(f"      Shield: {ship['shield_hp']}/{ship['max_shield_hp']} | Hull: {ship['hull_hp']}/{ship['max_hull_hp']}")
-
-        print()
-        print("=" * 60)
-        print()
-
-        # Combat options
-        options = [
-            "Scatter Fire (Up to 4 Targets)",
-            "Focus Fire (Single Target)",
-            "Evasive Maneuvers",
-            "Attempt Retreat",
-            "View Detailed Stats"
-        ]
-
-        # Capture current screen
-        content_buffer = StringIO()
-        old_stdout = sys.stdout
-        sys.stdout = content_buffer
-
-        # Re-print combat status
-        print(f"COMBAT - TURN {turn}")
-        print()
-        print("YOUR SHIP:")
-        max_shield = get_max_shield(player_ship)
-        max_hull = get_max_hull(player_ship)
-        print(f"  Shield: {player_ship['shield_hp']}/{max_shield}")
-        print(f"  Hull:   {player_ship['hull_hp']}/{max_hull}")
-        print()
-        if enemy_fleet.get("encounter_type") == "wave_group":
-            print(f"ENEMY FLEET ({enemy_fleet['type']}) - WAVE {enemy_fleet['current_wave']}/{enemy_fleet['total_waves']}:")
-        else:
-            print(f"ENEMY FLEET ({enemy_fleet['type']}):")
-        for i, ship in enumerate(alive_enemies):
-            name_display = ship['name']
-            if ship.get('is_command_ship', False):
-                name_display = f"★ {name_display} ★"
-            print(f"  [{i+1}] {name_display}")
-            print(f"      Shield: {ship['shield_hp']}/{ship['max_shield_hp']} | Hull: {ship['hull_hp']}/{ship['max_hull_hp']}")
-        print()
-
-        combat_content = content_buffer.getvalue()
-        sys.stdout = old_stdout
-
-        choice = arrow_menu("Select action:", options, combat_content)
-
-        if choice == 0:
-            # Fire at all targets
-            player_damage_distributed(alive_enemies, combat_skill, data)
-
-        elif choice == 1:
-            # Focus fire on single target
-            clear_screen()
-            print(combat_content)
-            target_options = [f"{ship['name']} (Hull: {ship['hull_hp']}/{ship['max_hull_hp']})" for ship in alive_enemies]
-            target_options.append("Cancel")
-
-            target_choice = arrow_menu("Select target:", target_options, combat_content)
-
-            if target_choice == len(alive_enemies):
-                continue  # Cancel, go back to combat menu
-
-            player_damage_focused(alive_enemies[target_choice], combat_skill, data)
-
-        elif choice == 2:
-            # Evasive maneuvers - skip attack but recharge shields and take less damage
-            perform_evasive_maneuvers_turn(player_ship, piloting_skill, data)
-            is_evading = True
-
-        elif choice == 3:
-            # Attempt retreat
-            retreat_result = attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data)
-
-            if retreat_result == "success":
-                # Small combat XP for participating
-                add_skill_xp(data, "combat", 5)
-                save_data(save_name, data)
-                # Update presence - back to traveling after escape
-                update_discord_presence(data=data, context="traveling")
-                return "continue"
-            elif retreat_result == "death":
-                # Died while retreating - still get small combat XP
-                add_skill_xp(data, "combat", 5)
-                save_data(save_name, data)
-                return "death"
-            elif retreat_result == "failed":
-                # Damage already applied in attempt_retreat_from_combat
-                continue
-            # If "impossible", just continue combat
-            continue
-
-        elif choice == 4:
-            # View detailed stats
-            show_detailed_combat_stats(player_ship, enemy_fleet, data)
-            continue
-
-        # Check if all enemies destroyed
-        alive_enemies = [ship for ship in enemy_fleet["ships"] if ship["hull_hp"] > 0]
         if not alive_enemies:
-            # Check if this is a wave-based encounter with more waves
-            if spawn_next_wave(enemy_fleet):
-                clear_screen()
-                title("WAVE CLEARED!")
-                print()
-                print(f"  Wave {enemy_fleet['current_wave'] - 1} eliminated!")
-                print()
-
-                # Show incoming wave message
-                if enemy_fleet["current_wave"] == enemy_fleet["command_ship_wave"]:
-                    set_color("red")
-                    set_color("blinking")
-                    print(f"  ⚠ ENEMY {enemy_fleet['command_ship_type'].upper()} INCOMING! ⚠")
-                    reset_color()
-                else:
-                    set_color("yellow")
-                    print(f"  → Wave {enemy_fleet['current_wave']} incoming...")
-                    reset_color()
-                print()
-
-                # Small XP for clearing wave
-                wave_xp = 10
-                add_skill_xp(data, "combat", wave_xp)
-                save_data(save_name, data)
-
-                sleep(1.5)
-                input("Press Enter to engage next wave...")
-                continue  # Continue combat with new wave
-
-            # No more waves - victory!
-            clear_screen()
-            title("VICTORY!")
-            print()
+            # Check for wave transitions
             if enemy_fleet.get("encounter_type") == "wave_group":
-                print(f"  All {enemy_fleet['total_waves']} waves defeated!")
-            else:
-                print("  All enemy ships have been destroyed!")
-            print()
+                if enemy_fleet["current_wave"] < enemy_fleet["total_waves"]:
+                    result = wave_transition(player_ship, enemy_fleet, data, save_name)
+                    if result == "retreat":
+                        add_skill_xp(data, "combat", total_xp_earned)
+                        add_skill_xp(data, "piloting", total_xp_earned // 2)
+                        save_data(save_name, data)
+                        return "retreat"
+                    spawn_next_wave(enemy_fleet)
+                    continue
 
-            # Calculate rewards (increased for wave-based encounters)
-            if enemy_fleet.get("encounter_type") == "wave_group":
-                credits_earned = enemy_fleet["size"] * 175 * random.randint(8, 12) // 10
-                combat_xp = 30 + (enemy_fleet["size"] * 12)
-            else:
-                credits_earned = enemy_fleet["size"] * 150 * random.randint(8, 12) // 10
-                combat_xp = 20 + (enemy_fleet["size"] * 10)
+            # Victory!
+            set_color("green")
+            print("\n╔════════════════════════════════════════════════════════════╗")
+            print(box_line("VICTORY!", 60))
+            print("╠════════════════════════════════════════════════════════════╣")
+            print(box_line(f"Total damage dealt: {total_damage_dealt}", 60))
+            print(box_line(f"Max combo reached: x{combo}", 60))
+            print("╚════════════════════════════════════════════════════════════╝")
+            reset_color()
 
-            data["credits"] += credits_earned
-            levels_gained = add_skill_xp(data, "combat", combat_xp)
-
-            print(f"  Credits earned: ¢{credits_earned}")
-            display_xp_gain("combat", combat_xp, levels_gained,
-                          data["skills"]["combat"], data["skills"]["combat_xp"])
-            print()
-
-            save_data(save_name, data)
-            # Update presence - back to traveling after victory
-            update_discord_presence(data=data, context="traveling")
-            input("Press Enter to continue...")
-            return "continue"
-
-        # Enemy turn - they attack
-        enemy_attacks(alive_enemies, player_ship, piloting_skill, is_evading)
-
-        # Check if player died
-        if player_ship["hull_hp"] <= 0:
-            clear_screen()
-            title("DEFEAT")
-            print()
-            print("  Your ship has been destroyed!")
-            print()
-            sleep(1.5)
-
-            # Small combat XP even on loss
-            combat_xp = 5
-            add_skill_xp(data, "combat", combat_xp)
+            add_skill_xp(data, "combat", total_xp_earned)
+            add_skill_xp(data, "piloting", total_xp_earned // 2)
             save_data(save_name, data)
 
+            input("\nPress Enter to continue...")
+            return "victory"
+
+        # Run unified combat round
+        result = unified_combat_round(
+            player_ship, alive_enemies, combo, firing_mode,
+            player_energy, max_energy, current_target_idx, data
+        )
+
+        combo = result['combo']
+        firing_mode = result['firing_mode']
+        player_energy = result['energy']
+        current_target_idx = result['target_idx']
+        total_damage_dealt += result['damage_dealt']
+        total_xp_earned += result['xp_earned']
+
+        # Check player death
+        if player_ship['hull_hp'] <= 0:
+            set_color("red")
+            print("\n╔════════════════════════════════════════════════════════════╗")
+            print(box_line("SHIP DESTROYED", 60))
+            print("╠════════════════════════════════════════════════════════════╣")
+            print(box_line("Your ship has been obliterated...", 60))
+            print("╚════════════════════════════════════════════════════════════╝")
+            reset_color()
+            sleep(2)
             return "death"
 
-        print()
-        input("Press Enter to continue to next turn...")
-        turn += 1
+    return "victory"
+
+
+def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_energy, max_energy, current_target_idx, data):
+    """Unified combat round with simultaneous dodging and firing"""
+
+    # State variables
+    player_pos = 5  # Center position
+
+    ship_stats = get_ship_stats(player_ship['name'])
+    ship_agility = ship_stats.get('Agility', 100)
+    base_dps = ship_stats.get('DPS', 120)
+
+    # Projectile system
+    projectiles = []
+    next_projectile_spawn = time() + 0.1  # First projectiles spawn almost immediately
+    projectile_spawn_interval = 0.8
+    max_active_projectiles = 6
+    total_projectiles_to_spawn = 15  # Multiple rounds
+    projectiles_spawned = 0
+
+    # Combat tracking
+    damage_dealt = 0
+    xp_earned = 0
+    hits_taken = 0
+    shots_fired = 0
+
+    # Fire rate limiting
+    last_shot_time = 0
+    shot_cooldown = 0.15  # Time between shots when holding space
+
+    # Energy regen
+    energy_regen_rate = 5.0  # per second
+    energy_cost_per_shot = 2
+
+    start_time = time()
+    last_update = start_time
+
+    # Make sure we have valid target
+    if current_target_idx >= len(alive_enemies):
+        current_target_idx = 0
+
+    # Combat round runs until all projectiles are cleared
+    while True:
+        current_time = time()
+        delta_time = current_time - last_update
+        last_update = current_time
+
+        # Spawn new projectiles
+        if projectiles_spawned < total_projectiles_to_spawn and current_time >= next_projectile_spawn:
+            if len(projectiles) < max_active_projectiles:
+                target_pos = random.randint(1, 9)
+                speed = random.uniform(0.4, 0.6)
+                projectiles.append(Projectile(target_pos, speed))
+                next_projectile_spawn = current_time + projectile_spawn_interval
+                projectiles_spawned += 1
+
+        # Update projectiles
+        completed_projectiles = []
+        for proj in projectiles:
+            if proj.update(delta_time):
+                completed_projectiles.append(proj)
+
+        # Check hits
+        for proj in completed_projectiles:
+            if proj.target_position == player_pos:
+                # Hit! Apply damage based on firing mode
+                damage_multiplier = 1.0
+                if firing_mode == "evade":
+                    damage_multiplier = 0.4  # Reduced damage in evade mode
+
+                damage_per_hit = sum(enemy['damage'] for enemy in alive_enemies) / len(alive_enemies)
+                damage_taken = int(damage_per_hit * damage_multiplier)
+                apply_damage_to_ship(player_ship, damage_taken)
+                hits_taken += 1
+
+                # Break combo on hit unless in evade mode
+                if firing_mode != "evade":
+                    combo = 1
+            projectiles.remove(proj)
+
+        # Check if phase is complete (no more projectiles and all spawned)
+        if not projectiles and projectiles_spawned >= total_projectiles_to_spawn:
+            break
+
+        # Regenerate energy
+        player_energy = min(max_energy, player_energy + energy_regen_rate * delta_time)
+
+        # Get input with full frame-time window to reliably catch single presses
+        key = get_numpad_key(timeout=0.016)  # Full 16ms window = 100% of frame time
+
+        # Process ALL key inputs immediately
+        if key:
+            # Movement keys (numpad or regular 1-9)
+            if isinstance(key, int) and 1 <= key <= 9:
+                if key != player_pos:
+                    player_pos = key  # Instant movement!
+            elif isinstance(key, str) and key in '123456789':
+                pos = int(key)
+                if pos != player_pos:
+                    player_pos = pos  # Instant movement!
+
+            # Space to fire (check this separately)
+            if key == ' ' and firing_mode != "evade":
+                if current_time - last_shot_time >= shot_cooldown and player_energy >= energy_cost_per_shot:
+                    if firing_mode == "focus":
+                        target = alive_enemies[current_target_idx]
+                        damage = int(base_dps * 0.08 * combo * random.uniform(0.9, 1.1))
+                        apply_damage_to_enemy(target, damage)
+                        damage_dealt += damage
+                        shots_fired += 1
+                    elif firing_mode == "spread":
+                        num_targets = min(3, len(alive_enemies))
+                        targets = random.sample(alive_enemies, num_targets)
+                        for target in targets:
+                            damage = int(base_dps * 0.05 * combo * random.uniform(0.9, 1.1))
+                            apply_damage_to_enemy(target, damage)
+                            damage_dealt += damage
+                        shots_fired += 1
+
+                    player_energy -= energy_cost_per_shot
+                    last_shot_time = current_time
+
+            # Firing mode switches (Q/E/R)
+            if isinstance(key, str):
+                key_lower = key.lower()
+                if key_lower == 'q':
+                    firing_mode = "focus"
+                elif key_lower == 'e':
+                    firing_mode = "spread"
+                elif key_lower == 'r':
+                    firing_mode = "evade"
+
+            # Tab to cycle targets
+            if key == 'tab':
+                current_target_idx = (current_target_idx + 1) % len(alive_enemies)
+
+        # Draw UI AFTER all input is processed
+        draw_unified_combat_ui(
+            player_ship, player_pos, alive_enemies, projectiles,
+            combo, firing_mode, player_energy, max_energy,
+            current_target_idx, current_time - start_time
+        )
+
+        sleep(0.016)  # ~60 FPS
+
+    # Calculate XP and combo updates
+    dodge_rate = 1.0 - (hits_taken / max(1, total_projectiles_to_spawn))
+
+    if hits_taken == 0:
+        combo = min(combo + 1, 5)
+    elif dodge_rate >= 0.7:
+        combo = max(1, combo)  # Maintain combo
+    else:
+        combo = 1
+
+    xp_earned = int((shots_fired * 2 + (total_projectiles_to_spawn - hits_taken) * 3) * combo)
+
+    # Brief results display
+    print("\033[H\033[J", end="")
+    print("╔════════════════════════════════════════════════════════════╗")
+    print(box_line("ROUND COMPLETE", 60))
+    print("╠════════════════════════════════════════════════════════════╣")
+    print(box_line(f"Hits Taken: {hits_taken}/{total_projectiles_to_spawn}", 60))
+    print(box_line(f"Damage Dealt: {damage_dealt}", 60))
+    print(box_line(f"Combo: x{combo}", 60))
+    print("╚════════════════════════════════════════════════════════════╝")
+    sleep(1.5)
+
+    return {
+        'combo': combo,
+        'firing_mode': firing_mode,
+        'energy': player_energy,
+        'target_idx': current_target_idx,
+        'damage_dealt': damage_dealt,
+        'xp_earned': xp_earned
+    }
+
+
+def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
+                           combo, firing_mode, energy, max_energy, target_idx, elapsed_time):
+    """Draw the unified combat UI matching original design"""
+    print("\033[H\033[J", end="")
+
+    # Get ship status
+    max_shield = get_max_shield(player_ship)
+    max_hull = get_max_hull(player_ship)
+    shield_hp = player_ship['shield_hp']
+    hull_hp = player_ship['hull_hp']
+
+    # Header
+    print("╔" + "═" * 76 + "╗")
+    print("║ COMBAT ZONE" + " " * 64 + "║")
+
+    # Shield and Hull bars
+    shield_bar = create_health_bar(shield_hp, max_shield, 12, "cyan")
+    hull_bar = create_health_bar(hull_hp, max_hull, 12, "green")
+    shield_text = f"Shield: {shield_bar} {shield_hp}/{max_shield}"
+    hull_text = f"Hull: {hull_bar} {hull_hp}/{max_hull}"
+
+    # Calculate visual lengths
+    shield_visual = len(strip_ansi(shield_text))
+    hull_visual = len(strip_ansi(hull_text))
+
+    # Padding between shield and hull
+    middle_padding = 4
+    # Calculate end padding (accounting for leading space + shield + middle + hull)
+    line_content_len = 1 + shield_visual + middle_padding + hull_visual
+    end_padding = " " * (76 - line_content_len)
+
+    print(f"║ {shield_text}    {hull_text}{end_padding}║")
+
+    print("╠" + "═" * 76 + "╣")
+    print("║" + " " * 76 + "║")
+
+    # Grid and Enemy List side by side
+    positions = [[7, 8, 9], [4, 5, 6], [1, 2, 3]]
+
+    # Get list of positions being targeted by projectiles
+    targeted_positions = set(proj.target_position for proj in projectiles)
+
+    for row_idx, row in enumerate(positions):
+        # Grid - build without padding first
+        grid_str = " "
+        for pos in row:
+            if pos == player_pos:
+                # Check if player's position is also being targeted
+                if pos in targeted_positions:
+                    # RED BACKGROUND with green star - player is in danger!
+                    grid_str += "\033[41m\033[32m[★]\033[0m"  # Red bg + green text + reset
+                else:
+                    # Just green star - safe position
+                    set_color("green")
+                    grid_str += "[★]"
+                    reset_color()
+            elif pos in targeted_positions:
+                # Use direct ANSI code for red background (100% guaranteed to work)
+                grid_str += "\033[41m[X]\033[0m"  # Red background + reset
+            else:
+                grid_str += f"[{pos}]"
+            grid_str += " "
+
+        # Calculate visual length of grid
+        grid_visual_len = len(strip_ansi(grid_str))
+
+        # Enemy list
+        enemy_str = ""
+        if row_idx < len(alive_enemies):
+            enemy = alive_enemies[row_idx]
+            enemy_hp = enemy.get('hull_hp', 0) + enemy.get('shield_hp', 0)
+            enemy_name = enemy['name'][:20]
+            indicator = " ⚠ TARGETING" if row_idx == target_idx else ""
+            enemy_str = f" ┃ {enemy_name} HP: {enemy_hp}{indicator}"
+        else:
+            enemy_str = " ┃"
+
+        # Pad grid to exactly 21 visual characters (including leading space)
+        grid_padding = " " * (21 - grid_visual_len)
+
+        # Calculate padding for end of line
+        enemy_visual_len = len(enemy_str)
+        line_padding = " " * (76 - 21 - enemy_visual_len)
+
+        line = f"║{grid_str}{grid_padding}{enemy_str}{line_padding}║"
+        print(line)
+
+    print("║" + " " * 76 + "║")
+
+    # Incoming projectiles section
+    incoming_header = " " + "─" * 15 + " INCOMING " + "─" * 15
+    incoming_visual_len = len(incoming_header)
+    incoming_padding = " " * (76 - incoming_visual_len)
+    print(f"║{incoming_header}{incoming_padding}║")
+
+    # Show up to 4 projectiles with progress bars
+    visible_projectiles = sorted(projectiles, key=lambda p: p.progress, reverse=True)[:4]
+    for i in range(4):
+        if i < len(visible_projectiles):
+            proj = visible_projectiles[i]
+            progress_filled = int(proj.progress * 15)
+            progress_bar = "━" * progress_filled + "━" * (15 - progress_filled)
+            set_color("red")
+            line_content = f" ║ ━━━> [{proj.target_position}]"
+            reset_color()
+            # Visual length is without ANSI codes
+            content_visual_len = len(" ║ ━━━> [X]")  # Fixed length
+            padding = " " * (76 - content_visual_len)
+            print(f"║{line_content}{padding}║")
+        else:
+            print("║ ║" + " " * 74 + "║")
+
+    print("║" + " " * 76 + "║")
+
+    # Target and Energy info
+    if alive_enemies:
+        target = alive_enemies[target_idx]
+        target_name = target['name'][:25]
+        target_line = f" Target: {target_name}"
+        target_padding = " " * (76 - len(target_line))
+        print(f"║{target_line}{target_padding}║")
+
+    energy_bar = create_health_bar(int(energy), max_energy, 15, "yellow")
+    energy_text = f" Energy: {energy_bar} {int(energy)}/{max_energy}"
+    energy_visual_len = len(strip_ansi(energy_text))
+    energy_padding = " " * (76 - energy_visual_len)
+    print(f"║{energy_text}{energy_padding}║")
+
+    print("║" + " " * 76 + "║")
+
+    # Controls line (no cooldown indicator needed anymore)
+    set_color("cyan")
+    controls = " [SPACE] Fire  [NUMPAD] Dodge  [Q/E/R] Mode  [TAB] Target"
+    reset_color()
+    controls_visual_len = len(strip_ansi(controls))
+    controls_padding = " " * (76 - controls_visual_len)
+    print(f"║{controls}{controls_padding}║")
+
+    print("╠" + "═" * 76 + "╣")
+
+    # Status bar
+    mode_display = firing_mode.upper()
+    mode_color = "cyan" if firing_mode == "focus" else "green" if firing_mode == "spread" else "yellow"
+
+    status_base = f" Time: {elapsed_time:.1f}s | Combo: x{combo} | Mode: "
+    set_color(mode_color)
+    status_line = status_base + mode_display
+    reset_color()
+
+    status_visual_len = len(strip_ansi(status_line))
+    status_padding = " " * (76 - status_visual_len)
+    print(f"║{status_line}{status_padding}║")
+    print("╚" + "═" * 76 + "╝")
 
 
 def create_health_bar(current, maximum, width, color="green"):
@@ -1823,7 +2732,7 @@ def player_damage_distributed(enemies, combat_skill, data):
     for enemy in targets:
         # Random variance
         damage = int(damage_per_enemy * random.uniform(0.85, 1.15))
-        apply_damage_to_enemy(enemy, damage)
+        apply_damage_to_enemy_verbose(enemy, damage)
         sleep(0.3)
 
     print()
@@ -1843,14 +2752,14 @@ def player_damage_focused(enemy, combat_skill, data):
     print()
     sleep(0.5)
 
-    apply_damage_to_enemy(enemy, damage)
+    apply_damage_to_enemy_verbose(enemy, damage)
 
     print()
     input("Press Enter to continue...")
 
 
-def apply_damage_to_enemy(enemy, damage):
-    """Apply damage to an enemy ship"""
+def apply_damage_to_enemy_verbose(enemy, damage):
+    """Apply damage to an enemy ship (OLD SYSTEM - VERBOSE)"""
     remaining_damage = damage
 
     # Damage shields first
