@@ -1605,16 +1605,18 @@ def get_numpad_key(timeout=0.05):
                     if rlist:
                         ch2 = sys.stdin.read(1)
                         if ch2 == '[':
-                            # Arrow key sequences
-                            ch3 = sys.stdin.read(1)
-                            arrow_map = {
-                                'A': 'up',
-                                'B': 'down',
-                                'C': 'right',
-                                'D': 'left',
-                            }
-                            if ch3 in arrow_map:
-                                return arrow_map[ch3]
+                            # Arrow key sequences - check if third char is available
+                            rlist, _, _ = select.select([sys.stdin], [], [], 0.01)
+                            if rlist:
+                                ch3 = sys.stdin.read(1)
+                                arrow_map = {
+                                    'A': 'up',
+                                    'B': 'down',
+                                    'C': 'right',
+                                    'D': 'left',
+                                }
+                                if ch3 in arrow_map:
+                                    return arrow_map[ch3]
                             return None  # Ignore other escape sequences
                     return 'esc'
                 elif ch == '\t':
@@ -1807,7 +1809,8 @@ def generate_projectiles(alive_enemies, difficulty_multiplier=1.0):
 
 def draw_dodge_arena(player_pos, projectiles, combo, time_remaining):
     """Draw the dodging arena with projectiles"""
-    print("\033[H\033[J", end="")
+    # Move cursor to home position without clearing - prevents flashing
+    print("\033[H", end="", flush=True)
     print("╔════════════════════════════════════════════════════════════╗")
     print(box_line("INCOMING ENEMY FIRE - DODGE!", 60))
     print("╠════════════════════════════════════════════════════════════╣")
@@ -1850,6 +1853,8 @@ def draw_dodge_arena(player_pos, projectiles, combo, time_remaining):
     print(box_line("", 60))
     print(box_line("[NUMPAD/ARROWS 1-9] Move", 60))
     print("╚════════════════════════════════════════════════════════════╝")
+    # Clear any remaining lines below (in case screen was larger before)
+    print("\033[J", end="", flush=True)
 
 
 def dodge_phase(player_ship, alive_enemies, combo, data):
@@ -1978,7 +1983,7 @@ def manual_fire_phase(player_ship, alive_enemies, combo, data):
     """
     phase_duration = 10.0  # 10 seconds to fire - increased for better readability
 
-    print("\033[H\033[J", end="")
+    print("\033[H", end="", flush=True)
     print("╔════════════════════════════════════════════════════════════╗")
     print(box_line("WEAPONS READY - FIRE!", 60))
     print("╠════════════════════════════════════════════════════════════╣")
@@ -2042,7 +2047,7 @@ def manual_fire_phase(player_ship, alive_enemies, combo, data):
                     charge_level = 0.0  # Reset charge
 
         # Draw UI
-        print("\033[H\033[J", end="")
+        print("\033[H", end="", flush=True)
         print("╔════════════════════════════════════════════════════════════╗")
         print(box_line("WEAPONS READY - FIRE!", 60))
         print("╠════════════════════════════════════════════════════════════╣")
@@ -2080,6 +2085,8 @@ def manual_fire_phase(player_ship, alive_enemies, combo, data):
         print(box_line(f"Time remaining: {time_remaining:.1f}s", 60))
         print(box_line("", 60))
         print("╚════════════════════════════════════════════════════════════╝")
+        # Clear any remaining lines
+        print("\033[J", end="", flush=True)
 
         sleep(0.05)
 
@@ -2094,7 +2101,7 @@ def auto_fire_phase(player_ship, alive_enemies, combo, data, turrets=None, assig
     """Execute the auto-fire phase"""
     phase_duration = 6.0  # Increased from 2.0 to make combat slower and more readable
 
-    print("\033[H\033[J", end="")
+    print("\033[H", end="", flush=True)
     print("╔════════════════════════════════════════════════════════════╗")
     print(box_line("AUTO-FIRE PHASE", 60))
     print("╠════════════════════════════════════════════════════════════╣")
@@ -2171,6 +2178,8 @@ def auto_fire_phase(player_ship, alive_enemies, combo, data, turrets=None, assig
 
     print(box_line("", 60))
     print("╚════════════════════════════════════════════════════════════╝")
+    # Clear any remaining lines
+    print("\033[J", end="", flush=True)
 
     xp_earned = int(5 * combo)
     return total_damage, xp_earned
@@ -2178,7 +2187,7 @@ def auto_fire_phase(player_ship, alive_enemies, combo, data, turrets=None, assig
 
 def positioning_phase(alive_enemies, current_target_idx, assignment_mode):
     """Brief positioning phase for target switching and mode changes"""
-    print("\033[H\033[J", end="")
+    print("\033[H", end="", flush=True)
     print("╔════════════════════════════════════════════════════════════╗")
     print(box_line("TACTICAL POSITIONING", 60))
     print("╠════════════════════════════════════════════════════════════╣")
@@ -2189,6 +2198,8 @@ def positioning_phase(alive_enemies, current_target_idx, assignment_mode):
     print(box_line("[1] Focused Fire   [2] Scatter Shot", 60))
     print(box_line("", 60))
     print("╚════════════════════════════════════════════════════════════╝")
+    # Clear any remaining lines
+    print("\033[J", end="", flush=True)
 
     start_time = time()
     phase_duration = 3.0  # Increased from 1.5 to make combat slower
@@ -2226,7 +2237,7 @@ def positioning_phase(alive_enemies, current_target_idx, assignment_mode):
 
 def wave_transition(player_ship, enemy_fleet, data, save_name):
     """Handle wave transition with repair and retreat options"""
-    print("\033[H\033[J", end="")
+    print("\033[H", end="", flush=True)
     print("╔════════════════════════════════════════════════════════════╗")
     print(box_line("WAVE TRANSITION", 60))
     print("╠════════════════════════════════════════════════════════════╣")
@@ -2269,6 +2280,8 @@ def wave_transition(player_ship, enemy_fleet, data, save_name):
     print(box_line("Next wave incoming...", 60))
     print(box_line("", 60))
     print("╚════════════════════════════════════════════════════════════╝")
+    # Clear any remaining lines
+    print("\033[J", end="", flush=True)
 
     for i in range(3, 0, -1):
         print(f"\n  {i}...", end="", flush=True)
@@ -2306,7 +2319,7 @@ def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=Fal
     max_energy = 80
 
     # Combat briefing
-    print("\033[H\033[J", end="")
+    print("\033[H", end="", flush=True)
     print("╔════════════════════════════════════════════════════════════╗")
     print(box_line("COMBAT ENGAGED!", 60))
     print("╠════════════════════════════════════════════════════════════╣")
@@ -2322,6 +2335,8 @@ def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=Fal
     print(box_line("", 60))
     print(box_line("Press Enter to begin combat...", 60))
     print("╚════════════════════════════════════════════════════════════╝")
+    # Clear any remaining lines
+    print("\033[J", end="", flush=True)
     input()
 
     # Main combat loop - each iteration is one combat round
@@ -2624,7 +2639,7 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
     xp_earned = int((shots_fired * 2 + (total_projectiles_to_spawn - hits_taken) * 3) * combo)
 
     # Brief results display
-    print("\033[H\033[J", end="")
+    print("\033[H", end="", flush=True)
     print("╔════════════════════════════════════════════════════════════╗")
     print(box_line("ROUND COMPLETE", 60))
     print("╠════════════════════════════════════════════════════════════╣")
@@ -2632,6 +2647,8 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
     print(box_line(f"Damage Dealt: {damage_dealt}", 60))
     print(box_line(f"Combo: x{combo}", 60))
     print("╚════════════════════════════════════════════════════════════╝")
+    # Clear any remaining lines
+    print("\033[J", end="", flush=True)
     sleep(1.5)
 
     return {
@@ -2652,7 +2669,7 @@ def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
     Args:
         display_offset: Starting index for displaying enemies (for scrolling when > 3 enemies)
     """
-    print("\033[H\033[J", end="")
+    print("\033[H", end="", flush=True)
 
     # Get ship status
     max_shield = get_max_shield(player_ship)
@@ -2822,6 +2839,8 @@ def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
     status_padding = " " * (76 - status_visual_len)
     print(f"║{status_line}{status_padding}║")
     print("╚" + "═" * 76 + "╝")
+    # Clear any remaining lines
+    print("\033[J", end="", flush=True)
 
 
 def create_health_bar(current, maximum, width, color="green"):
