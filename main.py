@@ -9043,22 +9043,23 @@ def main():
 
             choice = arrow_menu("Starscape: Text Adventure Edition", options, logo_text)
 
-            if choice == 0:
-                new_game()
-            elif choice == 1:
-                continue_game()
-            elif choice == 2:
-                delete_save_screen()
-            elif choice == 3:
-                settings_screen()
-            elif choice == 4:
-                about_screen()
-            elif choice == 5:
-                check_for_updates()
-            elif choice == 6:
-                clear_screen()
-                print("Exiting...")
-                break
+            match choice:
+                case 0:
+                    new_game()
+                case 1:
+                    continue_game()
+                case 2:
+                    delete_save_screen()
+                case 3:
+                    settings_screen()
+                case 4:
+                    about_screen()
+                case 5:
+                    check_for_updates()
+                case 6:
+                    clear_screen()
+                    print("Exiting...")
+                    break
     finally:
         # Clean up Discord connection when exiting
         close_discord_rpc()
