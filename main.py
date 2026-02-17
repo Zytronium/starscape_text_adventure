@@ -2250,9 +2250,7 @@ def wave_transition(player_ship, enemy_fleet, data, save_name):
     print("╠════════════════════════════════════════════════════════════╣\033[K")
     print(box_line("", 60) + "\033[K")
 
-    set_color("yellow")
-    print(box_line("Wave cleared! Preparing for next wave...", 60) + "\033[K")
-    reset_color()
+    print(box_line("Wave cleared! Preparing for next wave...", 60, text_color="yellow") + "\033[K")
     print(box_line("", 60) + "\033[K")
 
     max_shield = get_max_shield(player_ship)
@@ -2271,9 +2269,7 @@ def wave_transition(player_ship, enemy_fleet, data, save_name):
     actual_regen = player_ship['shield_hp'] - old_shield
 
     if actual_regen > 0:
-        set_color("cyan")
-        print(box_line(f"Shield regenerating... +{actual_regen} HP", 60) + "\033[K")
-        reset_color()
+        print(box_line(f"Shields regenerating... +{actual_regen} HP", 60, text_color="cyan") + "\033[K")
 
     print(box_line("", 60) + "\033[K")
 
