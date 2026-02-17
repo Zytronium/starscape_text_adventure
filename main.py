@@ -248,7 +248,7 @@ def check_for_updates():
     title("CHECK FOR UPDATES")
 
     print("Checking for updates...\033[K")
-    print("\033[K")
+    print()
 
     # Check if running as executable
     is_executable = hasattr(sys, '_MEIPASS')
@@ -270,7 +270,7 @@ def check_for_updates():
 
         print(f"Current version: {APP_VERSION_CODE}\033[K")
         print(f"Latest version:  {remote_app_version}\033[K")
-        print("\033[K")
+        print()
 
         # Check if update is available
         if not is_version_newer(remote_app_version):
@@ -280,7 +280,7 @@ def check_for_updates():
 
         # Update available
         print("\033[1;32mA new version is available!\033[0m\033[K")
-        print("\033[K")
+        print()
 
         # Detect OS
         system = platform.system()
@@ -560,10 +560,8 @@ def get_key():
 
 
 def clear_screen():
-    """Clear the terminal screen by overwriting (prevents flashing)"""
-    # Move cursor to home position and clear from cursor to end of screen
-    # This prevents flashing compared to cls/clear commands
-    print("\033[H\033[J", end="", flush=True)
+    """Clear the terminal screen"""
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 
 def capture_screen_content(func, *args, **kwargs):
@@ -590,7 +588,7 @@ def display_menu(title_, options, selected_index, previous_content=""):
         print()  # Add spacing between content and menu
 
     title(title_)
-    print("\033[K")
+    print()
 
     for i, option in enumerate(options):
         if i == selected_index:
@@ -598,7 +596,7 @@ def display_menu(title_, options, selected_index, previous_content=""):
         else:
             print(f"    {option}\033[K")
 
-    print("\033[K")
+    print()
     print("  Use ↑/↓ arrows to navigate, Enter to select\033[K")
 
 
@@ -654,8 +652,8 @@ def tabbed_interface(tab_names, tab_functions, initial_tab=0):
                 tab_line += f"┌{'─' * (tab_width - 2)}┐ "
                 underline += f"│ {name} │ "
 
-        print(tab_line + "\033[K")
-        print(underline + "\033[K")
+        print(tab_line)
+        print(underline)
 
         # Draw bottom line for active tab, close line for others
         bottom_line = "  "
@@ -668,15 +666,15 @@ def tabbed_interface(tab_names, tab_functions, initial_tab=0):
 
         # Fill rest of line
         bottom_line += "─" * (60 - len(bottom_line))
-        print(bottom_line + "\033[K")
-        print("\033[K")
+        print(bottom_line)
+        print()
 
         # Show tab hints
         tab_hints = "  "
         for i, name in enumerate(tab_names):
             tab_hints += f"[{i+1}] {name}  "
-        print(tab_hints + "\033[K")
-        print("\033[K")
+        print(tab_hints)
+        print()
 
         # Call the current tab's function
         # The function should handle its own display and return True to continue, False to exit
@@ -1267,17 +1265,17 @@ def enemy_encounter(enemy_fleet, system, save_name, data, previous_content=""):
 
     if previous_content:
         print(previous_content, end='')
-        print("\033[K")
+        print()
 
-    print("=" * 60 + "\033[K")
+    print("=" * 60)
     print("  ", end="")
     set_color("red")
     set_color("blinking")
     set_color("reverse")
     print(" ⚠ HOSTILE CONTACT ⚠ \033[K")
     reset_color()
-    print("=" * 60 + "\033[K")
-    print("\033[K")
+    print("=" * 60)
+    print()
     print(f"  Fleet Type: {enemy_fleet['type']}\033[K")
 
     # Show wave info for wave-based groups
@@ -1310,12 +1308,12 @@ def enemy_encounter(enemy_fleet, system, save_name, data, previous_content=""):
     reset_color()
 
     if enemy_fleet["warp_disruptor"]:
-        print("\033[K")
+        print()
         set_color("red")
         print("  ⚠ WARP DISRUPTED ⚠\033[K")
         reset_color()
 
-    print("\033[K")
+    print()
 
     content_buffer = StringIO()
     old_stdout = sys.stdout
@@ -1327,15 +1325,15 @@ def enemy_encounter(enemy_fleet, system, save_name, data, previous_content=""):
     sys.stdout = temp_buffer
 
     # Print the encounter info again to capture it
-    print("=" * 60 + "\033[K")
+    print("=" * 60)
     print("  ", end="")
     set_color("red")
     set_color("blinking")
     set_color("reverse")
     print(" ⚠ HOSTILE CONTACT ⚠ \033[K")
     reset_color()
-    print("=" * 60 + "\033[K")
-    print("\033[K")
+    print("=" * 60)
+    print()
     print(f"  Fleet Type: {enemy_fleet['type']}\033[K")
 
     if enemy_fleet.get("encounter_type") == "wave_group":
@@ -1353,9 +1351,9 @@ def enemy_encounter(enemy_fleet, system, save_name, data, previous_content=""):
     else:
         print("EXTREME\033[K")
     if enemy_fleet["warp_disruptor"]:
-        print("\033[K")
+        print()
         print("  ⚠ WARP DISRUPTOR DETECTED ⚠\033[K")
-    print("\033[K")
+    print()
 
     encounter_content = temp_buffer.getvalue()
     sys.stdout = old_stdout
@@ -1381,7 +1379,7 @@ def attempt_escape(enemy_fleet, system, save_name, data):
     """Attempt to escape from combat"""
     clear_screen()
     title("ATTEMPTING ESCAPE")
-    print("\033[K")
+    print()
 
     player_ship = get_active_ship(data)
     piloting_skill = data.get("skills", {}).get("piloting", 0)
@@ -1389,10 +1387,10 @@ def attempt_escape(enemy_fleet, system, save_name, data):
     # Warp disruptor prevents escape entirely
     if enemy_fleet["warp_disruptor"]:
         print("  ⚠ WARP DISRUPTOR DETECTED ⚠\033[K")
-        print("\033[K")
+        print()
         print("  The enemy's warp disruption field prevents any escape!\033[K")
         print("  Your jump drive is completely disabled.\033[K")
-        print("\033[K")
+        print()
         print("  You are forced into combat!\033[K")
         sleep(2)
         input("Press Enter to engage...")
@@ -1408,7 +1406,7 @@ def attempt_escape(enemy_fleet, system, save_name, data):
     if random.random() < escape_chance:
         # Successful escape
         print("  Successfully escaped!\033[K")
-        print("\033[K")
+        print()
 
         save_data(save_name, data)
         input("Press Enter to continue...")
@@ -1418,7 +1416,7 @@ def attempt_escape(enemy_fleet, system, save_name, data):
         # Failed escape - forced into combat
         print("  You reacted too slow!\033[K")
         print("  Enemy fleet has intercepted you!\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to engage in combat...")
 
         return combat_loop(enemy_fleet, system, save_name, data, forced_combat=True)
@@ -1428,20 +1426,20 @@ def ignore_enemies(enemy_fleet, system, save_name, data):
     """Ignore enemies and tank the damage"""
     clear_screen()
     title("IGNORING HOSTILE FLEET")
-    print("\033[K")
+    print()
 
     player_ship = get_active_ship(data)
 
     print("  You continue on your course, ignoring the hostile fleet.\033[K")
     print("  They open fire on your ship!\033[K")
-    print("\033[K")
+    print()
     sleep(1)
 
     # Calculate damage - 70% of total firepower
     total_damage = int(enemy_fleet["total_firepower"] * 0.7 * random.uniform(0.8, 1.2))
 
     print(f"  Incoming damage: {total_damage}\033[K")
-    print("\033[K")
+    print()
     sleep(0.5)
 
     # Apply damage
@@ -1461,7 +1459,7 @@ def ignore_enemies(enemy_fleet, system, save_name, data):
         print(f"  Hull HP: {max(0, player_ship['hull_hp'])}/{max_hull} (-{remaining_damage})\033[K")
         sleep(0.3)
 
-    print("\033[K")
+    print()
 
     if player_ship["hull_hp"] <= 0:
         print("  Your ship has been destroyed!\033[K")
@@ -1471,10 +1469,10 @@ def ignore_enemies(enemy_fleet, system, save_name, data):
         set_color("red")
         print("  ⚠ WARNING: CRITICAL HULL DAMAGE ⚠\033[K")
         reset_color()
-        print("\033[K")
+        print()
 
     print("  You've successfully passed through the hostile zone.\033[K")
-    print("\033[K")
+    print()
 
     # No skill increase for ignoring
     save_data(save_name, data)
@@ -1486,11 +1484,11 @@ def perform_evasive_maneuvers_turn(player_ship, piloting_skill, data):
     """Perform evasive maneuvers during a combat turn - recharge shields, skip attack"""
     clear_screen()
     title("MAKING EVASIVE MANEUVERS")
-    print("\033[K")
+    print()
 
     print("  You make evasive maneuvers to avoid enemy fire, giving\033[K")
     print("  your shields time to recharge.\033[K")
-    print("\033[K")
+    print()
     sleep(1)
 
     # Get ship stats
@@ -1526,9 +1524,9 @@ def perform_evasive_maneuvers_turn(player_ship, piloting_skill, data):
     else:
         print("  Shields already at maximum capacity.\033[K")
 
-    print("\033[K")
+    print()
     print("  You maintain evasive flight patterns to avoid incoming fire...\033[K")
-    print("\033[K")
+    print()
     sleep(1)
 
     # Small piloting XP for using evasive maneuvers
@@ -2334,6 +2332,7 @@ def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=Fal
     print(box_line("- [NUMPAD/ARROWS 1-9] to move position", 60) + "\033[K")
     print(box_line("- [Q] Focus Fire  [E] Spread Fire", 60) + "\033[K")
     print(box_line("- [TAB] Cycle Target", 60) + "\033[K")
+    print(box_line("- HOLD [ESC] to charge warp escape (60% energy)", 60) + "\033[K")
     print(box_line("", 60) + "\033[K")
     print(box_line("Press Enter to begin combat...", 60) + "\033[K")
     print("╚════════════════════════════════════════════════════════════╝\033[K")
@@ -2428,6 +2427,13 @@ def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=Fal
         total_damage_dealt += result['damage_dealt']
         total_xp_earned += result['xp_earned']
 
+        # Check for warp escape
+        if result.get('retreat', False):
+            add_skill_xp(data, "combat", total_xp_earned)
+            add_skill_xp(data, "piloting", total_xp_earned // 2)
+            save_data(save_name, data)
+            return "retreat"
+
         # Check player death
         if player_ship['hull_hp'] <= 0:
             set_color("red")
@@ -2448,10 +2454,21 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
 
     # State variables
     player_pos = 5  # Center position
+    is_moving = False
+    move_target = 5
+    move_start_time = 0
+    move_duration = 0
 
     ship_stats = get_ship_stats(player_ship['name'])
     ship_agility = ship_stats.get('Agility', 100)
     base_dps = ship_stats.get('DPS', 120)
+
+    # Warp escape system
+    warp_charging = False
+    warp_charge_level = 0.0  # 0.0 to 1.0
+    warp_charge_rate = 0.5  # Charge per second
+    warp_charge_required = 1.0  # Full charge needed
+    warp_energy_cost_percent = 0.6  # 60% of current energy
 
     # Projectile system
     projectiles = []
@@ -2527,6 +2544,12 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
             if proj.update(delta_time):
                 completed_projectiles.append(proj)
 
+        # Update player movement
+        if is_moving:
+            if current_time - move_start_time >= move_duration:
+                player_pos = move_target
+                is_moving = False
+
         # Check hits
         for proj in completed_projectiles:
             if proj.target_position == player_pos:
@@ -2553,21 +2576,116 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
         # Get input with full frame-time window to reliably catch single presses
         key = get_numpad_key(timeout=0.033)  # Full 33ms window = 100% of frame time at 30 FPS
 
+        # Check if ESC is being held for warp escape
+        if key == 'esc':
+            warp_charging = True
+        else:
+            # If ESC was released before full charge, reset warp charge
+            if warp_charging and warp_charge_level < warp_charge_required:
+                warp_charge_level = 0.0
+            warp_charging = False
+
+        # Update warp charge
+        if warp_charging:
+            warp_charge_level = min(warp_charge_required, warp_charge_level + warp_charge_rate * delta_time)
+
+            # Check if warp is fully charged
+            if warp_charge_level >= warp_charge_required:
+                # Calculate energy cost
+                energy_cost = player_energy * warp_energy_cost_percent
+
+                if player_energy >= energy_cost:
+                    # Deduct energy
+                    player_energy -= energy_cost
+
+                    # Warp escape chance - based on agility and remaining energy
+                    base_success_chance = 0.7  # 70% base chance
+                    agility_bonus = (ship_agility - 100) / 500.0  # ±0.2 based on agility
+                    energy_bonus = (player_energy / max_energy) * 0.1  # Up to 10% bonus for high energy
+
+                    success_chance = base_success_chance + agility_bonus + energy_bonus
+                    success_chance = max(0.3, min(0.95, success_chance))  # Clamp between 30% and 95%
+
+                    if random.random() < success_chance:
+                        # SUCCESS! Escape combat
+                        print("\033[H", end="", flush=True)
+                        set_color("cyan")
+                        print("╔════════════════════════════════════════════════════════════╗\033[K")
+                        print(box_line("WARP SUCCESSFUL!", 60) + "\033[K")
+                        print("╠════════════════════════════════════════════════════════════╣\033[K")
+                        reset_color()
+                        print(box_line("Your ship warps away to another planet.", 60) + "\033[K")
+                        print(box_line(f"Energy consumed: {int(energy_cost)}/{max_energy}", 60) + "\033[K")
+                        set_color("cyan")
+                        print("╚════════════════════════════════════════════════════════════╝\033[K")
+                        reset_color()
+                        # Clear any remaining lines below
+                        print("\033[J", end="", flush=True)
+                        sleep(2)
+
+                        # Return special retreat result with updated energy
+                        return {
+                            'combo': combo,
+                            'firing_mode': firing_mode,
+                            'energy': player_energy,
+                            'target_idx': current_target_idx,
+                            'display_offset': display_offset,
+                            'damage_dealt': damage_dealt,
+                            'xp_earned': xp_earned,
+                            'retreat': True
+                        }
+                    else:
+                        # FAILURE! Take damage and reset charge
+                        warp_charge_level = 0.0
+                        warp_charging = False
+
+                        # Take heavy damage from failed warp attempt
+                        failure_damage = sum(enemy['damage'] for enemy in alive_enemies) * 2
+                        apply_damage_to_ship(player_ship, int(failure_damage))
+
+                        print("\033[H", end="", flush=True)
+                        set_color("red")
+                        print("╔════════════════════════════════════════════════════════════╗\033[K")
+                        print(box_line("WARP FAILURE!", 60) + "\033[K")
+                        print("╠════════════════════════════════════════════════════════════╣\033[K")
+                        reset_color()
+                        print(box_line("Warp drive malfunction! Hull damage!", 60) + "\033[K")
+                        print(box_line(f"Damage taken: {int(failure_damage)}", 60) + "\033[K")
+                        set_color("red")
+                        print("╚════════════════════════════════════════════════════════════╝\033[K")
+                        reset_color()
+                        sleep(1.5)
+
+                        combo = 1  # Break combo
+                else:
+                    # Not enough energy
+                    warp_charge_level = 0.0
+                    warp_charging = False
+
         # Process ALL key inputs immediately
-        if key:
+        if key and not warp_charging:  # Don't process other inputs while charging warp
             # Movement keys (numpad or regular 1-9)
-            if isinstance(key, int) and 1 <= key <= 9:
+            if isinstance(key, int) and 1 <= key <= 9 and not is_moving:
                 if key != player_pos:
-                    player_pos = key  # Instant movement!
-            elif isinstance(key, str) and key in '123456789':
+                    move_target = key
+                    move_start_time = current_time
+                    move_duration = calculate_movement_time(ship_agility, player_pos, key)
+                    is_moving = True
+            elif isinstance(key, str) and key in '123456789' and not is_moving:
                 pos = int(key)
                 if pos != player_pos:
-                    player_pos = pos  # Instant movement!
-            elif key in ['up', 'down', 'left', 'right']:
+                    move_target = pos
+                    move_start_time = current_time
+                    move_duration = calculate_movement_time(ship_agility, player_pos, pos)
+                    is_moving = True
+            elif key in ['up', 'down', 'left', 'right'] and not is_moving:
                 # Arrow key movement - calculate new position relative to current
                 new_pos = calculate_arrow_position(player_pos, key)
                 if new_pos != player_pos:
-                    player_pos = new_pos  # Instant movement!
+                    move_target = new_pos
+                    move_start_time = current_time
+                    move_duration = calculate_movement_time(ship_agility, player_pos, new_pos)
+                    is_moving = True
 
             # Space to fire (check this separately)
             if key == ' ':
@@ -2623,7 +2741,8 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
         draw_unified_combat_ui(
             player_ship, player_pos, alive_enemies, projectiles,
             combo, firing_mode, player_energy, max_energy,
-            current_target_idx, current_time - start_time, weapon_heat, display_offset
+            current_target_idx, current_time - start_time, weapon_heat, display_offset,
+            warp_charge_level, is_moving
         )
 
         sleep(0.033)  # ~30 FPS - slower, more relaxed pace
@@ -2665,11 +2784,14 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
 
 
 def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
-                           combo, firing_mode, energy, max_energy, target_idx, elapsed_time, weapon_heat, display_offset=0):
+                           combo, firing_mode, energy, max_energy, target_idx, elapsed_time, weapon_heat, display_offset=0,
+                           warp_charge_level=0.0, is_moving=False):
     """Draw the unified combat UI matching original design
 
     Args:
         display_offset: Starting index for displaying enemies (for scrolling when > 3 enemies)
+        warp_charge_level: Current warp drive charge level (0.0 to 1.0)
+        is_moving: Whether the player is currently moving to a new position
     """
     print("\033[H", end="", flush=True)
 
@@ -2760,7 +2882,7 @@ def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
         line_padding = " " * (76 - 21 - enemy_visual_len)
 
         line = f"║{grid_str}{grid_padding}{enemy_str}{line_padding}║"
-        print(line + "\033[K")
+        print(line)
 
     print("║" + " " * 76 + "║" + "\033[K")
 
@@ -2816,11 +2938,30 @@ def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
     heat_padding = " " * (76 - heat_visual_len)
     print(f"║{heat_text}{heat_padding}║\033[K")
 
+    # Warp Drive charge bar
+    if warp_charge_level > 0.0:
+        warp_bar_color = "green" if warp_charge_level >= 1.0 else "yellow"
+        warp_bar = create_health_bar(int(warp_charge_level * 100), 100, 15, warp_bar_color)
+        warp_status = "READY!" if warp_charge_level >= 1.0 else "CHARGING..."
+        warp_text = f" Warp Drive: {warp_bar} {warp_status}"
+        warp_visual_len = len(strip_ansi(warp_text))
+        warp_padding = " " * (76 - warp_visual_len)
+        print(f"║{warp_text}{warp_padding}║\033[K")
+
+    # Movement status
+    if is_moving:
+        set_color("yellow")
+        move_text = " MANEUVERING..."
+        reset_color()
+        move_visual_len = len(strip_ansi(move_text))
+        move_padding = " " * (76 - move_visual_len)
+        print(f"║{move_text}{move_padding}║\033[K")
+
     print("║" + " " * 76 + "║" + "\033[K")
 
     # Controls line (no cooldown indicator needed anymore)
     set_color("cyan")
-    controls = " [SPACE] Fire  [NUMPAD] Dodge  [Q/E/R] Mode  [TAB] Target"
+    controls = " [SPACE] Fire  [NUMPAD] Dodge  [Q/E] Mode  [TAB] Target  [ESC] Warp"
     reset_color()
     controls_visual_len = len(strip_ansi(controls))
     controls_padding = " " * (76 - controls_visual_len)
@@ -2872,7 +3013,7 @@ def player_damage_distributed(enemies, combat_skill, data):
     """Player attacks enemies with distributed damage (max 4 targets)"""
     clear_screen()
     title("FIRING WEAPONS")
-    print("\033[K")
+    print()
 
     # Limit to 4 targets max
     num_targets = min(len(enemies), 4)
@@ -2886,7 +3027,7 @@ def player_damage_distributed(enemies, combat_skill, data):
         print(f"  Engaging {num_targets} of {len(enemies)} targets...\033[K")
     else:
         print(f"  Distributing {base_damage} damage across {num_targets} targets...\033[K")
-    print("\033[K")
+    print()
     sleep(0.5)
 
     for enemy in targets:
@@ -2895,7 +3036,7 @@ def player_damage_distributed(enemies, combat_skill, data):
         apply_damage_to_enemy_verbose(enemy, damage)
         sleep(0.3)
 
-    print("\033[K")
+    print()
     input("Press Enter to continue...")
 
 
@@ -2903,18 +3044,18 @@ def player_damage_focused(enemy, combat_skill, data):
     """Player attacks single enemy with focused damage"""
     clear_screen()
     title("FOCUSED FIRE")
-    print("\033[K")
+    print()
 
     # Higher damage when focused - scales with combat skill
     damage = int((60 + (combat_skill * 3)) * random.uniform(0.9, 1.1))
 
     print(f"  Targeting {enemy['name']}...\033[K")
-    print("\033[K")
+    print()
     sleep(0.5)
 
     apply_damage_to_enemy_verbose(enemy, damage)
 
-    print("\033[K")
+    print()
     input("Press Enter to continue...")
 
 
@@ -2984,13 +3125,13 @@ def enemy_attacks(enemies, player_ship, piloting_skill, is_evading=False):
     """
     clear_screen()
     title("ENEMY TURN")
-    print("\033[K")
+    print()
 
     if is_evading:
         print("  Enemy fleet is attacking, but you're evading!\033[K")
     else:
         print("  Enemy fleet is attacking!\033[K")
-    print("\033[K")
+    print()
     sleep(0.8)
 
     total_damage = 0
@@ -3023,7 +3164,7 @@ def enemy_attacks(enemies, player_ship, piloting_skill, is_evading=False):
     non_firing = len(enemies) - len(attacking_enemies)
     if non_firing > 0:
         print(f"  {non_firing} enemy ships are repositioning and not firing this turn.\033[K")
-        print("\033[K")
+        print()
         sleep(0.5)
 
     for enemy in attacking_enemies:
@@ -3056,13 +3197,13 @@ def enemy_attacks(enemies, player_ship, piloting_skill, is_evading=False):
             print(f"  {enemy['name']} deals {damage} damage!\033[K")
             sleep(0.3)
 
-    print("\033[K")
+    print()
     print(f"  Total incoming damage: {total_damage}\033[K")
     if is_evading and total_damage > 0:
         set_color("cyan")
         print("  (Damage greatly reduced by evasive maneuvers)\033[K")
         reset_color()
-    print("\033[K")
+    print()
     sleep(0.5)
 
     # Apply damage to player
@@ -3087,7 +3228,7 @@ def enemy_attacks(enemies, player_ship, piloting_skill, is_evading=False):
         sleep(0.3)
 
         if player_ship["hull_hp"] < max_hull * 0.2:
-            print("\033[K")
+            print()
             set_color("red")
             set_color("blinking")
             print("  ⚠ CRITICAL HULL DAMAGE ⚠\033[K")
@@ -3098,23 +3239,23 @@ def attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data):
     """Attempt to retreat during combat"""
     clear_screen()
     title("ATTEMPTING RETREAT")
-    print("\033[K")
+    print()
 
     if forced_combat and turn < 2:
         print("  You cannot retreat yet!\033[K")
         print("  The enemy has you locked down.\033[K")
         print(f"  You must fight for at least 1 turn. (Turn {turn}/1)\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
         return "impossible"
 
     # Warp disruptor prevents retreat for first 5 turns
     if enemy_fleet["warp_disruptor"] and turn < 6:
         print("  ⚠ WARP DISRUPTOR ACTIVE ⚠\033[K")
-        print("\033[K")
+        print()
         print("  The enemy's warp disruption field prevents retreat!\033[K")
         print(f"  You must fight for at least 5 turns. (Turn {turn}/5)\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
         return "impossible"
 
@@ -3128,7 +3269,7 @@ def attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data):
     if enemy_fleet["warp_disruptor"]:
         retreat_chance *= 0.4
         print("  Warp disruptor is weakening, but still interfering!\033[K")
-        print("\033[K")
+        print()
 
     print("  Charging jump drive...\033[K")
     sleep(1)
@@ -3138,16 +3279,16 @@ def attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data):
     sleep(1)
 
     if random.random() < retreat_chance:
-        print("\033[K")
+        print()
         print("  Successfully retreated from combat!\033[K")
-        print("\033[K")
+        print()
 
         # Piloting XP for successful retreat
         piloting_xp = 30
         levels_gained = add_skill_xp(data, "piloting", piloting_xp)
         display_xp_gain("piloting", piloting_xp, levels_gained,
                        data["skills"]["piloting"], data["skills"]["piloting_xp"])
-        print("\033[K")
+        print()
 
         # Take damage while retreating
         player_ship = get_active_ship(data)
@@ -3165,17 +3306,17 @@ def attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data):
             max_hull = get_max_hull(player_ship)
             print(f"  Hull HP: {max(0, player_ship['hull_hp'])}/{max_hull} (-{damage_taken})\033[K")
 
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
 
         if player_ship["hull_hp"] <= 0:
             return "death"
         return "success"
     else:
-        print("\033[K")
+        print()
         print("  Retreat failed!\033[K")
         print("  You took some damage while attempting to jump away!\033[K")
-        print("\033[K")
+        print()
         sleep(1)
 
         # Take damage from enemy's opportunity attack
@@ -3183,7 +3324,7 @@ def attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data):
         damage_taken = int(enemy_fleet["total_firepower"] * 0.5 * random.uniform(0.8, 1.2))
 
         print(f"  Incoming damage: {damage_taken}\033[K")
-        print("\033[K")
+        print()
 
         if player_ship["shield_hp"] > 0:
             shield_damage = min(damage_taken, player_ship["shield_hp"])
@@ -3197,12 +3338,12 @@ def attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data):
             max_hull = get_max_hull(player_ship)
             print(f"  Hull HP: {max(0, player_ship['hull_hp'])}/{max_hull} (-{damage_taken})\033[K")
 
-        print("\033[K")
+        print()
         if player_ship['hull_hp'] > 0:
             print("  You remain engaged in combat.\033[K")
         else:
             print("  Your ship was destroyed in the attempt!\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
 
         if player_ship["hull_hp"] <= 0:
@@ -3214,7 +3355,7 @@ def show_detailed_combat_stats(player_ship, enemy_fleet, data):
     """Show detailed stats during combat"""
     clear_screen()
     title("DETAILED COMBAT STATISTICS")
-    print("\033[K")
+    print()
 
     max_shield = get_max_shield(player_ship)
     max_hull = get_max_hull(player_ship)
@@ -3224,7 +3365,7 @@ def show_detailed_combat_stats(player_ship, enemy_fleet, data):
     print(f"  Type: {player_ship.get('name', 'Unknown').title()}\033[K")
     print(f"  Shield HP: {player_ship['shield_hp']}/{max_shield}\033[K")
     print(f"  Hull HP: {player_ship['hull_hp']}/{max_hull}\033[K")
-    print("\033[K")
+    print()
 
     print("YOUR SKILLS:\033[K")
     combat_level = data['skills']['combat']
@@ -3238,7 +3379,7 @@ def show_detailed_combat_stats(player_ship, enemy_fleet, data):
     piloting_xp_needed = xp_required_for_level(piloting_level)
     print(f"  Piloting: Level {piloting_level} ({piloting_xp}/{piloting_xp_needed} XP)\033[K")
     print(f"    - Evasion Chance: {min(piloting_level * 2, 25)}%\033[K")
-    print("\033[K")
+    print()
 
     print("ENEMY FLEET:\033[K")
     print(f"  Type: {enemy_fleet['type']}\033[K")
@@ -3246,7 +3387,7 @@ def show_detailed_combat_stats(player_ship, enemy_fleet, data):
     alive_count = sum(1 for ship in enemy_fleet['ships'] if ship['hull_hp'] > 0)
     print(f"  Remaining: {alive_count}\033[K")
     print(f"  Warp Disruptor: {'ACTIVE' if enemy_fleet['warp_disruptor'] else 'None'}\033[K")
-    print("\033[K")
+    print()
 
     print("ENEMY SHIPS:\033[K")
     for ship in enemy_fleet['ships']:
@@ -3256,7 +3397,7 @@ def show_detailed_combat_stats(player_ship, enemy_fleet, data):
             print(f"    Hull: {ship['hull_hp']}/{ship['max_hull_hp']}\033[K")
             print(f"    Damage: {ship['damage']}\033[K")
 
-    print("\033[K")
+    print()
     input("Press Enter to return to combat...")
 
 
@@ -3518,15 +3659,15 @@ def scan_for_anomalies(save_name, data):
     """Scan the current system for anomalies using a system probe"""
     clear_screen()
     title("SCAN FOR ANOMALIES")
-    print("\033[K")
+    print()
 
     # Check if player has a system probe
     if data.get("inventory", {}).get("System Probe", 0) < 1:
         print("  You need a System Probe to scan for anomalies!\033[K")
-        print("\033[K")
+        print()
         print("  System Probes can be purchased from the General Marketplace\033[K")
         print("  at most space stations.\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
         return
 
@@ -3544,8 +3685,8 @@ def scan_for_anomalies(save_name, data):
     for i in range(3):
         print("  .", end="", flush=True)
         sleep(0.3)
-    print("\033[K")
-    print("\033[K")
+    print()
+    print()
     sleep(0.3)
 
     # Manage anomalies (cleanup expired + generate new if needed)
@@ -3565,18 +3706,18 @@ def scan_for_anomalies(save_name, data):
     # Display results
     clear_screen()
     title("SCAN RESULTS")
-    print("\033[K")
+    print()
     print(f"  System: {current_system}\033[K")
     system = system_data(current_system)
     system_security = system.get("SecurityLevel", "Secure")
     print(f"  Security: {system_security}\033[K")
-    print("\033[K")
+    print()
 
     if not anomalies:
         print("  No anomalies detected in this system.\033[K")
     else:
         print(f"  {len(anomalies)} anomal{'y' if len(anomalies) == 1 else 'ies'} detected:\033[K")
-        print("\033[K")
+        print()
 
         # Load system data for wormhole destinations
         try:
@@ -3614,7 +3755,7 @@ def scan_for_anomalies(save_name, data):
             else:
                 print(f"    [{i+1}] {anomaly_name}{visited_str}\033[K")
 
-    print("\033[K")
+    print()
     save_data(save_name, data)
     input("Press Enter to continue...")
 
@@ -3627,20 +3768,20 @@ def visit_anomalies_menu(save_name, data):
     if current_system not in data.get("scanned_systems", []):
         clear_screen()
         title("ANOMALIES")
-        print("\033[K")
+        print()
         print("  No anomalies have been scanned in this system yet.\033[K")
         print("  Use a System Probe to scan for anomalies.\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
         return
 
     if current_system not in data.get("anomalies", {}):
         clear_screen()
         title("ANOMALIES")
-        print("\033[K")
+        print()
         print("  No anomalies have been scanned in this system yet.\033[K")
         print("  Use a System Probe to scan for anomalies.\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
         return
 
@@ -3652,10 +3793,10 @@ def visit_anomalies_menu(save_name, data):
     if not scanned_anomalies:
         clear_screen()
         title("ANOMALIES")
-        print("\033[K")
+        print()
         print("  No anomalies have been scanned in this system yet.\033[K")
         print("  Use a System Probe to scan for anomalies.\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
         return
 
@@ -3677,9 +3818,9 @@ def visit_anomalies_menu(save_name, data):
 
         clear_screen()
         title(f"ANOMALIES - {current_system}")
-        print("\033[K")
+        print()
         print(f"  {len(scanned_anomalies)} scanned anomal{'y' if len(scanned_anomalies) == 1 else 'ies'}:\033[K")
-        print("\033[K")
+        print()
 
         options = []
         for i, anomaly in enumerate(scanned_anomalies):
@@ -3721,9 +3862,9 @@ def visit_anomaly(save_name, data, anomaly):
     else:
         clear_screen()
         title(anomaly_name.upper())
-        print("\033[K")
+        print()
         print(f"  {anomaly_name} visit not yet implemented.\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
 
 
@@ -3747,10 +3888,10 @@ def visit_wormhole(save_name, data, anomaly):
 
         clear_screen()
         title("WORMHOLE")
-        print("\033[K")
+        print()
         print("  You approach the wormhole... What a spectacular sight!\033[K")
         print("  Even the fabric of space-time appears distorted here.\033[K")
-        print("\033[K")
+        print()
 
         # Calculate remaining time
         current_time = time()
@@ -3781,7 +3922,7 @@ def visit_wormhole(save_name, data, anomaly):
                     print(f"    Stability: ~{hours_left} hour{'s' if hours_left != 1 else ''} remaining\033[K")
             else:
                 print(f"    Stability: Collapsing soon!\033[K")
-            print("\033[K")
+            print()
 
 
         previous_content = content_buffer.getvalue()
@@ -3802,15 +3943,15 @@ def visit_wormhole(save_name, data, anomaly):
             # Scan wormhole (only available if not yet scanned)
             clear_screen()
             title("WORMHOLE SCAN")
-            print("\033[K")
+            print()
             print("  Initiating deep-space scan...\033[K")
             sleep(0.5)
             print("  Analyzing gravitational distortions...\033[K")
             for i in range(3):
                 print("  .", end="", flush=True)
                 sleep(0.4)
-            print("\033[K")
-            print("\033[K")
+            print()
+            print()
             sleep(0.3)
 
             # Mark as scanned
@@ -3822,7 +3963,7 @@ def visit_wormhole(save_name, data, anomaly):
             dest_color = get_security_color(dest_security)
 
             print(f"  Scan complete!\033[K")
-            print("\033[K")
+            print()
             print(f"  Destination: {dest_color}{destination_system}{RESET_COLOR}\033[K")
             print(f"  Security Level: {dest_color}{dest_security}{RESET_COLOR}\033[K")
 
@@ -3842,7 +3983,7 @@ def visit_wormhole(save_name, data, anomaly):
                 print(f"  Warning: Wormhole is highly unstable!\033[K")
                 reset_color()
 
-            print("\033[K")
+            print()
             input("Press Enter to continue...")
 
         elif (scan_option_present and choice == 1) or (not scan_option_present and choice == 0):
@@ -3850,35 +3991,35 @@ def visit_wormhole(save_name, data, anomaly):
             if destination_system == "Unknown" or destination_system not in all_systems_data:
                 clear_screen()
                 title("WORMHOLE")
-                print("\033[K")
+                print()
                 print("  Error: Unable to establish stable connection!\033[K")
-                print("\033[K")
+                print()
                 input("Press Enter to continue...")
                 continue
 
             clear_screen()
             title("WORMHOLE TRANSIT")
-            print("\033[K")
+            print()
             print("  Engaging wormhole transit sequence...\033[K")
             sleep(0.5)
             print("  Entering event horizon...\033[K")
             sleep(0.7)
             print("  Space-time displacement in progress...\033[K")
-            print("\033[K")
+            print()
             for i in range(4):
                 print("  .", end="", flush=True)
                 sleep(0.5 + i * 0.25)
-            print("\033[K")
+            print()
             sleep(0.5)
 
             # Check if player is docked
             if data.get("docked_at"):
                 clear_screen()
                 title("WORMHOLE")
-                print("\033[K")
+                print()
                 print("  Error: Cannot transit while docked!\033[K")
                 print("         How did you even manage to attempt this?\033[K")
-                print("\033[K")
+                print()
                 input("Press Enter to continue...")
                 continue
 
@@ -3891,12 +4032,12 @@ def visit_wormhole(save_name, data, anomaly):
 
             save_data(save_name, data)
 
-            print("\033[K")
+            print()
             dest_security = all_systems_data.get(destination_system, {}).get("SecurityLevel", "Unknown")
             dest_color = get_security_color(dest_security)
             print(f"  Arrived at: {dest_color}{destination_system}{RESET_COLOR}\033[K")
             print(f"  Security Level: {dest_color}{dest_security}{RESET_COLOR}\033[K")
-            print("\033[K")
+            print()
             input("Press Enter to continue...")
 
             # Update Discord presence
@@ -3976,23 +4117,23 @@ def mine_anomaly(save_name, data, anomaly):
     if vexnium_guarded:
         clear_screen()
         title("VEXNIUM ANOMALY")
-        print("\033[K")
+        print()
         print("  ⚠ WARNING: Crystalline entities detected!\033[K")
-        print("\033[K")
+        print()
         print("  This anomaly is guarded by hostile crystalline life forms.\033[K")
         print("  They will attack if you attempt to mine here.\033[K")
-        print("\033[K")
+        print()
         print("  Proceed with caution.\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
 
     # Mining loop
     while asteroids:
         clear_screen()
         title(f"{anomaly_name.upper()} - MINING")
-        print("\033[K")
+        print()
         print(f"  {len(asteroids)} asteroid{'s' if len(asteroids) != 1 else ''} remaining\033[K")
-        print("\033[K")
+        print()
 
         options = []
         for i, asteroid in enumerate(asteroids):
@@ -4039,10 +4180,10 @@ def mine_anomaly(save_name, data, anomaly):
 
         clear_screen()
         title("ANOMALY DEPLETED")
-        print("\033[K")
+        print()
         print(f"  {anomaly_name} has been fully mined.\033[K")
         print("  The anomaly has dissipated.\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
 
 
@@ -4063,17 +4204,17 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
     if ship_class != "Miner":
         clear_screen()
         title("INEFFICIENT MINING SHIP")
-        print("\033[K")
+        print()
         set_color("yellow")
         print("  ⚠ WARNING: This ship is not designed for mining!\033[K")
         reset_color()
-        print("\033[K")
+        print()
         print(f"  Your {player_ship.get('nickname', player_ship['name'].title())} ({ship_class})\033[K")
         print("  is poorly equipped for mining operations.\033[K")
-        print("\033[K")
+        print()
         print("  Mining will be extremely slow and inefficient.\033[K")
         print("  Consider using a Miner-class ship for better results.\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue anyway...")
 
     # Get current system and security level for random events
@@ -4103,16 +4244,16 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
     if guarded and random.random() < 0.8:
         clear_screen()
         update_discord_presence(data=data, context="combat")
-        print("=" * 60 + "\033[K")
+        print("=" * 60)
         set_color("magenta")
         set_color("blinking")
         set_color("reverse")
         print("⚠ CRYSTALLINE GUARDIAN ATTACK ⚠\033[K")
         reset_color()
-        print("=" * 60 + "\033[K")
-        print("\033[K")
+        print("=" * 60)
+        print()
         print("  The crystalline guardians are attacking!\033[K")
-        print("\033[K")
+        print()
         sleep(1)
 
         # Generate crystalline enemy fleet
@@ -4154,11 +4295,11 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
         clear_screen()
         update_discord_presence(data=data, context="mining")
         title("MINING ASTEROID")
-        print("\033[K")
+        print()
         print(f"  Ore: {ore_name}\033[K")
         print(f"  Ship: {player_ship.get('nickname', player_ship['name'].title())} ({ship_class})\033[K")
         print(f"  Mining Skill: Level {mining_skill}\033[K")
-        print("\033[K")
+        print()
 
         # Display ore and stability status
         ore_percent = (remaining_ore / total_quantity) * 100
@@ -4166,7 +4307,7 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
 
         print(f"  Ore Remaining: {int(remaining_ore)}/{total_quantity} ({ore_percent:.1f}%)\033[K")
         print(f"  Asteroid Stability: {stability_color}{stability:.1f}%{RESET_COLOR}\033[K")
-        print("\033[K")
+        print()
 
         # Stability bar
         stability_bar_width = 40
@@ -4174,21 +4315,21 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
         stability_empty = stability_bar_width - stability_filled
         stability_bar = f"[{stability_color}{'█' * stability_filled}{'░' * stability_empty}{RESET_COLOR}]"
         print(f"  {stability_bar}\033[K")
-        print("\033[K")
+        print()
 
-        print("=" * 60 + "\033[K")
-        print("\033[K")
+        print("=" * 60)
+        print()
         print("  Select Mining Laser Intensity:\033[K")
-        print("\033[K")
+        print()
         print("  [1] Minimum    - Safest, slowest      (+5% stability)\033[K")
         print("  [2] Low        - Safe, slow           (neutral)\033[K")
         print("  [3] Medium     - Balanced             (-5% stability)\033[K")
         print("  [4] High       - Fast, risky          (-10% stability)\033[K")
         print("  [5] Maximum    - Fastest, dangerous   (-20% stability)\033[K")
-        print("\033[K")
+        print()
         print("  [ESC] Stop mining and leave\033[K")
-        print("\033[K")
-        print("=" * 60 + "\033[K")
+        print()
+        print("=" * 60)
 
         # Get player choice
         choice = None
@@ -4242,11 +4383,11 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
         # Display mining action
         clear_screen()
         title("MINING IN PROGRESS")
-        print("\033[K")
+        print()
         set_color("cyan")
         print(f"  Firing mining laser at intensity {intensity}...\033[K")
         reset_color()
-        print("\033[K")
+        print()
         sleep(0.5)
 
         # Random events check
@@ -4272,15 +4413,15 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                 if ship_damage > 0:
                     ship_destroyed = apply_damage_to_player(player_ship, ship_damage)
                     if ship_destroyed:
-                        print("\033[K")
+                        print()
                         set_color("red")
                         set_color("blinking")
                         print("     ⚠ CRITICAL: SHIP DESTROYED ⚠\033[K")
                         reset_color()
-                        print("\033[K")
+                        print()
                         input("Press Enter to continue...")
                         return "death"
-                print("\033[K")
+                print()
                 input("Press Enter to continue...")
 
 
@@ -4292,7 +4433,7 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                 print(f"  Dense Mineral Formation Uncovered!\033[K")
                 reset_color()
                 print(f"     Bonus: +{bonus_ore:.1f} units of {ore_name}\033[K")
-                print("\033[K")
+                print()
                 input("Press Enter to continue...")
 
 
@@ -4307,19 +4448,19 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                 reset_color()
                 print(f"     {ore_lost:.1f} units of ore broke off\033[K")
                 print(f"     {recoverable:.1f} units are recoverable if you act fast!\033[K")
-                print("\033[K")
+                print()
                 print("  [A] Act fast to recover ore\033[K")
                 print("  [Any other key] Continue mining\033[K")
-                print("\033[K")
+                print()
 
                 key = get_key()
                 if key == 'a':
                     # Quick time event - player has to spam a key
-                    print("\033[K")
+                    print()
                     set_color("cyan")
                     print("  Quickly press SPACE to recover ore!\033[K")
                     reset_color()
-                    print("\033[K")
+                    print()
 
                     recovered = 0
                     start_time = time()
@@ -4335,9 +4476,9 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                     recovered = recoverable * recovery_rate
                     ore_extracted += recovered
 
-                    print("\033[K")
+                    print()
                     print(f"  Recovered {recovered:.1f} units! ({recovery_rate * 100:.0f}%)\033[K")
-                    print("\033[K")
+                    print()
                     sleep(1.5)
 
             elif event_type == "artifact":
@@ -4348,7 +4489,7 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                     print(f"  Ancient Artifact Vaporized!\033[K")
                     reset_color()
                     print(f"     The high-intensity laser destroyed a valuable artifact!\033[K")
-                    print("\033[K")
+                    print()
                     input("Press Enter to continue...")
                 else:
                     set_color("green")
@@ -4356,7 +4497,7 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                     reset_color()
                     print(f"     Added to inventory: Ancient Artifact\033[K")
                     print(f"     This can be sold for a high price!\033[K")
-                    print("\033[K")
+                    print()
 
                     if "Ancient Artifact" not in data.get("inventory", {}):
                         data["inventory"]["Ancient Artifact"] = 0
@@ -4378,14 +4519,14 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                     print(f"  MINE DETONATED!\033[K")
                     reset_color()
                     print(f"     Asteroid destroyed - all remaining ore lost\033[K")
-                    print("\033[K")
+                    print()
 
                     if ship_destroyed:
                         set_color("red")
                         set_color("blinking")
                         print("     ⚠ CRITICAL: SHIP DESTROYED ⚠\033[K")
                         reset_color()
-                        print("\033[K")
+                        print()
                         input("Press Enter to continue...")
                         return "death"
 
@@ -4394,13 +4535,13 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                     set_color("green")
                     print(f"  Mine successfully defused!\033[K")
                     reset_color()
-                    print("\033[K")
+                    print()
                     input("Press Enter to continue...")
                 else:
                     set_color("yellow")
                     print(f"  You decided to skip this asteroid to avoid the mine\033[K")
                     reset_color()
-                    print("\033[K")
+                    print()
                     sleep(1.5)
                     return "skipped"
 
@@ -4410,11 +4551,11 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
             set_color("yellow")
             print(f"  ⚠ {vaporized:.1f} units vaporized by high-intensity laser\033[K")
             reset_color()
-            print("\033[K")
+            print()
             sleep(1)
 
         print(f"  Extracted: {ore_extracted:.1f} units of {ore_name}\033[K")
-        print("\033[K")
+        print()
 
         remaining_ore -= ore_extracted
         remaining_ore = max(0, remaining_ore)
@@ -4452,18 +4593,18 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
             clear_screen()
             set_color("red")
             set_color("blinking")
-            print("\033[K")
+            print()
             print("  " + "=" * 56 + "\033[K")
             print("  ⚠ ⚠ ⚠  CRITICAL STABILITY FAILURE  ⚠ ⚠ ⚠\033[K")
             print("  " + "=" * 56 + "\033[K")
             reset_color()
-            print("\033[K")
+            print()
             sleep(1)
 
             set_color("red")
             print("  The asteroid is exploding!\033[K")
             reset_color()
-            print("\033[K")
+            print()
             sleep(1)
 
             # Massive ship damage
@@ -4471,14 +4612,14 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
             ship_destroyed = apply_damage_to_player(player_ship, explosion_damage)
 
             print(f"  ⚠ All remaining ore vaporized\033[K")
-            print("\033[K")
+            print()
 
             if ship_destroyed:
                 set_color("red")
                 set_color("blinking")
                 print("  ⚠ CRITICAL: SHIP DESTROYED ⚠\033[K")
                 reset_color()
-                print("\033[K")
+                print()
                 input("Press Enter to continue...")
                 return "death"
 
@@ -4504,13 +4645,13 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
 
         clear_screen()
         title("MINING COMPLETE")
-        print("\033[K")
+        print()
         print(f"  Collected {ore_collected}x {ore_name}!\033[K")
-        print("\033[K")
+        print()
 
         display_xp_gain("mining", total_xp_gained, levels_gained, new_level, new_xp)
 
-        print("\033[K")
+        print()
         save_data(save_name, data)
         sleep(1)
         input("Press Enter to continue...")
@@ -4650,21 +4791,21 @@ def trigger_mining_event(event_type, data, ore_name, stability, intensity):
         clear_screen()
         set_color("red")
         set_color("blinking")
-        print("\033[K")
+        print()
         print("  " + "=" * 56 + "\033[K")
         print("  ⚠ ⚠ ⚠  PROXIMITY MINE DETECTED  ⚠ ⚠ ⚠\033[K")
         print("  " + "=" * 56 + "\033[K")
         reset_color()
-        print("\033[K")
+        print()
         sleep(1)
 
         print("  This asteroid has an explosive mine attached!\033[K")
-        print("\033[K")
+        print()
         print("  What do you want to do?\033[K")
-        print("\033[K")
+        print()
         print("  [D] Attempt to defuse the mine (risky)\033[K")
         print("  [S] Skip this asteroid entirely\033[K")
-        print("\033[K")
+        print()
 
         choice = None
         while choice not in ['d', 's']:
@@ -4675,7 +4816,7 @@ def trigger_mining_event(event_type, data, ore_name, stability, intensity):
             mining_skill = data.get("skills", {}).get("mining", 0)
             success_chance = max(0.8, 0.5 + (mining_skill * 0.03))  # 50% base, +3% per level, caps at 80%
 
-            print("\033[K")
+            print()
             set_color("cyan")
             print("  Attempting to defuse...\033[K")
             reset_color()
@@ -4732,11 +4873,11 @@ def visit_refinery(save_name, data):
     while True:
         clear_screen()
         title("REFINERY")
-        print("\033[K")
+        print()
         print("  Process ores and salvage into refined materials\033[K")
-        print("\033[K")
-        print("=" * 60 + "\033[K")
-        print("\033[K")
+        print()
+        print("=" * 60)
+        print()
 
         # Get refinable items from inventory
         refinable_items = []
@@ -4752,7 +4893,7 @@ def visit_refinery(save_name, data):
 
         if not refinable_items:
             print("  You don't have any items that can be refined.\033[K")
-            print("\033[K")
+            print()
             input("Press Enter to continue...")
             return
 
@@ -4775,19 +4916,19 @@ def visit_refinery(save_name, data):
 
         clear_screen()
         title("REFINING")
-        print("\033[K")
+        print()
         print(f"Item: {item_name}\033[K")
         print(f"Available: {quantity}\033[K")
-        print("\033[K")
+        print()
 
         if item_name == "Metal Scraps":
             print("Metal Scraps have a 20% chance to refine into a random material.\033[K")
             print("Higher tier materials are rarer.\033[K")
-            print("\033[K")
+            print()
             print(f"How many would you like to process? (0 to cancel, Enter for max [{quantity}]): ", end="")
         else:
             print(f"Refines into: {material} (x{yield_amount} per ore)\033[K")
-            print("\033[K")
+            print()
             print(f"How many would you like to refine? (0 to cancel, Enter for max [{quantity}]): ", end="")
 
         try:
@@ -4801,9 +4942,9 @@ def visit_refinery(save_name, data):
             if amount <= 0:
                 continue
             if amount > quantity:
-                print("\033[K")
+                print()
                 print("You don't have that many!\033[K")
-                print("\033[K")
+                print()
                 input("Press Enter to continue...")
                 continue
 
@@ -4840,12 +4981,12 @@ def visit_refinery(save_name, data):
                                 materials_gained[mat] = materials_gained.get(mat, 0) + 1
                                 break
 
-                print("\033[K")
+                print()
                 print(f"Processed {amount} Metal Scraps\033[K")
                 print(f"Successful refines: {successful_refines} ({int(successful_refines/amount*100)}%)\033[K")
 
                 if materials_gained:
-                    print("\033[K")
+                    print()
                     print("Materials gained:\033[K")
                     for mat, qty in materials_gained.items():
                         if mat not in data["inventory"]:
@@ -4863,18 +5004,18 @@ def visit_refinery(save_name, data):
                     data["inventory"][material] = 0
                 data["inventory"][material] += total_yield
 
-                print("\033[K")
+                print()
                 print(f"Refined {amount}x {item_name}\033[K")
                 print(f"Produced: {total_yield}x {material}\033[K")
 
-            print("\033[K")
+            print()
             save_data(save_name, data)
             input("Press Enter to continue...")
 
         except ValueError:
-            print("\033[K")
+            print()
             print("Invalid input!\033[K")
-            print("\033[K")
+            print()
             input("Press Enter to continue...")
 
 
@@ -4891,7 +5032,7 @@ def visit_manufacturing_bay(save_name, data):
         sys.stdout = content_buffer
 
         title("MANUFACTURING BAY")
-        print("\033[K")
+        print()
 
         previous_content = content_buffer.getvalue()
         sys.stdout = old_stdout
@@ -4923,9 +5064,9 @@ def manufacturing_craft_menu(save_name, data, craft_type):
     if not recipes:
         clear_screen()
         title(f"MANUFACTURING - {craft_type.upper()}S")
-        print("\033[K")
+        print()
         print(f"No {craft_type}s available for crafting.\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
         return
 
@@ -4950,10 +5091,10 @@ def manufacturing_craft_menu(save_name, data, craft_type):
 
         # Build display
         title(f"MANUFACTURING - {craft_type.upper()}S")
-        print("\033[K")
+        print()
         print(f"Page {current_page + 1}/{max_page + 1}\033[K")
-        print("\033[K")
-        print("=" * 60 + "\033[K")
+        print()
+        print("=" * 60)
 
         previous_content = content_buffer.getvalue()
         sys.stdout = old_stdout
@@ -5021,7 +5162,7 @@ def show_craft_details(save_name, data, item_name, recipe, items_data, ships_dat
 
     # Build display
     title(f"CRAFT: {item_name}")
-    print("\033[K")
+    print()
 
     # Show item info
     item_info = items_data.get(item_name, {})
@@ -5039,7 +5180,7 @@ def show_craft_details(save_name, data, item_name, recipe, items_data, ships_dat
         # Show ship stats
         stats = ship_info.get('stats', {})
         if stats:
-            print("\033[K")
+            print()
             print("Ship Stats:\033[K")
             for stat_name, stat_value in stats.items():
                 print(f"  {stat_name}: {stat_value}\033[K")
@@ -5048,12 +5189,12 @@ def show_craft_details(save_name, data, item_name, recipe, items_data, ships_dat
         wrapped_desc = wrap_text(desc, 60)
         print(f"Description: {wrapped_desc}\033[K")
 
-    print("\033[K")
+    print()
 
     # Show crafting time
     craft_time = recipe.get('time', 0)
     print(f"Crafting Time: {craft_time:.0f} seconds\033[K")
-    print("\033[K")
+    print()
 
     # Show required materials
     print("Required Materials:\033[K")
@@ -5071,8 +5212,8 @@ def show_craft_details(save_name, data, item_name, recipe, items_data, ships_dat
             print(f"  x {mat_name}: {mat_qty} (You have: {player_qty})\033[K")
             has_all_materials = False
 
-    print("\033[K")
-    print("=" * 60 + "\033[K")
+    print()
+    print("=" * 60)
 
     previous_content = content_buffer.getvalue()
     sys.stdout = old_stdout
@@ -5104,10 +5245,10 @@ def show_craft_details(save_name, data, item_name, recipe, items_data, ships_dat
 
             clear_screen()
             title(f"CRAFT: {item_name}")
-            print("\033[K")
+            print()
             print(f"How many would you like to craft? (Max: {max_quantity})\033[K")
             print("Press Enter for 1, or type a number:\033[K")
-            print("\033[K")
+            print()
 
             try:
                 quantity_input = input("> ").strip()
@@ -5176,7 +5317,7 @@ def start_crafting(save_name, data, item_name, recipe, quantity=1):
 
     clear_screen()
     title("CRAFTING STARTED")
-    print("\033[K")
+    print()
     if quantity == 1:
         print(f"Started crafting: {item_name}\033[K")
     else:
@@ -5186,10 +5327,10 @@ def start_crafting(save_name, data, item_name, recipe, quantity=1):
     print(f"Time per item: {recipe.get('time', 0):.0f} seconds\033[K")
     if quantity > 1:
         print(f"Total time: {recipe.get('time', 0) * quantity:.0f} seconds\033[K")
-    print("\033[K")
+    print()
     print("You can check progress in 'View Manufacturing Jobs'.\033[K")
     print("Crafting will continue even when you're not at this station.\033[K")
-    print("\033[K")
+    print()
     input("Press Enter to continue...")
 
 
@@ -5267,9 +5408,9 @@ def view_manufacturing_jobs(save_name, data):
         if not job_groups:
             clear_screen()
             title("MANUFACTURING JOBS")
-            print("\033[K")
+            print()
             print("  No active manufacturing jobs.\033[K")
-            print("\033[K")
+            print()
             input("Press Enter to continue...")
             return
 
@@ -5309,9 +5450,9 @@ def view_manufacturing_jobs(save_name, data):
         # Display jobs with live updating
         clear_screen()
         title("MANUFACTURING JOBS")
-        print("\033[K")
+        print()
         print("Active Jobs:\033[K")
-        print("\033[K")
+        print()
 
         for i, group in enumerate(all_groups):
             item_name = group['item_name']
@@ -5342,12 +5483,12 @@ def view_manufacturing_jobs(save_name, data):
 
             print(f"{chr(ord('a') + i)}) {item_display} - {station}\033[K")
             print(f"   [{bar}] {avg_progress:.1f}%{status}\033[K")
-            print("\033[K")
+            print()
 
-        print("=" * 60 + "\033[K")
-        print("\033[K")
+        print("=" * 60)
+        print()
         print("[a-z] Select job | [ESC] Back\033[K")
-        print("\033[K")
+        print()
 
         # Wait for input with timeout for live updating
         key = get_key_nonblocking(timeout=0.125)
@@ -5391,7 +5532,7 @@ def collect_crafted_items_group(save_name, data, group):
     clear_screen()
     if item_type == 'ship':
         title("SHIPS CRAFTED")
-        print("\033[K")
+        print()
         if count == 1:
             print(f"✓ {item_name} ship item has been added to your inventory!\033[K")
         else:
@@ -5399,14 +5540,14 @@ def collect_crafted_items_group(save_name, data, group):
         print(f"  You can assemble them from the Ship Terminal or form your inventory.\033[K")
     else:
         title("ITEMS CRAFTED")
-        print("\033[K")
+        print()
         if count == 1:
             print(f"✓ {item_name} has been added to your inventory!\033[K")
         else:
             print(f"✓ {item_name} x{count} have been added to your inventory!\033[K")
 
     save_data(save_name, data)
-    print("\033[K")
+    print()
     input("Press Enter to continue...")
 
 
@@ -5421,14 +5562,14 @@ def show_job_group_details(group):
 
     clear_screen()
     title("JOB GROUP DETAILS")
-    print("\033[K")
+    print()
     print(f"Item: {item_name}\033[K")
     if count > 1:
         print(f"Quantity: {count}\033[K")
     print(f"Location: {station}\033[K")
     print(f"Average Progress: {avg_progress:.1f}%\033[K")
     print(f"Completed: {completed_count}/{count}\033[K")
-    print("\033[K")
+    print()
 
     # Show individual job progress if there are multiple
     if count > 1:
@@ -5441,14 +5582,14 @@ def show_job_group_details(group):
 
             status = "Complete" if elapsed >= job['craft_time'] else f"{remaining:.0f}s remaining"
             print(f"  {i}. Progress: {progress:.1f}% - {status}\033[K")
-        print("\033[K")
+        print()
 
     if group['all_complete']:
         print("Status: All jobs complete! Return to this station to collect.\033[K")
     else:
         print("Status: In Progress\033[K")
 
-    print("\033[K")
+    print()
     input("Press Enter to continue...")
 
 
@@ -5472,16 +5613,16 @@ def collect_crafted_item(save_name, data, job_info):
     clear_screen()
     if item_type == 'ship':
         title("SHIP CRAFTED")
-        print("\033[K")
+        print()
         print(f"✓ {item_name} ship item has been added to your inventory!\033[K")
         print(f"  You can assemble it from the Ship Terminal or from your inventory.\033[K")
     else:
         title("ITEM CRAFTED")
-        print("\033[K")
+        print()
         print(f"✓ {item_name} has been added to your inventory!\033[K")
 
     save_data(save_name, data)
-    print("\033[K")
+    print()
     input("Press Enter to continue...")
 
 
@@ -5496,19 +5637,19 @@ def show_job_details(job_info):
 
     clear_screen()
     title("JOB DETAILS")
-    print("\033[K")
+    print()
     print(f"Item: {job['item']}\033[K")
     print(f"Location: {station}\033[K")
     print(f"Progress: {progress:.1f}%\033[K")
     print(f"Time Remaining: {remaining:.0f} seconds\033[K")
-    print("\033[K")
+    print()
 
     if job_info['is_complete']:
         print("Status: Complete! Return to this station to collect.\033[K")
     else:
         print("Status: In Progress\033[K")
 
-    print("\033[K")
+    print()
     input("Press Enter to continue...")
 
 
@@ -5516,11 +5657,11 @@ def game_loop(save_name, data):
     clear_screen()
     if data["v"] < SAVE_VERSION_CODE:
         title("CONTINUE GAME")
-        print("\033[K")
+        print()
         print("ERROR: Save file is of an older data format.\033[K")
         print("       No migration method has been programmed.\033[K")
         print("       This save file can therefore not be loaded.\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to return to main menu")
         return
 
@@ -5556,12 +5697,12 @@ def main_screen(save_name, data):
         gate_name = gate_mapping[system_name]
         # Show discovery message
         clear_screen()
-        print("\033[K")
+        print()
         set_color("cyan")
         print(f"  ⚬ ANOMALOUS SIGNATURE DETECTED ⚬\033[K")
         print(f"  New system discovered: {gate_name}\033[K")
         reset_color()
-        print("\033[K")
+        print()
         sleep(2)
 
     if data["docked_at"] != "":
@@ -5591,7 +5732,7 @@ def main_screen(save_name, data):
     sys.stdout = content_buffer
 
     title(f"CURRENT SYSTEM: {system_name}  [{system["SecurityLevel"].upper()}]")
-    print(f"  {system["Region"]} > {system["Sector"]}\033[K")
+    print(f"  {system["Region"]} > {system["Sector"]}")
 
     # Show destination info if set
     destination = data.get("destination", "")
@@ -5668,34 +5809,34 @@ def main_screen(save_name, data):
         clear_screen()
 
         title(f"CURRENT SYSTEM: {system_name}  [{system["SecurityLevel"].upper()}]")
-        print(f"  {system["Region"]} > {system["Sector"]}\033[K")
+        print(f"  {system["Region"]} > {system["Sector"]}")
         title(f"CREDITS: ¢{data["credits"]}")
-        print("\033[K")
-        print("=" * 60 + "\033[K")
+        print()
+        print("=" * 60)
         print("  ", end="")
         set_color("red")
         set_color("blinking")
         set_color("reverse")
         print(" ⚠ HOSTILE CONTACT ⚠ \033[K")
         reset_color()
-        print("=" * 60 + "\033[K")
-        print("\033[K")
+        print("=" * 60)
+        print()
         print("A fleet of pirates approaches!\033[K")
         title("What will you do?")
-        print("\033[K")
+        print()
         print("  > Fight!\033[K")
         print("    Attempt to Escape\033[K")
         print("    Ignore and Tank Damage\033[K")
-        print("\033[K")
+        print()
         print("  Use ↑/↓ arrows to navigate, Enter to select\033[K")
         sleep(0.75)
 
         clear_screen()
 
         title(f"CURRENT SYSTEM: {system_name}  [{system["SecurityLevel"].upper()}]")
-        print(f"  {system["Region"]} > {system["Sector"]}\033[K")
+        print(f"  {system["Region"]} > {system["Sector"]}")
         title(f"CREDITS: ¢{data["credits"]}")
-        print("\033[K")
+        print()
         print("The fleet of pirates obliterated your ship! You died.\033[K")
         sleep(2)
 
@@ -5740,7 +5881,7 @@ def view_status_screen(data):
     """Display player status including ship and skills"""
     clear_screen()
     title("STATUS")
-    print("\033[K")
+    print()
 
     player_ship = get_active_ship(data)
     max_shield = get_max_shield(player_ship)
@@ -5754,7 +5895,7 @@ def view_status_screen(data):
     print("PILOT INFORMATION:\033[K")
     print(f"  Name: {data['player_name']}\033[K")
     print(f"  Credits: ¢{data['credits']}\033[K")
-    print("\033[K")
+    print()
 
     print("ACTIVE SHIP:\033[K")
     print(f"  Name: {player_ship.get('nickname', 'Unknown')}\033[K")
@@ -5765,7 +5906,7 @@ def view_status_screen(data):
     print(f"  Hull HP: {player_ship['hull_hp']}/{max_hull}\033[K")
     hull_percent = int((player_ship['hull_hp'] / max_hull) * 100)
     print(f"  Hull:   [{create_health_bar(player_ship['hull_hp'], max_hull, 30, 'red')}] {hull_percent}%\033[K")
-    print("\033[K")
+    print()
 
     print("SKILLS:\033[K")
     combat_level = data['skills']['combat']
@@ -5775,7 +5916,7 @@ def view_status_screen(data):
     print(f"    - Increases damage dealt\033[K")
     print(f"    - Reduces damage taken\033[K")
     print(f"    - Current damage bonus: +{combat_level * 2}\033[K")
-    print("\033[K")
+    print()
 
     piloting_level = data['skills']['piloting']
     piloting_xp = data['skills'].get('piloting_xp', 0)
@@ -5784,20 +5925,20 @@ def view_status_screen(data):
     print(f"    - Increases evasion chance in combat\033[K")
     print(f"    - Improves escape success rate\033[K")
     print(f"    - Current evasion chance: {min(piloting_level * 2, 25)}%\033[K")
-    print("\033[K")
+    print()
 
     # Ship status warnings
     if player_ship['hull_hp'] < max_hull * 0.3:
         set_color("red")
         print("⚠ WARNING: Hull damage detected! Visit a repair bay soon.\033[K")
         reset_color()
-        print("\033[K")
+        print()
 
     if player_ship['shield_hp'] < max_shield * 0.5:
         set_color("yellow")
         print("⚠ NOTICE: Shields need recharging.\033[K")
         reset_color()
-        print("\033[K")
+        print()
 
     input("Press Enter to continue...")
 
@@ -5805,7 +5946,7 @@ def view_status_screen(data):
 def type_lines(lines):
     for line in lines:
         if line == "":
-            print("\033[K")
+            print()
         else:
             for char in line:
                 print(char, end='', flush=True)
@@ -5826,7 +5967,7 @@ def type_lines(lines):
                         delay = 0.025
 
                 sleep(delay)
-            print("\033[K")
+            print()
         sleep(0.15)
 
 def warp_to_gate_system(gate_name, save_name, data):
@@ -5919,7 +6060,7 @@ def warp_to_gate_system(gate_name, save_name, data):
 
     # Display lore with typing effect
     type_lines(lore_lines)
-    print("\033[K")
+    print()
     sleep(3)
     input("Press Enter to continue...")
 
@@ -5962,13 +6103,13 @@ def warp_to_gate_system(gate_name, save_name, data):
             try:
                 with open(resource_path(f'ascii_art/{random_file}'), 'r', encoding='utf-8') as f:
                     art = f.read()
-                print(art + "\033[K")
+                print(art)
             except FileNotFoundError:
                 print(f"[ASCII art file {random_file} not found]\033[K")
 
-            print("\033[K")
+            print()
             print(f"Press Enter to return to {previous_system}\033[K")
-            print("\033[K")
+            print()
 
             # Wait for frame duration or until stop signal
             stop_animation.wait(timeout=0.125)
@@ -5988,17 +6129,17 @@ def warp_to_gate_system(gate_name, save_name, data):
         try:
             with open(resource_path('ascii_art/gate.txt'), 'r', encoding='utf-8') as f:
                 art = f.read()
-            print(art + "\033[K")
+            print(art)
         except FileNotFoundError:
             print("[Gate ASCII art not found]\033[K")
-            print("\033[K")
+            print()
             print("     ═══════════════════════════\033[K")
             print("    ║                           ║\033[K")
             print("    ║     ANCIENT STARGATE      ║\033[K")
             print("    ║                           ║\033[K")
             print("     ═══════════════════════════\033[K")
 
-        print("\033[K")
+        print()
         print(f"Press Enter to return to {previous_system}\033[K")
 
         # Wait for Enter key
@@ -6224,7 +6365,7 @@ def station_screen(system, station_num, save_name, data):
     if "Stations" not in system or not system["Stations"]:
         clear_screen()
         title("NO STATION")
-        print("\033[K")
+        print()
         print("This system does not have any orbital stations.\033[K")
         print("You cannot dock here.\033[K")
         input("Press Enter to continue...")
@@ -6355,7 +6496,7 @@ def station_screen(system, station_num, save_name, data):
         # All other options - not implemented yet
         clear_screen()
         title(options[choice].upper().replace("VISIT ", ""))
-        print("\033[K")
+        print()
         print("Not implemented yet\033[K")
         input("Press Enter to continue...")
 
@@ -6364,7 +6505,7 @@ def visit_repair_bay(save_name, data):
     """Repair ship hull and shields"""
     clear_screen()
     title("REPAIR BAY")
-    print("\033[K")
+    print()
 
     player_ship = get_active_ship(data)
     max_hull = get_max_hull(player_ship)
@@ -6372,13 +6513,13 @@ def visit_repair_bay(save_name, data):
     hull_damage = max_hull - player_ship["hull_hp"]
 
     print(f"Ship: {player_ship.get('nickname', 'Unknown')}\033[K")
-    print("\033[K")
+    print()
     print(f"Hull HP:   {player_ship['hull_hp']}/{max_hull}\033[K")
-    print("\033[K")
+    print()
 
     if hull_damage == 0:
         print("Your ship is already in perfect condition!\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
         return
 
@@ -6386,7 +6527,7 @@ def visit_repair_bay(save_name, data):
     player_ship["hull_hp"] = max_hull
 
     print("Hull fully repaired!\033[K")
-    print("\033[K")
+    print()
 
     save_data(save_name, data)
     input("Press Enter to continue...")
@@ -6403,7 +6544,7 @@ def visit_marketplace(save_name, data):
         sys.stdout = content_buffer
 
         title("GENERAL MARKETPLACE")
-        print("\033[K")
+        print()
         print(f"  Credits: {data['credits']}\033[K")
 
         previous_content = content_buffer.getvalue()
@@ -6442,9 +6583,9 @@ def marketplace_buy(save_name, data, items_data):
         if not buyable_items:
             clear_screen()
             title("MARKETPLACE - BUY")
-            print("\033[K")
+            print()
             print("No items available for purchase.\033[K")
-            print("\033[K")
+            print()
             input("Press Enter to continue...")
             return
 
@@ -6454,10 +6595,10 @@ def marketplace_buy(save_name, data, items_data):
         sys.stdout = content_buffer
 
         print("MARKETPLACE - BUY\033[K")
-        print("\033[K")
+        print()
         print(f"Credits: {data['credits']}\033[K")
-        print("\033[K")
-        print("=" * 60 + "\033[K")
+        print()
+        print("=" * 60)
 
         previous_content = content_buffer.getvalue()
         sys.stdout = old_stdout
@@ -6485,19 +6626,19 @@ def marketplace_buy(save_name, data, items_data):
 
         clear_screen()
         title("PURCHASE ITEM")
-        print("\033[K")
+        print()
         print(f"Item: {item_name}\033[K")
         print(f"Type: {item_info.get('type', 'Unknown')}\033[K")
         desc = item_info.get('description', 'No description available.')
         print(f"Description: {wrap_text(desc, 60)}\033[K")
-        print("\033[K")
+        print()
         print(f"Price: {price} CR\033[K")
         print(f"Your Credits: {data['credits']} CR\033[K")
-        print("\033[K")
+        print()
 
         if data['credits'] < price:
             print("You don't have enough credits!\033[K")
-            print("\033[K")
+            print()
             input("Press Enter to continue...")
             continue
 
@@ -6515,10 +6656,10 @@ def marketplace_buy(save_name, data, items_data):
                 total_cost = price * quantity
 
                 # Confirm purchase of max quantity
-                print("\033[K")
+                print()
                 print(f"Purchase {quantity}x {item_name} for {total_cost} CR?\033[K")
                 print(f"(This will use {int(total_cost/data['credits']*100)}% of your credits)\033[K")
-                print("\033[K")
+                print()
                 confirm = input("Confirm? (y/n): ").strip().lower()
                 if confirm != 'y':
                     continue
@@ -6530,9 +6671,9 @@ def marketplace_buy(save_name, data, items_data):
                 continue
 
             if data['credits'] < total_cost:
-                print("\033[K")
+                print()
                 print("You don't have enough credits for that quantity!\033[K")
-                print("\033[K")
+                print()
                 input("Press Enter to continue...")
                 continue
 
@@ -6544,15 +6685,15 @@ def marketplace_buy(save_name, data, items_data):
 
             save_data(save_name, data)
 
-            print("\033[K")
+            print()
             print(f"Purchased {quantity}x {item_name} for {total_cost} CR\033[K")
-            print("\033[K")
+            print()
             input("Press Enter to continue...")
 
         except ValueError:
-            print("\033[K")
+            print()
             print("Invalid input!\033[K")
-            print("\033[K")
+            print()
             input("Press Enter to continue...")
 
 
@@ -6565,10 +6706,10 @@ def marketplace_sell(save_name, data, items_data):
         sys.stdout = content_buffer
 
         print("MARKETPLACE - SELL\033[K")
-        print("\033[K")
+        print()
         print(f"Credits: {data['credits']}\033[K")
-        print("\033[K")
-        print("=" * 60 + "\033[K")
+        print()
+        print("=" * 60)
 
         previous_content = content_buffer.getvalue()
         sys.stdout = old_stdout
@@ -6593,9 +6734,9 @@ def marketplace_sell(save_name, data, items_data):
         if not source:
             clear_screen()
             title("MARKETPLACE - SELL")
-            print("\033[K")
+            print()
             print(f"Your {source_name} is empty.\033[K")
-            print("\033[K")
+            print()
             input("Press Enter to continue...")
             continue
 
@@ -6610,9 +6751,9 @@ def marketplace_sell(save_name, data, items_data):
         if not sellable_items:
             clear_screen()
             title("MARKETPLACE - SELL")
-            print("\033[K")
+            print()
             print(f"No sellable items in your {source_name}.\033[K")
-            print("\033[K")
+            print()
             input("Press Enter to continue...")
             continue
 
@@ -6627,10 +6768,10 @@ def marketplace_sell(save_name, data, items_data):
             sys.stdout = content_buffer
 
             print(f"MARKETPLACE - SELL FROM {source_name.upper()}\033[K")
-            print("\033[K")
+            print()
             print(f"Credits: {data['credits']}\033[K")
-            print("\033[K")
-            print("=" * 60 + "\033[K")
+            print()
+            print("=" * 60)
 
             previous_content = content_buffer.getvalue()
             sys.stdout = old_stdout
@@ -6655,16 +6796,16 @@ def marketplace_sell(save_name, data, items_data):
 
             clear_screen()
             title("SELL ITEM")
-            print("\033[K")
+            print()
             print(f"Item: {item_name}\033[K")
             print(f"Type: {item_info.get('type', 'Unknown')}\033[K")
             desc = item_info.get('description', 'No description available.')
             print(f"Description: {wrap_text(desc, 60)}\033[K")
-            print("\033[K")
+            print()
             print(f"Sell Price: {price} CR (each)\033[K")
             print(f"Available: {available_quantity}\033[K")
             print(f"Your Credits: {data['credits']} CR\033[K")
-            print("\033[K")
+            print()
 
             # Ask how many to sell
             print(f"Enter quantity to sell (0 to cancel, Enter for max [{available_quantity}]): ", end="")
@@ -6680,9 +6821,9 @@ def marketplace_sell(save_name, data, items_data):
                     continue
 
                 if quantity > available_quantity:
-                    print("\033[K")
+                    print()
                     print("You don't have that many!\033[K")
-                    print("\033[K")
+                    print()
                     input("Press Enter to continue...")
                     continue
 
@@ -6702,9 +6843,9 @@ def marketplace_sell(save_name, data, items_data):
 
                 save_data(save_name, data)
 
-                print("\033[K")
+                print()
                 print(f"Sold {quantity}x {item_name} for {total_value} CR\033[K")
-                print("\033[K")
+                print()
                 input("Press Enter to continue...")
 
                 # If no more items to sell, go back
@@ -6712,9 +6853,9 @@ def marketplace_sell(save_name, data, items_data):
                     break
 
             except ValueError:
-                print("\033[K")
+                print()
                 print("Invalid input!\033[K")
-                print("\033[K")
+                print()
                 input("Press Enter to continue...")
 
 
@@ -6722,7 +6863,7 @@ def view_inventory(data):
     """View current inventory"""
     clear_screen()
     title("INVENTORY")
-    print("\033[K")
+    print()
 
     inventory = data.get('inventory', {})
 
@@ -6730,7 +6871,7 @@ def view_inventory(data):
         print("Your inventory is empty.\033[K")
     else:
         print("Current Inventory:\033[K")
-        print("=" * 60 + "\033[K")
+        print("=" * 60)
 
         # Load items data to show descriptions
         items_data = load_items_data()
@@ -6749,7 +6890,7 @@ def view_inventory(data):
                 for line in wrapped_desc.split('\n'):
                     print(f"    {line}\033[K")
 
-    print("\033[K")
+    print()
     input("Press Enter to continue...")
 
 
@@ -6758,12 +6899,12 @@ def access_global_storage(save_name, data):
     while True:
         clear_screen()
         title("GLOBAL STORAGE")
-        print("\033[K")
+        print()
 
         inventory = data.get('inventory', {})
         storage = data.get('storage', {})
 
-        print("=" * 60 + "\033[K")
+        print("=" * 60)
         print("INVENTORY:\033[K")
         if not inventory:
             print("  Empty\033[K")
@@ -6771,7 +6912,7 @@ def access_global_storage(save_name, data):
             for item_name, quantity in sorted(inventory.items()):
                 print(f"  {item_name} x{quantity}\033[K")
 
-        print("\033[K")
+        print()
         print("STORAGE:\033[K")
         if not storage:
             print("  Empty\033[K")
@@ -6779,7 +6920,7 @@ def access_global_storage(save_name, data):
             for item_name, quantity in sorted(storage.items()):
                 print(f"  {item_name} x{quantity}\033[K")
 
-        print("=" * 60 + "\033[K")
+        print("=" * 60)
 
         options = [
             "Move Items: Inventory → Storage",
@@ -6794,8 +6935,8 @@ def access_global_storage(save_name, data):
         sys.stdout = content_buffer
 
         print("GLOBAL STORAGE\033[K")
-        print("\033[K")
-        print("=" * 60 + "\033[K")
+        print()
+        print("=" * 60)
         print("INVENTORY:\033[K")
         if not inventory:
             print("  Empty\033[K")
@@ -6803,7 +6944,7 @@ def access_global_storage(save_name, data):
             for item_name, quantity in sorted(inventory.items()):
                 print(f"  {item_name} x{quantity}\033[K")
 
-        print("\033[K")
+        print()
         print("STORAGE:\033[K")
         if not storage:
             print("  Empty\033[K")
@@ -6811,7 +6952,7 @@ def access_global_storage(save_name, data):
             for item_name, quantity in sorted(storage.items()):
                 print(f"  {item_name} x{quantity}\033[K")
 
-        print("=" * 60 + "\033[K")
+        print("=" * 60)
 
         previous_content = content_buffer.getvalue()
         sys.stdout = old_stdout
@@ -6839,28 +6980,28 @@ def transfer_items(save_name, data, source_key, dest_key):
     if not source:
         clear_screen()
         title("TRANSFER ITEMS")
-        print("\033[K")
+        print()
         print(f"Your {source_key} is empty!\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
         return
 
     while True:
         clear_screen()
         title(f"TRANSFER: {source_key.upper()} → {dest_key.upper()}")
-        print("\033[K")
+        print()
 
         # Display source items
         print(f"{source_key.upper()}:\033[K")
-        print("=" * 60 + "\033[K")
+        print("=" * 60)
 
         sorted_items = sorted(source.items())
 
         for i, (item_name, quantity) in enumerate(sorted_items):
             print(f"  [{i+1}] {item_name} x{quantity}\033[K")
 
-        print("\033[K")
-        print("=" * 60 + "\033[K")
+        print()
+        print("=" * 60)
 
         options = [f"{item_name} (x{quantity})" for item_name, quantity in sorted_items]
         options.append("Back")
@@ -6871,13 +7012,13 @@ def transfer_items(save_name, data, source_key, dest_key):
         sys.stdout = content_buffer
 
         print(f"TRANSFER: {source_key.upper()} → {dest_key.upper()}\033[K")
-        print("\033[K")
+        print()
         print(f"{source_key.upper()}:\033[K")
-        print("=" * 60 + "\033[K")
+        print("=" * 60)
         for i, (item_name, quantity) in enumerate(sorted_items):
             print(f"  [{i+1}] {item_name} x{quantity}\033[K")
-        print("\033[K")
-        print("=" * 60 + "\033[K")
+        print()
+        print("=" * 60)
 
         previous_content = content_buffer.getvalue()
         sys.stdout = old_stdout
@@ -6894,10 +7035,10 @@ def transfer_items(save_name, data, source_key, dest_key):
         # Ask for quantity
         clear_screen()
         title("TRANSFER QUANTITY")
-        print("\033[K")
+        print()
         print(f"Item: {item_name}\033[K")
         print(f"Available: {available_quantity}\033[K")
-        print("\033[K")
+        print()
         print(f"Enter quantity to transfer (0 to cancel, Enter for max [{available_quantity}]): ", end="")
 
         try:
@@ -6913,9 +7054,9 @@ def transfer_items(save_name, data, source_key, dest_key):
                 continue
 
             if quantity > available_quantity:
-                print("\033[K")
+                print()
                 print("You don't have that many!\033[K")
-                print("\033[K")
+                print()
                 input("Press Enter to continue...")
                 continue
 
@@ -6932,15 +7073,15 @@ def transfer_items(save_name, data, source_key, dest_key):
 
             save_data(save_name, data)
 
-            print("\033[K")
+            print()
             print(f"Transferred {quantity}x {item_name} to {dest_key}\033[K")
-            print("\033[K")
+            print()
             input("Press Enter to continue...")
 
         except ValueError:
-            print("\033[K")
+            print()
             print("Invalid input!\033[K")
-            print("\033[K")
+            print()
             input("Press Enter to continue...")
 
 
@@ -6958,16 +7099,16 @@ def view_item_details(data, save_name=None):
     if not all_items:
         clear_screen()
         title("ITEM DETAILS")
-        print("\033[K")
+        print()
         print("No items to display.\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
         return
 
     while True:
         clear_screen()
         title("ITEM DETAILS")
-        print("\033[K")
+        print()
 
         sorted_items = sorted(all_items.items())
 
@@ -6987,12 +7128,12 @@ def view_item_details(data, save_name=None):
 
         clear_screen()
         title("ITEM INFORMATION")
-        print("\033[K")
+        print()
         print(f"Name: {item_name}\033[K")
         print(f"Type: {item_info.get('type', 'Unknown')}\033[K")
         desc = item_info.get('description', 'No description available.')
         print(f"Description: {wrap_text(desc, 60)}\033[K")
-        print("\033[K")
+        print()
 
         inv_qty = data.get('inventory', {}).get(item_name, 0)
         stor_qty = data.get('storage', {}).get(item_name, 0)
@@ -7000,19 +7141,19 @@ def view_item_details(data, save_name=None):
         print(f"In Inventory: {inv_qty}\033[K")
         print(f"In Storage: {stor_qty}\033[K")
         print(f"Total: {inv_qty + stor_qty}\033[K")
-        print("\033[K")
+        print()
 
         if item_info.get('sell_price') and item_info['sell_price'] != "":
             print(f"Sell Price: {item_info['sell_price']} CR\033[K")
         if item_info.get('buy_price') and item_info['buy_price'] != "":
             print(f"Buy Price: {item_info['buy_price']} CR\033[K")
 
-        print("\033[K")
+        print()
 
         # If this is a ship item and we have save_name, offer to assemble it
         if item_info.get('type') == 'Ship' and save_name and (inv_qty > 0 or stor_qty > 0):
             print("[A] Assemble Ship  [Enter] Continue\033[K")
-            print("\033[K")
+            print()
             key = get_key()
             if key == 'a':
                 assemble_ship_from_item(save_name, data, item_name)
@@ -7034,10 +7175,10 @@ def visit_ship_vendor(save_name, data):
     while True:
         clear_screen()
         title("SHIP VENDOR")
-        print("\033[K")
+        print()
         print(f"Credits: {data['credits']}\033[K")
-        print("\033[K")
-        print("=" * 60 + "\033[K")
+        print()
+        print("=" * 60)
 
         # Get all purchasable ships (ship items with buy_price specified in items.json)
         purchasable_ships = []
@@ -7053,13 +7194,13 @@ def visit_ship_vendor(save_name, data):
 
         if not purchasable_ships:
             print("No ships available for purchase.\033[K")
-            print("\033[K")
+            print()
             input("Press Enter to continue...")
             return
 
         # Display ships
         print("Available Ships:\033[K")
-        print("\033[K")
+        print()
 
         for ship_name_lower, ship_info, ship_item in purchasable_ships:
             price = ship_item['buy_price']
@@ -7077,9 +7218,9 @@ def visit_ship_vendor(save_name, data):
             stats = ship_info.get('stats', {})
             print(f"    Stats: DPS {stats.get('DPS', '?')} | Shield {stats.get('Shield', '?')} | Hull {stats.get('Hull', '?')}\033[K")
             print(f"           Speed {stats.get('Speed', '?')} | Warp {stats.get('Warp Speed', '?')}\033[K")
-            print("\033[K")
+            print()
 
-        print("=" * 60 + "\033[K")
+        print("=" * 60)
 
         options = [f"{ship_info['name']} - {ship_item['buy_price']} CR" for _, ship_info, ship_item in purchasable_ships]
         options.append("Back")
@@ -7090,10 +7231,10 @@ def visit_ship_vendor(save_name, data):
         sys.stdout = content_buffer
 
         print("SHIP VENDOR\033[K")
-        print("\033[K")
+        print()
         print(f"Credits: {data['credits']}\033[K")
-        print("\033[K")
-        print("=" * 60 + "\033[K")
+        print()
+        print("=" * 60)
 
         previous_content = content_buffer.getvalue()
         sys.stdout = old_stdout
@@ -7111,12 +7252,12 @@ def visit_ship_vendor(save_name, data):
 
         clear_screen()
         title("PURCHASE SHIP")
-        print("\033[K")
+        print()
         print(f"Ship: {ship_name}\033[K")
         print(f"Class: {ship_info.get('class', 'Unknown')}\033[K")
         desc = ship_info.get('description', 'No description available.')
         print(f"Description: {wrap_text(desc, 60)}\033[K")
-        print("\033[K")
+        print()
 
         stats = ship_info.get('stats', {})
         print("Stats:\033[K")
@@ -7126,14 +7267,14 @@ def visit_ship_vendor(save_name, data):
         print(f"  Energy: {stats.get('Energy', '?')}\033[K")
         print(f"  Speed: {stats.get('Speed', '?')}\033[K")
         print(f"  Warp Speed: {stats.get('Warp Speed', '?')}\033[K")
-        print("\033[K")
+        print()
         print(f"Price: {price} CR\033[K")
         print(f"Your Credits: {data['credits']} CR\033[K")
-        print("\033[K")
+        print()
 
         if data['credits'] < price:
             print("You don't have enough credits!\033[K")
-            print("\033[K")
+            print()
             input("Press Enter to continue...")
             continue
 
@@ -7150,11 +7291,11 @@ def visit_ship_vendor(save_name, data):
 
         save_data(save_name, data)
 
-        print("\033[K")
+        print()
         print(f"Purchased {ship_name} for {price} CR\033[K")
         print(f"The {ship_name} item has been added to your inventory.\033[K")
         print("You can assemble it to create a usable ship.\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
 
 
@@ -7178,8 +7319,8 @@ def ship_terminal(save_name, data):
                 tab_line += "┌─────────┐ "
                 name_line += f"│ {name:^7} │ "
 
-        print(tab_line + "\033[K")
-        print(name_line + "\033[K")
+        print(tab_line)
+        print(name_line)
 
         # Bottom border
         border = "  "
@@ -7189,11 +7330,11 @@ def ship_terminal(save_name, data):
             else:
                 border += "└─────────┘ "
         border += "─" * (60 - len(border))
-        print(border + "\033[K")
-        print("\033[K")
+        print(border)
+        print()
         print("  [1] Ships     [2] Assembly\033[K")
-        print("=" * 60 + "\033[K")
-        print("\033[K")
+        print("=" * 60)
+        print()
 
     while True:
         if current_tab == 0:
@@ -7218,21 +7359,21 @@ def ship_list_tab(save_name, data):
 
     while True:
         clear_screen()
-        print("\033[K")
+        print()
         print("  ┌─────────┐ ┌──────────┐\033[K")
         print("  │  Ships  │ │ Assembly │\033[K")
         print("  └─────────┴─┴──────────┴─────────────────────────────────\033[K")
-        print("\033[K")
+        print()
         print("  [1] Ships     [2] Assembly\033[K")
-        print("=" * 60 + "\033[K")
-        print("\033[K")
+        print("=" * 60)
+        print()
 
         # Show all owned ships
         if not data["ships"]:
             print("  No ships available!\033[K")
-            print("\033[K")
+            print()
             print("  Options: [2] Assembly  [ESC] Back\033[K")
-            print("\033[K")
+            print()
 
             key = get_key()
             if key == '2':
@@ -7289,10 +7430,10 @@ def ship_list_tab(save_name, data):
             warp = stats.get("Warp Speed", "N/A")
 
             print(f"     DPS: {dps}  Speed: {speed}  Warp: {warp}\033[K")
-            print("\033[K")
+            print()
 
         print("  " + "=" * 58 + "\033[K")
-        print("\033[K")
+        print()
 
         # Get user choice with custom key handling
         from io import StringIO
@@ -7303,14 +7444,14 @@ def ship_list_tab(save_name, data):
         sys.stdout = content_buffer
 
         # Recreate the screen content
-        print("\033[K")
+        print()
         print("  ┌─────────┐ ┌──────────┐\033[K")
         print("  │  Ships  │ │ Assembly │\033[K")
         print("  └─────────┴─┴──────────┴─────────────────────────────────\033[K")
-        print("\033[K")
+        print()
         print("  [1] Ships     [2] Assembly\033[K")
-        print("=" * 60 + "\033[K")
-        print("\033[K")
+        print("=" * 60)
+        print()
 
         previous_content = content_buffer.getvalue()
         sys.stdout = old_stdout
@@ -7352,10 +7493,10 @@ def view_ship_details(save_name, data, ship_index):
     while True:
         clear_screen()
         title("SHIP DETAILS")
-        print("\033[K")
+        print()
         print(f"Nickname: {nickname}\033[K")
         print(f"Model: {ship_name.title()}\033[K")
-        print("\033[K")
+        print()
 
         # Get ship info from ships.json
         ships_data = load_ships_data()
@@ -7364,7 +7505,7 @@ def view_ship_details(save_name, data, ship_index):
         print(f"Class: {ship_info.get('class', 'Unknown')}\033[K")
         desc = ship_info.get('description', 'No description available.')
         print(f"Description: {wrap_text(desc, 60)}\033[K")
-        print("\033[K")
+        print()
 
         # HP status
         max_hull = stats.get("Hull", 200)
@@ -7374,7 +7515,7 @@ def view_ship_details(save_name, data, ship_index):
 
         print(f"Hull: {current_hull}/{max_hull}\033[K")
         print(f"Shield: {current_shield}/{max_shield}\033[K")
-        print("\033[K")
+        print()
 
         # Stats
         print("Stats:\033[K")
@@ -7385,16 +7526,16 @@ def view_ship_details(save_name, data, ship_index):
         print(f"  Speed: {stats.get('Speed', 'N/A')}\033[K")
         print(f"  Agility: {stats.get('Agility', 'N/A')}\033[K")
         print(f"  Warp Speed: {stats.get('Warp Speed', 'N/A')}\033[K")
-        print("\033[K")
+        print()
 
         # Status
         if ship_index == data["active_ship"]:
             print("Status: ACTIVE ★\033[K")
         else:
             print("Status: Docked\033[K")
-        print("\033[K")
-        print("=" * 60 + "\033[K")
-        print("\033[K")
+        print()
+        print("=" * 60)
+        print()
 
         # Capture current screen content for arrow_menu
         from io import StringIO
@@ -7406,17 +7547,17 @@ def view_ship_details(save_name, data, ship_index):
 
         # Recreate the screen content
         title("SHIP DETAILS")
-        print("\033[K")
+        print()
         print(f"Nickname: {nickname}\033[K")
         print(f"Model: {ship_name.title()}\033[K")
-        print("\033[K")
+        print()
         print(f"Class: {ship_info.get('class', 'Unknown')}\033[K")
         desc = ship_info.get('description', 'No description available.')
         print(f"Description: {wrap_text(desc, 60)}\033[K")
-        print("\033[K")
+        print()
         print(f"Hull: {current_hull}/{max_hull}\033[K")
         print(f"Shield: {current_shield}/{max_shield}\033[K")
-        print("\033[K")
+        print()
         print("Stats:\033[K")
         print(f"  DPS: {stats.get('DPS', 'N/A')}\033[K")
         print(f"  Shield: {stats.get('Shield', 'N/A')}\033[K")
@@ -7425,14 +7566,14 @@ def view_ship_details(save_name, data, ship_index):
         print(f"  Speed: {stats.get('Speed', 'N/A')}\033[K")
         print(f"  Agility: {stats.get('Agility', 'N/A')}\033[K")
         print(f"  Warp Speed: {stats.get('Warp Speed', 'N/A')}\033[K")
-        print("\033[K")
+        print()
         if ship_index == data["active_ship"]:
             print("Status: ACTIVE ★\033[K")
         else:
             print("Status: Docked\033[K")
-        print("\033[K")
-        print("=" * 60 + "\033[K")
-        print("\033[K")
+        print()
+        print("=" * 60)
+        print()
 
         previous_content = content_buffer.getvalue()
         sys.stdout = old_stdout
@@ -7456,9 +7597,9 @@ def view_ship_details(save_name, data, ship_index):
 
             clear_screen()
             title("SHIP SWITCHED")
-            print("\033[K")
+            print()
             print(f"  Switched from {old_ship.get('nickname', old_ship['name'].title())} to {nickname}\033[K")
-            print("\033[K")
+            print()
             input("  Press Enter to continue...")
             return
 
@@ -7466,9 +7607,9 @@ def view_ship_details(save_name, data, ship_index):
             # Rename ship
             clear_screen()
             title("RENAME SHIP")
-            print("\033[K")
+            print()
             print(f"Current name: {nickname}\033[K")
-            print("\033[K")
+            print()
             print("Enter new nickname (press Enter to cancel): ", end="")
             new_nickname = input().strip()
 
@@ -7478,9 +7619,9 @@ def view_ship_details(save_name, data, ship_index):
 
                 clear_screen()
                 title("SHIP RENAMED")
-                print("\033[K")
+                print()
                 print(f"Ship renamed to: {new_nickname}\033[K")
-                print("\033[K")
+                print()
                 input("Press Enter to continue...")
                 return
 
@@ -7489,19 +7630,19 @@ def view_ship_details(save_name, data, ship_index):
             if ship_index == data["active_ship"]:
                 clear_screen()
                 title("CANNOT DISASSEMBLE")
-                print("\033[K")
+                print()
                 print("You cannot disassemble your active ship!\033[K")
                 print("Please switch to another ship first.\033[K")
-                print("\033[K")
+                print()
                 input("Press Enter to continue...")
                 continue
 
             clear_screen()
             title("DISASSEMBLE SHIP")
-            print("\033[K")
+            print()
             print(f"Are you sure you want to disassemble {nickname}?\033[K")
             print(f"This will return the {ship_name.title()} item to your inventory.\033[K")
-            print("\033[K")
+            print()
             print("Type 'yes' to confirm, or anything else to cancel: ", end="")
             confirmation = input().strip().lower()
 
@@ -7528,10 +7669,10 @@ def view_ship_details(save_name, data, ship_index):
 
                 clear_screen()
                 title("SHIP DISASSEMBLED")
-                print("\033[K")
+                print()
                 print(f"{nickname} has been disassembled.\033[K")
                 print(f"The {proper_ship_name} item has been added to your inventory.\033[K")
-                print("\033[K")
+                print()
                 input("Press Enter to continue...")
                 return
 
@@ -7546,14 +7687,14 @@ def ship_assembly_tab(save_name, data):
 
     while True:
         clear_screen()
-        print("\033[K")
+        print()
         print("  ┌─────────┐ ┌──────────┐\033[K")
         print("  │  Ships  │ │ Assembly │\033[K")
         print("  └─────────┴─┴──────────┴─────────────────────────────────\033[K")
-        print("\033[K")
+        print()
         print("  [1] Ships     [2] Assembly\033[K")
-        print("=" * 60 + "\033[K")
-        print("\033[K")
+        print("=" * 60)
+        print()
 
         # Get all ship items from inventory and storage
         ship_items = {}
@@ -7572,11 +7713,11 @@ def ship_assembly_tab(save_name, data):
 
         if not ship_items:
             print("  No ship items available to assemble.\033[K")
-            print("\033[K")
+            print()
             print("  You can purchase ships from the Ship Vendor.\033[K")
-            print("\033[K")
+            print()
             print("  Options: [1] Ships  [ESC] Back\033[K")
-            print("\033[K")
+            print()
 
             key = get_key()
             if key == '1':
@@ -7599,7 +7740,7 @@ def ship_assembly_tab(save_name, data):
             print(f"    Inventory: {inv_qty}  |  Storage: {stor_qty}  |  Total: {total}\033[K")
 
         print("  " + "=" * 58 + "\033[K")
-        print("\033[K")
+        print()
 
         # Build options
         options = [f"{name} (Total: {qty['inv'] + qty['stor']})" for name, qty in sorted_ships]
@@ -7613,14 +7754,14 @@ def ship_assembly_tab(save_name, data):
         old_stdout = sys.stdout
         sys.stdout = content_buffer
 
-        print("\033[K")
+        print()
         print("  ┌─────────┐ ┌──────────┐\033[K")
         print("  │  Ships  │ │ Assembly │\033[K")
         print("  └─────────┴─┴──────────┴─────────────────────────────────\033[K")
-        print("\033[K")
+        print()
         print("  [1] Ships     [2] Assembly\033[K")
-        print("=" * 60 + "\033[K")
-        print("\033[K")
+        print("=" * 60)
+        print()
 
         previous_content = content_buffer.getvalue()
         sys.stdout = old_stdout
@@ -7665,7 +7806,7 @@ def assemble_ship_from_item(save_name, data, ship_name):
 
     clear_screen()
     title("ASSEMBLE SHIP")
-    print("\033[K")
+    print()
     print(f"Ship: {ship_name}\033[K")
 
     # Get ship info
@@ -7676,7 +7817,7 @@ def assemble_ship_from_item(save_name, data, ship_name):
     print(f"Class: {ship_info.get('class', 'Unknown')}\033[K")
     desc = ship_info.get('description', 'No description available.')
     print(f"Description: {wrap_text(desc, 60)}\033[K")
-    print("\033[K")
+    print()
 
     # Show stats
     print("Stats:\033[K")
@@ -7685,10 +7826,10 @@ def assemble_ship_from_item(save_name, data, ship_name):
     print(f"  Hull: {stats.get('Hull', 'N/A')}\033[K")
     print(f"  Speed: {stats.get('Speed', 'N/A')}\033[K")
     print(f"  Warp Speed: {stats.get('Warp Speed', 'N/A')}\033[K")
-    print("\033[K")
+    print()
 
     print(f"Available: {inv_qty} in inventory, {stor_qty} in storage\033[K")
-    print("\033[K")
+    print()
 
     # Ask for source
     if inv_qty > 0 and stor_qty > 0:
@@ -7706,7 +7847,7 @@ def assemble_ship_from_item(save_name, data, ship_name):
         source = 'storage'
 
     # Ask for nickname
-    print("\033[K")
+    print()
     print("Enter a nickname for this ship (press Enter for default): ", end="")
     nickname = input().strip()
     if not nickname:
@@ -7735,10 +7876,10 @@ def assemble_ship_from_item(save_name, data, ship_name):
 
     clear_screen()
     title("SHIP ASSEMBLED")
-    print("\033[K")
+    print()
     print(f"Successfully assembled {ship_name} '{nickname}'!\033[K")
     print("Your new ship is ready to use.\033[K")
-    print("\033[K")
+    print()
     input("Press Enter to continue...")
 
 
@@ -7754,7 +7895,7 @@ def visit_observatory():
     if not ascii_art_dir.exists():
         clear_screen()
         title("OBSERVATORY")
-        print("\033[K")
+        print()
         print("Error: ASCII art directory not found.\033[K")
         input("Press Enter to continue...")
         return
@@ -7771,7 +7912,7 @@ def visit_observatory():
     if not art_collections:
         clear_screen()
         title("OBSERVATORY")
-        print("\033[K")
+        print()
         print("No astronomical artwork available at this time.\033[K")
         input("Press Enter to continue...")
         return
@@ -7792,17 +7933,17 @@ def visit_observatory():
     # Display the art
     clear_screen()
     title("OBSERVATORY")
-    print("\033[K")
-    print(art_content + "\033[K")
-    print("\033[K")
+    print()
+    print(art_content)
+    print()
     print(f"Title: {metadata.get('title', 'Untitled')}\033[K")
     print(f"Artist: {metadata.get('Artist', 'Unknown')}\033[K")
-    print("\033[K")
+    print()
     input("Press Enter to Exit")
 
 
 def title(text, centered=False):
-    print("=" * 60 + "\033[K")
+    print("=" * 60)
     if centered:
         total_padding = 60 - len(text)
         spacingL = " " * math.ceil(total_padding / 2)
@@ -7810,7 +7951,7 @@ def title(text, centered=False):
         print(f"{spacingL}{text}{spacingR}\033[K")
     else:
         print(f"  {text}\033[K")
-    print("=" * 60 + "\033[K")
+    print("=" * 60)
 
 
 def system_data(system_name):
@@ -7823,8 +7964,8 @@ def system_data(system_name):
 def new_game():
     """Start a new game with dialogue and player name input"""
     clear_screen()
-    print("=" * 60 + "\033[K")
-    print("\033[K")
+    print("=" * 60)
+    print()
     intro = [
         "Welcome to Starscape, the greatest adventure you'll ever",
         "live among the stars. Plagued with war and malicious drones,",
@@ -7845,14 +7986,14 @@ def new_game():
     ]
     type_lines(intro)
     sleep(1)
-    print("=" * 60 + "\033[K")
-    print("\033[K")
+    print("=" * 60)
+    print()
 
     input("Press Enter to begin your journey...")
 
     clear_screen()
     title("NEW GAME")
-    print("\033[K")
+    print()
     print("Pilot, what shall you be called?\033[K")
 
     player_name = input("Enter your pilot name: ").strip()
@@ -7878,7 +8019,7 @@ def new_game():
 
     clear_screen()
     title(f"WELCOME, {player_name.upper()}")
-    print("\033[K")
+    print()
     print(f"  Save '{save_name}' created successfully!\033[K")
     lines = [
         "",
@@ -7900,7 +8041,7 @@ def new_game():
     print("  You have been assigned:\033[K")
     print("    - Stratos (Starter Ship)\033[K")
     print("    - 5,000 Credits\033[K")
-    print("\033[K")
+    print()
     input("Press Enter to continue...")
 
     game_loop(save_name, data)
@@ -7913,7 +8054,7 @@ def continue_game():
     if not save_dir.exists():
         clear_screen()
         title("CONTINUE GAME")
-        print("\033[K")
+        print()
         print("No saves found!\033[K")
         input("Press Enter to continue...")
         return
@@ -7924,7 +8065,7 @@ def continue_game():
     if not saves:
         clear_screen()
         title("CONTINUE GAME")
-        print("\033[K")
+        print()
         print("No saves found!\033[K")
         input("Press Enter to continue...")
         return
@@ -7956,7 +8097,7 @@ def delete_save_screen():
     if not save_dir.exists():
         clear_screen()
         title("DELETE SAVE")
-        print("\033[K")
+        print()
         print("No saves found!\033[K")
         input("Press Enter to continue...")
         return
@@ -7967,7 +8108,7 @@ def delete_save_screen():
     if not saves:
         clear_screen()
         title("DELETE SAVE")
-        print("\033[K")
+        print()
         print("No saves found!\033[K")
         input("Press Enter to continue...")
         return
@@ -7983,10 +8124,10 @@ def delete_save_screen():
 
     clear_screen()
     title("CONFIRM DELETE")
-    print("\033[K")
+    print()
     print(f"This will permanently delete the save '{save_name}'.\033[K")
     print(f"Type '{save_name}' to confirm.\033[K")
-    print("\033[K")
+    print()
 
     confirmation = input("> ").strip()
 
@@ -8089,10 +8230,10 @@ def settings_screen():
             # Reset settings to default
             clear_screen()
             title("RESET SETTINGS")
-            print("\033[K")
+            print()
             print("This will reset all settings to their default values.\033[K")
             print("Type 'RESET' to confirm.\033[K")
-            print("\033[K")
+            print()
 
             confirmation = input("> ").strip()
 
@@ -8115,24 +8256,24 @@ def about_screen():
     title("ABOUT")
     print(f"Game version code: {APP_VERSION_CODE}\033[K")
     print(f"Save format code: {SAVE_VERSION_CODE}\033[K")
-    print("\033[K")
+    print()
     print("Starscape Text Adventure is a text-based game based on the\033[K")
     print("Roblox game, Starscape, by Zolar Keth, aka Ethan Witt.\033[K")
     print("Almost all of the game mechanics are the same between these\033[K")
     print("two games, besides the fact that this one is purely\033[K")
     print("text-based.\033[K")
-    print("\033[K")
+    print()
     print("In Starscape, you get to wander around a vast galaxy with\033[K")
     print("over 4,500 procedurally generated star systems. You can\033[K")
     print("do just about anything from fighting ancient drones to\033[K")
     print("mining materials to build a new ship. Oh, and unlike in\033[K")
     print("the Roblox version of Starscape, mining is actually fun.\033[K")
-    print("\033[K")
+    print()
     print("This game is open-source and can be found on GitHub at\033[K")
     set_color("cyan")
     print("https://github.com/Zytronium/starscape_text_adventure.\033[K")
     reset_color()
-    print("\033[K")
+    print()
     print("Need help finding information about the game? While this\033[K")
     print("version doesn't have its own wiki, it shares a enough\033[K")
     print("game mechanics with Roblox Starscape that their wiki may\033[K")
@@ -8140,7 +8281,7 @@ def about_screen():
     set_color("cyan")
     print("https://starscape-roblox.fandom.com/wiki/Starscape_Wiki\033[K")
     reset_color()
-    print("\033[K")
+    print()
 
     input("Press Enter to return to main menu...")
 
@@ -8162,7 +8303,7 @@ def animated_death_screen(save_name, data):
         for char in text:
             print(color + char + RESET, end='', flush=True)
             sleep(delay)
-        print("\033[K")
+        print()
 
     def glitch_line(length=60):
         """Generate a glitchy corrupted line"""
@@ -8179,8 +8320,8 @@ def animated_death_screen(save_name, data):
     clear_screen()
 
     # Death message
-    print("\033[K")
-    print("\033[K")
+    print()
+    print()
     type_text("CRITICAL SYSTEM FAILURE", 0.05, RED)
     sleep(0.5)
     glitch_screen(3)
@@ -8223,7 +8364,7 @@ def animated_death_screen(save_name, data):
     for _ in range(40):
         print(random.choice(bases), end='', flush=True)
         sleep(0.02)
-    print(RESET + "\033[K")
+    print(RESET)
     sleep(0.4)
 
     type_text("Neural pathways reconstructing...", 0.03, GREEN)
@@ -8245,11 +8386,11 @@ def animated_death_screen(save_name, data):
     type_text("Cognitive functions: ONLINE", 0.03, GREEN)
     sleep(0.5)
 
-    print("\033[K")
+    print()
     type_text("Welcome back, pilot.", 0.04, GREEN)
     sleep(1)
 
-    print("\033[K")
+    print()
     print(f"{RED}WARNING: All cargo has been lost.{RESET}\033[K")
     print(f"{DARK_GREEN}Location: The Citadel - Cloning Bay{RESET}\033[K")
     sleep(2)
@@ -8266,7 +8407,7 @@ def animated_death_screen(save_name, data):
 
     # Check if the ship is a Stratos - if not, player loses their ship
     if ship_name != "stratos":
-        print("\033[K")
+        print()
         print(f"{RED}Your {player_ship.get('nickname', 'ship')} was destroyed and cannot be recovered.{RESET}\033[K")
         sleep(1.5)
 
@@ -8293,7 +8434,7 @@ def animated_death_screen(save_name, data):
         player_ship = get_active_ship(data)
     else:
         # Stratos is protected - restore it to full health
-        print("\033[K")
+        print()
         print(f"{GREEN}Your Stratos has been recovered and repaired.{RESET}\033[K")
         sleep(1)
 
@@ -8380,9 +8521,9 @@ def find_nearest_by_security(current_system, all_systems_data):
 
     clear_screen()
     title("FIND NEAREST BY SECURITY CLASS")
-    print("\033[K")
+    print()
     print("Select a security class to find the nearest system:\033[K")
-    print("\033[K")
+    print()
 
     security_classes = ["Core", "Secure", "Contested", "Unsecure", "Wild"]
 
@@ -8392,7 +8533,7 @@ def find_nearest_by_security(current_system, all_systems_data):
         color = get_security_color(sec_class)
         print(f"  [{letter}] {color}{sec_class}{RESET_COLOR}\033[K")
 
-    print("\033[K")
+    print()
     print("Press a letter to search, or Enter to cancel\033[K")
 
     while True:
@@ -8442,20 +8583,20 @@ def find_nearest_by_security(current_system, all_systems_data):
     # Display result
     clear_screen()
     title("SEARCH RESULT")
-    print("\033[K")
+    print()
 
     if nearest_system:
         color = get_security_color(selected_security)
         print(f"Nearest {color}{selected_security}{RESET_COLOR} system:\033[K")
         print(f"  {color}{nearest_system}{RESET_COLOR}\033[K")
         print(f"  Distance: {nearest_distance} jump(s)\033[K")
-        print("\033[K")
+        print()
         print("Press Enter to view this system on the map\033[K")
         get_key()
         return nearest_system
     else:
         print(f"No {selected_security} systems found in the galaxy.\033[K")
-        print("\033[K")
+        print()
         input("Press Enter to continue...")
         return None
 
@@ -8464,10 +8605,10 @@ def search_systems(all_systems_data):
     """Search for systems by name or security level"""
     clear_screen()
     title("GALAXY SEARCH")
-    print("\033[K")
+    print()
     print("Search by system name or security level\033[K")
     print("(Core, Secure, Contested, Unsecure, Wild)\033[K")
-    print("\033[K")
+    print()
 
     query = input("Search: ").strip()
 
@@ -8494,9 +8635,9 @@ def search_systems(all_systems_data):
         return None
 
     # Show results with letter navigation
-    print("\033[K")
+    print()
     print(f"Found {len(matches)} system(s):\033[K")
-    print("\033[K")
+    print()
 
     letter_map = {}
     for i, system_name in enumerate(matches[:26]):  # Limit to 26 for a-z
@@ -8509,7 +8650,7 @@ def search_systems(all_systems_data):
 
         print(f"  [{letter}] {color}{system_name}{RESET_COLOR} ({security})\033[K")
 
-    print("\033[K")
+    print()
     print("Press a letter to view that system, or Enter to cancel\033[K")
 
     while True:
@@ -8853,8 +8994,8 @@ def display_spatial_map(center_system, all_systems_data, current_system,
     if destination:
         print(
             f"  Destination: {get_security_color(all_systems_data[destination]['SecurityLevel'])}{destination}{RESET_COLOR}")
-    print("=" * 60 + "\033[K")
-    print("\033[K")
+    print("=" * 60)
+    print()
 
     # Print the grid
     for y in range(MAP_HEIGHT):
@@ -8866,10 +9007,10 @@ def display_spatial_map(center_system, all_systems_data, current_system,
                 line += f"{color}{letter}{RESET_COLOR}"
             else:
                 line += cell
-        print(line + "\033[K")
+        print(line)
 
-    print("\033[K")
-    print("=" * 60 + "\033[K")
+    print()
+    print("=" * 60)
 
     # Print legend with letters
     print("Systems:\033[K")
@@ -8922,13 +9063,13 @@ def display_spatial_map(center_system, all_systems_data, current_system,
                 plain_item = plain_item.replace(code, "")
 
             print(f"{item:<{col_width}}", end="")
-        print("\033[K")
+        print()
 
-    print("\033[K")
+    print()
     print(
         "  [a-z] Navigate | [SHIFT+letter] Set dest | [s] Search | [f] Find by security | [ESC] Exit")
     print("  Legend: ★ Current System  ◆ Destination  @ Viewing Center  \033[33m➜\033[0m Next in Route\033[K")
-    print("=" * 60 + "\033[K")
+    print("=" * 60)
 
     return letter_map
 
@@ -9041,7 +9182,7 @@ def main():
                                                         RESET_COLOR
             )
 
-            print(logo_text + "\033[K")
+            print(logo_text)
 
             choice = arrow_menu("Starscape: Text Adventure Edition", options, logo_text)
 
