@@ -2320,7 +2320,7 @@ def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=Fal
     total_xp_earned = 0
     current_target_idx = 0
     display_offset = 0  # For scrolling through enemy list when > 3 enemies
-    firing_mode = "spread"  # spread or focus
+    firing_mode = "focus"  # focus or spread
     player_energy = 80
     max_energy = 80
 
