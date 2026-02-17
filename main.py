@@ -2739,8 +2739,8 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
                         warp_charge_level = 0.0
                         warp_charging = False
 
-                        # Take heavy damage from failed warp attempt
-                        failure_damage = sum(enemy['damage'] for enemy in alive_enemies) * 2
+                        # Take some damage from failed warp attempt
+                        failure_damage = sum(enemy['damage'] for enemy in alive_enemies) // 4
                         apply_damage_to_ship(player_ship, int(failure_damage))
 
                         print("\033[H", end="", flush=True)
@@ -2749,7 +2749,7 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
                         print(box_line("WARP FAILURE!", 60) + "\033[K")
                         print("╠════════════════════════════════════════════════════════════╣\033[K")
                         reset_color()
-                        print(box_line("Warp drive malfunction! Hull damage!", 60) + "\033[K")
+                        print(box_line("Warp jump failed! You took additional damage!", 60) + "\033[K")
                         print(box_line(f"Damage taken: {int(failure_damage)}", 60) + "\033[K")
                         set_color("red")
                         print("╚════════════════════════════════════════════════════════════╝\033[K")
