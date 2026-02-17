@@ -2397,6 +2397,20 @@ def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=Fal
                 data['credits'] = 0
             data['credits'] += total_credits
 
+            # Award XP to player
+            combat_levels_gained = add_skill_xp(data, "combat", total_xp_earned)
+            piloting_xp_earned = total_xp_earned // 2
+            piloting_levels_gained = add_skill_xp(data, "piloting", piloting_xp_earned)
+            save_data(save_name, data)
+
+            # Gather post-XP skill state for display
+            combat_level = data["skills"]["combat"]
+            combat_xp = data["skills"]["combat_xp"]
+            combat_xp_needed = xp_required_for_level(combat_level)
+            piloting_level = data["skills"]["piloting"]
+            piloting_xp = data["skills"]["piloting_xp"]
+            piloting_xp_needed = xp_required_for_level(piloting_level)
+
             # Victory screen with proper color management
             print("\n", end="")
             set_color("green")
@@ -2417,13 +2431,17 @@ def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=Fal
             print(box_line("─" * 58, 60, border_color="green") + "\033[K")
             print(box_line(f"TOTAL EARNED: {total_credits} CR", 60, border_color="green", text_color="green") + "\033[K")
             print(box_line(f"Credits: {data['credits']} CR", 60, border_color="green", text_color="green") + "\033[K")
+            print(box_line("", 60, border_color="green") + "\033[K")
+            print(box_line("EXPERIENCE:", 60, border_color="green") + "\033[K")
+            if combat_levels_gained > 0:
+                print(box_line(f"  ★ COMBAT LEVEL UP! ({combat_level - combat_levels_gained} -> {combat_level})", 60, border_color="green", text_color="cyan") + "\033[K")
+            print(box_line(f"  +{total_xp_earned} Combat XP  -  Level {combat_level} ({combat_xp}/{combat_xp_needed})", 60, border_color="green", text_color="yellow") + "\033[K")
+            if piloting_levels_gained > 0:
+                print(box_line(f"  ★ PILOTING LEVEL UP! ({piloting_level - piloting_levels_gained} -> {piloting_level})", 60, border_color="green", text_color="cyan") + "\033[K")
+            print(box_line(f"  +{piloting_xp_earned} Piloting XP  -  Level {piloting_level} ({piloting_xp}/{piloting_xp_needed})", 60, border_color="green", text_color="yellow") + "\033[K")
             set_color("green")
             print("╚════════════════════════════════════════════════════════════╝\033[K")
             reset_color()
-
-            add_skill_xp(data, "combat", total_xp_earned)
-            add_skill_xp(data, "piloting", total_xp_earned // 2)
-            save_data(save_name, data)
 
             input("\nPress Enter to continue...")
             return "victory"
