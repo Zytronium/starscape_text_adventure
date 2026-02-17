@@ -157,5 +157,17 @@
       "Axnit": 320,
       "Narcor": 100
     }
+  },
+  {
+    "name": "Ozark",
+    "type": "ship",
+    "time": 1800.0,
+    "materials": {
+      "Korrelite": 2800,
+      "Reknite": 1650,
+      "Gellium": 900,
+      "Axnit": 300,
+      "Narcor": 100
+    }
   }
 ]
