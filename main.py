@@ -1598,11 +1598,19 @@ def get_numpad_key(timeout=0.05):
     else:  # Unix/Linux/Mac
         import select
         import termios
-        import tty
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
-            tty.setraw(fd)
+            # Disable canonical mode and echo WITHOUT touching OPOST output processing.
+            # tty.setraw() would also clear OPOST, which breaks \n -> \r\n translation
+            # and destroys the combat UI layout.  We only need raw *input*.
+            new_settings = termios.tcgetattr(fd)
+            new_settings[3] &= ~(termios.ICANON | termios.ECHO)  # lflags: raw input only
+            new_settings[6][termios.VMIN] = 0   # non-blocking read
+            new_settings[6][termios.VTIME] = 0  # no read timeout (select handles timing)
+            # TCSANOW: apply immediately, no drain latency on every frame
+            termios.tcsetattr(fd, termios.TCSANOW, new_settings)
+
             rlist, _, _ = select.select([sys.stdin], [], [], timeout)
             if rlist:
                 ch = sys.stdin.read(1)
@@ -1637,7 +1645,7 @@ def get_numpad_key(timeout=0.05):
                     return ch.lower()
             return None
         finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            termios.tcsetattr(fd, termios.TCSANOW, old_settings)
 
 
 def calculate_arrow_position(current_pos, arrow_direction):
