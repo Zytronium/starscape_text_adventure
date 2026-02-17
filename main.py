@@ -954,6 +954,12 @@ def generate_small_group(security_level, combat_skill):
                 base_damage = 15
                 ship_type = "Drone Fighter"
             elif random.random() < 0.5:
+                fleet["type"] = "Drone Pack"
+                fleet["size"] = random.randint(4, 6)
+                base_hp = 45
+                base_damage = 15
+                ship_type = "Drone Fighter"
+            elif random.random() < 0.5:
                 fleet["type"] = "Pirate Patrol"
                 fleet["size"] = random.randint(3, 5)
                 base_hp = 75
@@ -2320,6 +2326,7 @@ def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=Fal
 
     # Combat briefing
     print("\033[H", end="", flush=True)
+
     print("╔════════════════════════════════════════════════════════════╗\033[K")
     print(box_line("COMBAT ENGAGED!", 60) + "\033[K")
     print("╠════════════════════════════════════════════════════════════╣\033[K")
@@ -2416,7 +2423,7 @@ def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=Fal
         # Run unified combat round
         result = unified_combat_round(
             player_ship, alive_enemies, combo, firing_mode,
-            player_energy, max_energy, current_target_idx, display_offset, data
+            player_energy, max_energy, current_target_idx, display_offset, data, enemy_fleet
         )
 
         combo = result['combo']
@@ -2449,7 +2456,7 @@ def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=Fal
     return "victory"
 
 
-def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_energy, max_energy, current_target_idx, display_offset, data):
+def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_energy, max_energy, current_target_idx, display_offset, data, enemy_fleet):
     """Unified combat round with simultaneous dodging and firing"""
 
     # State variables
@@ -2470,12 +2477,37 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
     warp_charge_required = 1.0  # Full charge needed
     warp_energy_cost_percent = 0.6  # 60% of current energy
 
-    # Projectile system
+    # Projectile system - scale with fleet size and power
     projectiles = []
     next_projectile_spawn = time() + 0.5  # First projectiles spawn after half second
-    projectile_spawn_interval = 1.5  # Slower spawning - 1.5 seconds between projectiles
-    max_active_projectiles = 4  # Fewer projectiles at once
-    total_projectiles_to_spawn = 12  # Fewer total projectiles
+
+    # Calculate fleet power and size for scaling
+    fleet_size = len(alive_enemies)
+    avg_enemy_damage = sum(enemy.get('damage', 50) for enemy in alive_enemies) / max(1, fleet_size)
+
+    # Check if this is a crystalline fleet (they get special treatment)
+    is_crystalline = enemy_fleet.get('type') == 'Crystalline Guardians'
+
+    if is_crystalline:
+        # Crystalline entities fire in bursts of 3 per entity
+        projectile_spawn_interval = 0.8  # Slightly slower than normal
+        max_active_projectiles = fleet_size * 3  # 3 projectiles per entity
+        total_projectiles_to_spawn = fleet_size * 15  # 15 projectiles per entity total
+    else:
+        # Scale with fleet size: 1-3 ships = slow, 4-7 ships = medium, 8+ ships = fast
+        if fleet_size <= 3:
+            projectile_spawn_interval = 1.2
+            max_active_projectiles = 3
+            total_projectiles_to_spawn = 12
+        elif fleet_size <= 7:
+            projectile_spawn_interval = 0.6  # Faster spawning
+            max_active_projectiles = 6
+            total_projectiles_to_spawn = 20
+        else:  # 8+ ships
+            projectile_spawn_interval = 0.25  # 4 per second for large fleets
+            max_active_projectiles = min(12, fleet_size)
+            total_projectiles_to_spawn = min(40, fleet_size * 4)
+
     projectiles_spawned = 0
 
     # Combat tracking
@@ -2528,15 +2560,44 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
 
         # Spawn new projectiles (only if enemies alive)
         if alive_enemy_count > 0 and projectiles_spawned < total_projectiles_to_spawn and current_time >= next_projectile_spawn:
-            # Scale max projectiles based on alive enemies (fewer enemies = fewer projectiles)
-            scaled_max_projectiles = min(max_active_projectiles, max(1, alive_enemy_count))
+            if is_crystalline:
+                # Crystalline entities fire in bursts of 3 per entity
+                scaled_max_projectiles = alive_enemy_count * 3
+            else:
+                # Scale max projectiles based on alive enemies (fewer enemies = fewer projectiles)
+                scaled_max_projectiles = min(max_active_projectiles, max(1, alive_enemy_count))
 
-            if len(projectiles) < scaled_max_projectiles:
-                target_pos = random.randint(1, 9)
-                speed = random.uniform(0.2, 0.35)  # Much slower projectiles
+            # Calculate how many projectiles to spawn this cycle
+            if is_crystalline:
+                # Crystalline: spawn 3 projectiles per entity at once
+                projectiles_to_spawn = min(alive_enemy_count * 3, scaled_max_projectiles - len(projectiles))
+            else:
+                # Normal: spawn 1 projectile
+                projectiles_to_spawn = 1 if len(projectiles) < scaled_max_projectiles else 0
+
+            for _ in range(projectiles_to_spawn):
+                if len(projectiles) >= scaled_max_projectiles:
+                    break
+
+                # 2/3 of projectiles should target the player's current position
+                # 1/3 should be random
+                if random.random() < 0.67:  # 67% chance to target player
+                    target_pos = player_pos
+                else:
+                    target_pos = random.randint(1, 9)
+
+                # Set projectile speed based on fleet type
+                if is_crystalline:
+                    speed = random.uniform(0.25, 0.4)  # Slightly faster than normal
+                else:
+                    # Scale speed slightly with fleet size
+                    base_speed = 0.2 if fleet_size <= 3 else 0.25 if fleet_size <= 7 else 0.3
+                    speed = random.uniform(base_speed, base_speed + 0.15)
+
                 projectiles.append(Projectile(target_pos, speed))
-                next_projectile_spawn = current_time + projectile_spawn_interval
                 projectiles_spawned += 1
+
+            next_projectile_spawn = current_time + projectile_spawn_interval
 
         # Update projectiles
         completed_projectiles = []
@@ -2553,9 +2614,19 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
         # Check hits
         for proj in completed_projectiles:
             if proj.target_position == player_pos:
-                # Hit! Apply damage
-                damage_per_hit = sum(enemy['damage'] for enemy in alive_enemies) / len(alive_enemies)
-                damage_taken = int(damage_per_hit)
+                # Hit! Apply damage based on fleet power
+                # Use average enemy damage but scale with fleet size and power
+                avg_damage = sum(enemy['damage'] for enemy in alive_enemies) / len(alive_enemies)
+
+                # Scale damage based on fleet size (more enemies = slightly more damage per hit)
+                fleet_multiplier = 1.0 + (len(alive_enemies) - 1) * 0.1  # +10% per additional enemy
+                fleet_multiplier = min(fleet_multiplier, 2.0)  # Cap at 2x
+
+                # Crystalline entities do more damage
+                if is_crystalline:
+                    fleet_multiplier *= 1.5
+
+                damage_taken = int(avg_damage * fleet_multiplier)
                 apply_damage_to_ship(player_ship, damage_taken)
                 hits_taken += 1
 
@@ -2984,6 +3055,7 @@ def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
     print("╚" + "═" * 76 + "╝" + "\033[K")
     # Clear any remaining lines
     print("\033[J", end="", flush=True)
+
 
 
 def create_health_bar(current, maximum, width, color="green"):
@@ -4261,18 +4333,18 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
             "type": "Crystalline Guardians",
             "size": random.randint(2, 4),
             "warp_disruptor": False,
-            "total_firepower": 500,
+            "total_firepower": 800,
             "ships": []
         }
 
         for i in range(enemy_fleet["size"]):
             entity = {
                 "name": f"Crystalline Guardian {i+1}",
-                "shield_hp": 100,
-                "max_shield_hp": 100,
-                "hull_hp": 500,
-                "max_hull_hp": 500,
-                "damage": 125,
+                "shield_hp": 150,
+                "max_shield_hp": 150,
+                "hull_hp": 600,
+                "max_hull_hp": 600,
+                "damage": 180,  # Increased from 125
             }
             enemy_fleet["ships"].append(entity)
 
