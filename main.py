@@ -2542,6 +2542,10 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
     energy_regen_rate = 5.0  # per second
     energy_cost_per_shot = 2
 
+    # Shield regen (HP per second, from ship's Shield Regen stat)
+    shield_regen_rate = get_shield_regen(player_ship)  # HP per second
+    shield_regen_accumulator = 0.0  # Tracks partial seconds
+
     start_time = time()
     last_update = start_time
 
@@ -2603,11 +2607,11 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
 
                 # Set projectile speed based on fleet type
                 if is_crystalline:
-                    speed = random.uniform(0.25, 0.4)  # Slightly faster than normal
+                    speed = random.uniform(0.75, 1.2)  # Much faster than normal
                 else:
                     # Scale speed slightly with fleet size
-                    base_speed = 0.2 if fleet_size <= 3 else 0.25 if fleet_size <= 7 else 0.3
-                    speed = random.uniform(base_speed, base_speed + 0.15)
+                    base_speed = 0.4 if fleet_size <= 3 else 0.5 if fleet_size <= 7 else 0.6
+                    speed = random.uniform(base_speed, base_speed + 0.3)
 
                 projectiles.append(Projectile(target_pos, speed))
                 projectiles_spawned += 1
@@ -2655,6 +2659,16 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
 
         # Regenerate energy
         player_energy = min(max_energy, player_energy + energy_regen_rate * delta_time)
+
+        # Regenerate player shields (Shield Regen HP per second)
+        shield_regen_accumulator += delta_time
+        if shield_regen_accumulator >= 1.0:
+            seconds_elapsed = int(shield_regen_accumulator)
+            shield_regen_accumulator -= seconds_elapsed
+            max_shield = get_max_shield(player_ship)
+            if player_ship['shield_hp'] < max_shield:
+                regen_amount = shield_regen_rate * seconds_elapsed
+                player_ship['shield_hp'] = min(player_ship['shield_hp'] + regen_amount, max_shield)
 
         # Decay weapon heat when not firing
         weapon_heat = max(0.0, weapon_heat - heat_decay_rate * delta_time)
@@ -2915,8 +2929,9 @@ def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
     # Grid and Enemy List side by side
     positions = [[7, 8, 9], [4, 5, 6], [1, 2, 3]]
 
-    # Get list of positions being targeted by projectiles
-    targeted_positions = set(proj.target_position for proj in projectiles)
+    # Get list of positions being targeted by projectiles that are close to hitting
+    # Only highlight when projectile is in the final 2/3 of travel
+    targeted_positions = set(proj.target_position for proj in projectiles if proj.progress >= 1/3)
 
     for row_idx, row in enumerate(positions):
         # Grid - build without padding first
