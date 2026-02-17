@@ -328,6 +328,13 @@
       "type": "Ship",
       "sell_price": "",
       "buy_price": ""
+    },
+    {
+      "name": "Ozark",
+      "description": "The Ozark is a dedicated mining platform with the ability to quickly strip asteroid fields of ore using its considerable bonus to mining turret yield.",
+      "type": "Ship",
+      "sell_price": "",
+      "buy_price": ""
     }
   ]
 }

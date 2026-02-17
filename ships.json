@@ -266,6 +266,21 @@
         "Agility": 60,
         "Warp Speed": 0.8
       }
+    },
+    {
+      "name": "Ozark",
+      "description": "The Ozark is a dedicated mining platform with the ability to quickly strip asteroid fields of ore using its considerable bonus to mining turret yield.",
+      "class": "Miner",
+      "stats": {
+        "DPS": 151.0,
+        "Shield": 660.0,
+        "Hull": 2200.0,
+        "Shield Regen": 7.0,
+        "Energy": 350.0,
+        "Speed": 140.0,
+        "Agility": 48.0,
+        "Warp Speed": 0.7
+      }
     }
   ]
 }
