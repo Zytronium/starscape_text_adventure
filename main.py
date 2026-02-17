@@ -2660,9 +2660,9 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
         # Regenerate energy
         player_energy = min(max_energy, player_energy + energy_regen_rate * delta_time)
 
-        # Regenerate player shields (Shield Regen HP per second)
+        # Regenerate player shields (Shield Regen HP per 2 seconds)
         shield_regen_accumulator += delta_time
-        if shield_regen_accumulator >= 1.0:
+        if shield_regen_accumulator >= 2.0:
             seconds_elapsed = int(shield_regen_accumulator)
             shield_regen_accumulator -= seconds_elapsed
             max_shield = get_max_shield(player_ship)
