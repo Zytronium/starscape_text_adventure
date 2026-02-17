@@ -1814,8 +1814,7 @@ def generate_projectiles(alive_enemies, difficulty_multiplier=1.0):
 
     for _ in range(num_projectiles):
         target_pos = random.randint(1, 9)
-        # Made SLOWER - reduced from 0.6-0.9 to 0.3-0.5 so they're actually dodgeable
-        speed = random.uniform(0.3, 0.5)
+        speed = random.uniform(5, 7.5)
         projectiles.append(Projectile(target_pos, speed))
 
     return projectiles
@@ -1885,7 +1884,6 @@ def dodge_phase(player_ship, alive_enemies, combo, data):
     move_target = 5
     move_start_time = 0
     move_duration = 0
-    emergency_evade_active = False
 
     start_time = time()
     last_update = start_time
@@ -1903,7 +1901,7 @@ def dodge_phase(player_ship, alive_enemies, combo, data):
                 completed_projectiles.append(proj)
 
         for proj in completed_projectiles:
-            if proj.target_position == player_pos and not emergency_evade_active:
+            if proj.target_position == player_pos:
                 hits += 1
             projectiles.remove(proj)
 
@@ -1936,20 +1934,15 @@ def dodge_phase(player_ship, alive_enemies, combo, data):
     successful_dodges = total_projectiles - hits
     dodge_percent = (successful_dodges / total_projectiles * 100) if total_projectiles > 0 else 100
 
-    if emergency_evade_active:
-        damage_per_hit = sum(enemy['damage'] for enemy in alive_enemies) / len(alive_enemies)
-        damage_taken = int(damage_per_hit * 0.3 * len(projectiles))
-        new_combo = 1
-    else:
-        damage_per_hit = sum(enemy['damage'] for enemy in alive_enemies) / len(alive_enemies)
-        damage_taken = int(damage_per_hit * hits)
+    damage_per_hit = sum(enemy['damage'] for enemy in alive_enemies) / len(alive_enemies)
+    damage_taken = int(damage_per_hit * hits)
 
-        if hits == 0:
-            new_combo = min(combo + 1, 4)
-        elif dodge_percent >= 70:
-            new_combo = combo
-        else:
-            new_combo = 1
+    if hits == 0:
+        new_combo = min(combo + 1, 4)
+    elif dodge_percent >= 70:
+        new_combo = combo
+    else:
+        new_combo = 1
 
     return new_combo, damage_taken, successful_dodges, total_projectiles
 
@@ -3210,127 +3203,6 @@ def apply_damage_to_player(player_ship, damage):
             return True
 
     return False
-
-
-def enemy_attacks(enemies, player_ship, piloting_skill, is_evading=False):
-    """Enemies attack the player; not all ships may fire each turn
-
-    Args:
-        enemies: List of enemy ships
-        player_ship: Player's ship data
-        piloting_skill: Player's piloting skill level
-        is_evading: If True, player took evasive maneuvers this turn and damage is reduced
-    """
-    clear_screen()
-    title("ENEMY TURN")
-    print()
-
-    if is_evading:
-        print("  Enemy fleet is attacking, but you're evading!\033[K")
-    else:
-        print("  Enemy fleet is attacking!\033[K")
-    print()
-    sleep(0.8)
-
-    total_damage = 0
-
-    # Get ship agility for evasion calculations
-    ship_stats = get_ship_stats(player_ship['name'])
-    ship_agility = ship_stats.get('Agility', 100)
-
-    # Determine which enemies fire this turn
-    # If 4 or fewer: all fire
-    # If more than 4: random 50-80% fire, but command ships always fire
-    if len(enemies) <= 4:
-        attacking_enemies = enemies
-    else:
-        firing_chance = random.uniform(0.5, 0.8)
-        attacking_enemies = []
-        for enemy in enemies:
-            # Command ships always fire
-            if enemy.get('is_command_ship', False):
-                attacking_enemies.append(enemy)
-            # Regular ships have firing_chance to fire
-            elif random.random() < firing_chance:
-                attacking_enemies.append(enemy)
-
-        # Ensure at least 3 ships fire
-        if len(attacking_enemies) < 3:
-            remaining = [e for e in enemies if e not in attacking_enemies]
-            attacking_enemies.extend(random.sample(remaining, min(3 - len(attacking_enemies), len(remaining))))
-
-    non_firing = len(enemies) - len(attacking_enemies)
-    if non_firing > 0:
-        print(f"  {non_firing} enemy ships are repositioning and not firing this turn.\033[K")
-        print()
-        sleep(0.5)
-
-    for enemy in attacking_enemies:
-        # Base damage with variance
-        damage = int(enemy["damage"] * random.uniform(0.8, 1.2))
-
-        # Piloting skill gives evasion chance
-        base_evasion_chance = min(piloting_skill * 0.02, 0.25)  # Max 25% evasion normally
-
-        # If evading, greatly increase evasion chance
-        if is_evading:
-            # Agility factor - higher agility = more evasion
-            agility_factor = (ship_agility - 67) / 150  # Normalize to 0-0.35 range
-            # Piloting factor - higher skill = more evasion
-            piloting_factor = piloting_skill * 0.02  # Up to 0.4 at level 20
-
-            evasion_chance = min(base_evasion_chance + 0.4 + agility_factor + piloting_factor, 0.85)  # Max 85% evasion when evading
-        else:
-            evasion_chance = base_evasion_chance
-
-        if random.random() < evasion_chance:
-            print(f"  {enemy['name']}'s attack missed! (Evaded)\033[K")
-            sleep(0.3)
-        else:
-            # If evading, reduce damage significantly even on hits
-            if is_evading:
-                damage = int(damage * 0.3)  # Only 30% damage on hits while evading
-
-            total_damage += damage
-            print(f"  {enemy['name']} deals {damage} damage!\033[K")
-            sleep(0.3)
-
-    print()
-    print(f"  Total incoming damage: {total_damage}\033[K")
-    if is_evading and total_damage > 0:
-        set_color("cyan")
-        print("  (Damage greatly reduced by evasive maneuvers)\033[K")
-        reset_color()
-    print()
-    sleep(0.5)
-
-    # Apply damage to player
-    remaining_damage = total_damage
-
-    if player_ship["shield_hp"] > 0:
-        shield_damage = min(remaining_damage, player_ship["shield_hp"])
-        player_ship["shield_hp"] -= shield_damage
-        remaining_damage -= shield_damage
-        print(f"  Your shields absorbed {shield_damage} damage\033[K")
-        max_shield = get_max_shield(player_ship)
-        print(f"  Shield HP: {player_ship['shield_hp']}/{max_shield}\033[K")
-        sleep(0.3)
-
-    if remaining_damage > 0:
-        player_ship["hull_hp"] -= remaining_damage
-        set_color("red")
-        print(f"  Your hull took {remaining_damage} damage!\033[K")
-        reset_color()
-        max_hull = get_max_hull(player_ship)
-        print(f"  Hull HP: {max(0, player_ship['hull_hp'])}/{max_hull}\033[K")
-        sleep(0.3)
-
-        if player_ship["hull_hp"] < max_hull * 0.2:
-            print()
-            set_color("red")
-            set_color("blinking")
-            print("  ⚠ CRITICAL HULL DAMAGE ⚠\033[K")
-            reset_color()
 
 
 def attempt_retreat_from_combat(enemy_fleet, turn, forced_combat, data):
