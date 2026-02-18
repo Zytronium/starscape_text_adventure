@@ -9166,6 +9166,8 @@ def galaxy_map(save_name, data):
 def exit_game(close_rpc=True):
     if close_rpc:
         close_discord_rpc()
+    if MUSIC_AVAILABLE:
+        music.stop()
     sys.exit(0)
 
 
@@ -9176,6 +9178,8 @@ def main():
 
     # Initialize Discord Rich Presence
     init_discord_rpc()
+
+    music.play(resource_path("audio/Chance.mp3"))
 
     # Display startup dialog if enabled in settings
     if settings.get("display_startup_dialog", True):
