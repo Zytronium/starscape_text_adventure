@@ -62,6 +62,45 @@ DISCORD_CLIENT_ID = "1469089302578200799"
 discord_rpc = None
 
 
+class MusicManager:
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._current_track = None
+        if MUSIC_AVAILABLE:
+            pygame.mixer.init()
+
+    def play(self, filepath, loops=-1, fade_ms=2000):
+        """Play a music track in the background. loops=-1 means infinite."""
+        if not MUSIC_AVAILABLE:
+            return
+        with self._lock:
+            try:
+                pygame.mixer.music.fadeout(fade_ms // 2)
+                pygame.mixer.music.load(filepath)
+                pygame.mixer.music.play(loops=loops, fade_ms=fade_ms)
+                self._current_track = filepath
+            except Exception as e:
+                pass  # Don't interrupt gameplay
+
+    def stop(self, fade_ms=2000):
+        if not MUSIC_AVAILABLE:
+            return
+        pygame.mixer.music.fadeout(fade_ms)
+        self._current_track = None
+
+    def set_volume(self, volume: float):
+        """Volume from 0.0 to 1.0"""
+        if not MUSIC_AVAILABLE:
+            return
+        pygame.mixer.music.set_volume(max(0.0, min(1.0, volume)))
+
+    def is_playing(self):
+        return MUSIC_AVAILABLE and pygame.mixer.music.get_busy()
+
+# Global music instance
+music = MusicManager()
+
+
 def resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
     try:
