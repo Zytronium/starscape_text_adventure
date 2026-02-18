@@ -12,7 +12,7 @@ a = Analysis(
         ('system_data.json', '.'),
         ('colors.py', '.'),
     ],
-    hiddenimports=['pypresence'],
+    hiddenimports=['pypresence', 'pygame'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

@@ -9,6 +9,7 @@ import json
 import os
 import platform
 import subprocess
+import threading
 from pathlib import Path
 from io import StringIO
 from time import sleep, time
@@ -23,12 +24,27 @@ try:
     DISCORD_AVAILABLE = True
 except ImportError:
     DISCORD_AVAILABLE = False
+
+# Music support
+try:
+    import pygame
+    MUSIC_AVAILABLE = True
+except ImportError:
+    MUSIC_AVAILABLE = False
+
+if not DISCORD_AVAILABLE:
     print("Warning: pypresence not installed. Discord Rich Presence disabled.\033[K")
     print("Install with: pip install pypresence\033[K")
+
+if not MUSIC_AVAILABLE:
+    print("Warning: pygame not installed. Audio disabled.\033[K")
+    print("Install with: pip install pygame\033[K")
+
+if not DISCORD_AVAILABLE or not MUSIC_AVAILABLE:
     sleep(3)
 
 # Version codes
-APP_VERSION_CODE = "0.1.3"    # 0.1.x = alpha; 0.2.x = beta; 1.x = release
+APP_VERSION_CODE = "0.1.3.1"  # 0.1.x = alpha; 0.2.x = beta; 1.x = release
 SAVE_VERSION_CODE = 2         # Save format version code
 
 # Color codes
