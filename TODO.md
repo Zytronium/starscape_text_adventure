@@ -2,6 +2,7 @@
 
 - add more items 
 - add more ships
+- add ship turrets
 - add ship upgrades
 - add enemy structures
 - add drone battleships
