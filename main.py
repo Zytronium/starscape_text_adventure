@@ -8572,6 +8572,395 @@ def settings_screen():
         globals()['get_key'] = _saved
 
 
+def jukebox_screen():
+    """Full-featured jukebox: browse and play the game soundtrack with live controls."""
+    if not MUSIC_AVAILABLE:
+        clear_screen()
+        title("JUKEBOX")
+        print()
+        print("  Audio is not available (pygame not installed).\033[K")
+        print()
+        input("  Press Enter to return to menu...")
+        return
+
+    # ── Load metadata ──────────────────────────────────────────────────────────
+    metadata_map: dict = {}
+    try:
+        with open(resource_path("audio/metadata.json"), "r") as _f:
+            for _item in json.load(_f):
+                metadata_map[_item["ref"]] = _item
+    except Exception:
+        pass
+
+    def get_meta(ref: str):
+        m = metadata_map.get(ref, {})
+        return m.get("title", ref), m.get("artist", "Unknown")
+
+    # ── Discover audio files ───────────────────────────────────────────────────
+    audio_dir = resource_path("audio")
+    try:
+        audio_files = sorted(
+            f for f in os.listdir(audio_dir)
+            if f.lower().endswith((".mp3", ".ogg", ".wav"))
+        )
+    except Exception:
+        audio_files = []
+
+    if not audio_files:
+        clear_screen()
+        title("JUKEBOX")
+        print("\n  No audio files found.\n")
+        input("  Press Enter to return...")
+        return
+
+    # ── Get song duration via mutagen (optional dep) ───────────────────────────
+    def get_duration(filepath: str):
+        try:
+            from mutagen.mp3 import MP3
+            return MP3(filepath).info.length
+        except Exception:
+            pass
+        try:
+            from mutagen.oggvorbis import OggVorbis
+            return OggVorbis(filepath).info.length
+        except Exception:
+            pass
+        try:
+            from mutagen import File as MFile
+            mf = MFile(filepath)
+            if mf and mf.info:
+                return mf.info.length
+        except Exception:
+            pass
+        return None
+
+    # ── Non-blocking raw key reader ────────────────────────────────────────────
+    # IMPORTANT: must use os.read(fd, 1) — NOT sys.stdin.read(1) — because
+    # Python's TextIOWrapper may buffer the full escape sequence (\x1b[A) on the
+    # first read, leaving the subsequent select() seeing an empty OS buffer and
+    # incorrectly timing out, causing arrow keys to be mis-read as ESC.
+    def _read_key_nonblocking(timeout: float = 0.08):
+        """Return a key name or None; never blocks longer than *timeout* seconds."""
+        if os.name == 'nt':
+            import msvcrt
+            deadline = time() + timeout
+            while time() < deadline:
+                if msvcrt.kbhit():
+                    key = msvcrt.getch()
+                    if key in (b'\xe0', b'\x00'):
+                        key2 = msvcrt.getch()
+                        if key2 == b'H': return 'up'
+                        if key2 == b'P': return 'down'
+                        if key2 == b'K': return 'left'
+                        if key2 == b'M': return 'right'
+                        return None
+                    if key == b'\r':  return 'enter'
+                    if key == b'\x1b': return 'esc'
+                    try: return key.decode('utf-8').lower()
+                    except: return None
+                sleep(0.01)
+            return None
+        else:
+            import termios, tty, select as _sel
+            fd = sys.stdin.fileno()
+            old = termios.tcgetattr(fd)
+            try:
+                tty.setraw(fd)
+                # ── First byte ────────────────────────────────────────────────
+                r, _, _ = _sel.select([fd], [], [], timeout)
+                if not r:
+                    return None
+                ch = os.read(fd, 1)      # raw read — bypasses Python's buffer
+                if ch == b'\x1b':
+                    # ── Try to read the rest of the escape sequence ────────────
+                    r2, _, _ = _sel.select([fd], [], [], 0.05)
+                    if r2:
+                        ch2 = os.read(fd, 1)
+                        if ch2 == b'[':
+                            r3, _, _ = _sel.select([fd], [], [], 0.05)
+                            if r3:
+                                ch3 = os.read(fd, 1)
+                                if ch3 == b'A': return 'up'
+                                if ch3 == b'B': return 'down'
+                                if ch3 == b'C': return 'right'
+                                if ch3 == b'D': return 'left'
+                    return 'esc'
+                if ch in (b'\n', b'\r'): return 'enter'
+                try:
+                    return ch.decode('utf-8').lower()
+                except Exception:
+                    return None
+            finally:
+                termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+    # ── Visual helpers ─────────────────────────────────────────────────────────
+    BAR_WIDTH = 42
+
+    _GRAD_COLORS = [
+        "\033[96m",   # bright cyan
+        "\033[94m",   # bright blue
+        "\033[95m",   # bright magenta
+        "\033[96m",   # bright cyan (smoother cycle)
+        "\033[36m",   # cyan
+        "\033[34m",   # blue
+    ]
+
+    def _animated_progress_bar(fraction: float, width: int, t: float) -> str:
+        """Animated colour-wave progress bar; t drives the animation phase."""
+        filled = int(max(0.0, min(1.0, fraction)) * width)
+        bar = ""
+        wave_speed = 1.5
+        wave_width = len(_GRAD_COLORS)
+        for i in range(width):
+            if i < filled:
+                phase = (i / max(width, 1) * wave_width + t * wave_speed) % wave_width
+                color = _GRAD_COLORS[int(phase)]
+                bar += color + "█" + RESET_COLOR
+            else:
+                bar += "\033[90m░\033[0m"
+        return f"[{bar}\033[0m]"
+
+    def _volume_bar(vol: float, width: int = 20) -> str:
+        filled = int(vol * width)
+        bar = ""
+        for i in range(width):
+            if i < filled:
+                if vol > 0.7:
+                    bar += "\033[1;32m█\033[0m"
+                elif vol > 0.4:
+                    bar += "\033[1;33m█\033[0m"
+                else:
+                    bar += "\033[1;31m█\033[0m"
+            else:
+                bar += "\033[90m░\033[0m"
+        return f"[{bar}]"
+
+    def _fmt_time(secs) -> str:
+        if secs is None or secs < 0:
+            return "--:--"
+        m, s = divmod(int(secs), 60)
+        return f"{m}:{s:02d}"
+
+    # ── Mutable playback state ─────────────────────────────────────────────────
+    state = {
+        "selected":    0,
+        "current_idx": None,
+        "paused":      False,
+        "volume":      0.8,
+        "start_time":  0.0,
+        "song_offset": 0.0,
+        "duration":    None,
+        "in_player":   False,
+    }
+
+    def _elapsed() -> float:
+        if state["paused"]:
+            return state["song_offset"]
+        return state["song_offset"] + (time() - state["start_time"])
+
+    def _fraction() -> float:
+        d = state["duration"]
+        if d and d > 0:
+            return min(1.0, _elapsed() / d)
+        return 0.0
+
+    def _play(idx: int, seek_to: float = 0.0):
+        fp = resource_path(f"audio/{audio_files[idx]}")
+        try:
+            pygame.mixer.music.stop()
+            pygame.mixer.music.load(fp)
+            pygame.mixer.music.set_volume(state["volume"])
+            pygame.mixer.music.play()
+            if seek_to > 0.0:
+                try:
+                    pygame.mixer.music.set_pos(seek_to)
+                except Exception:
+                    pass
+            state["current_idx"] = idx
+            state["paused"]      = False
+            state["start_time"]  = time()
+            state["song_offset"] = seek_to
+            state["duration"]    = get_duration(fp)
+            state["in_player"]   = True
+        except Exception:
+            pass
+
+    def _seek(delta: float):
+        new_pos = max(0.0, _elapsed() + delta)
+        if state["duration"]:
+            new_pos = min(new_pos, state["duration"] - 0.5)
+        _play(state["current_idx"], seek_to=new_pos)
+
+    SEEK_STEP   = 5.0
+    VOLUME_STEP = 0.05
+
+    sys.stdout.write("\033[?25l")   # hide cursor
+    sys.stdout.flush()
+
+    try:
+        while True:
+            t_now = time()
+
+            # Auto-advance when a song ends naturally
+            if (state["in_player"]
+                    and state["current_idx"] is not None
+                    and not state["paused"]
+                    and not pygame.mixer.music.get_busy()):
+                next_idx = (state["current_idx"] + 1) % len(audio_files)
+                _play(next_idx)
+                state["selected"] = next_idx
+
+            # ──────────────────────────────────────────────────────────────────
+            # SONG LIST VIEW
+            # ──────────────────────────────────────────────────────────────────
+            if not state["in_player"]:
+                sys.stdout.write("\033[H\033[J")
+
+                print("=" * 60)
+                print("  ♫  JUKEBOX\033[K")
+                print("=" * 60)
+                print()
+                print("  \033[90mSelect a song and press ENTER to play it.\033[0m\033[K")
+                print()
+
+                visible  = 15
+                sel      = state["selected"]
+                n        = len(audio_files)
+                list_top = max(0, min(sel - visible // 2, n - visible))
+                list_bot = min(list_top + visible, n)
+
+                for i in range(list_top, list_bot):
+                    ref  = audio_files[i]
+                    stit, sart = get_meta(ref)
+                    is_playing = (i == state["current_idx"])
+                    play_icon  = " \033[1;33m♪\033[0m" if is_playing else "  "
+
+                    if i == sel:
+                        marker     = "\033[1;36m>\033[0m"
+                        title_col  = "\033[1;37m"
+                        artist_col = "\033[37m"
+                    else:
+                        marker     = " "
+                        title_col  = ""
+                        artist_col = "\033[90m"
+
+                    t_trunc = stit[:34]
+                    a_trunc = sart[:22]
+                    print(
+                        f"  {marker} {title_col}{t_trunc:<34}\033[0m"
+                        f" {artist_col}{a_trunc:<22}\033[0m"
+                        f"{play_icon}\033[K"
+                    )
+
+                print()
+                if list_top > 0:
+                    print(f"  \033[90m  ↑ {list_top} more above\033[0m\033[K")
+                if list_bot < n:
+                    print(f"  \033[90m  ↓ {n - list_bot} more below\033[0m\033[K")
+
+                print()
+                if state["current_idx"] is not None:
+                    ct, _ = get_meta(audio_files[state["current_idx"]])
+                    icon  = "⏸" if state["paused"] else "▶"
+                    print(f"  {icon} \033[1;36m{ct}\033[0m\033[K")
+                print()
+                print("  \033[90m↑↓ Navigate  │  ENTER Play  │  [p] Player View  │  ESC Back\033[0m\033[K")
+                sys.stdout.flush()
+
+                key = _read_key_nonblocking(0.10)
+
+                if key == 'up':
+                    state["selected"] = (sel - 1) % n
+                elif key == 'down':
+                    state["selected"] = (sel + 1) % n
+                elif key == 'enter':
+                    _play(sel)
+                elif key == 'p' and state["current_idx"] is not None:
+                    state["in_player"] = True
+                elif key == 'esc':
+                    break
+
+            # ──────────────────────────────────────────────────────────────────
+            # NOW-PLAYING VIEW
+            # ──────────────────────────────────────────────────────────────────
+            else:
+                idx  = state["current_idx"]
+                ref  = audio_files[idx]
+                stit, sart = get_meta(ref)
+                elapsed = _elapsed()
+                frac    = _fraction()
+                dur     = state["duration"]
+
+                sys.stdout.write("\033[H\033[J")
+
+                print("=" * 60)
+                print("  ♫  NOW PLAYING\033[K")
+                print("=" * 60)
+                print()
+
+                state_icon = "⏸" if state["paused"] else "♪"
+                print(f"  {state_icon}  \033[1;37m{stit}\033[0m\033[K")
+                print(f"     \033[90m{sart}\033[0m\033[K")
+                print()
+                print(f"     \033[90mTrack {idx + 1} of {len(audio_files)}\033[0m\033[K")
+                print()
+
+                bar      = _animated_progress_bar(frac, BAR_WIDTH, t_now)
+                time_str = _fmt_time(elapsed) + " / " + (_fmt_time(dur) if dur else "--:--")
+                print(f"  {bar}\033[K")
+                print(f"  \033[90m{time_str}\033[0m\033[K")
+                print()
+
+                arrow_l = "\033[1;36m◄◄\033[0m"
+                arrow_r = "\033[1;36m▶▶\033[0m"
+                print(f"  {arrow_l} -5s  Seek  +5s {arrow_r}   \033[90m(← / →)\033[0m\033[K")
+                print()
+
+                vbar    = _volume_bar(state["volume"])
+                vol_pct = int(state["volume"] * 100)
+                print(f"  Volume: {vbar}  \033[1m{vol_pct}%\033[0m\033[K")
+                print()
+
+                pause_label = "[p] Resume" if state["paused"] else "[p] Pause "
+                print(f"  \033[90m{pause_label}  │  [n] Next  │  [s] Song List  │  ESC Back\033[0m\033[K")
+                sys.stdout.flush()
+
+                key = _read_key_nonblocking(0.08)
+
+                if key == 'up':
+                    state["volume"] = min(1.0, state["volume"] + VOLUME_STEP)
+                    pygame.mixer.music.set_volume(state["volume"])
+                elif key == 'down':
+                    state["volume"] = max(0.0, state["volume"] - VOLUME_STEP)
+                    pygame.mixer.music.set_volume(state["volume"])
+                elif key == 'right':
+                    _seek(+SEEK_STEP)
+                elif key == 'left':
+                    _seek(-SEEK_STEP)
+                elif key == 'p':
+                    if state["paused"]:
+                        pygame.mixer.music.unpause()
+                        state["start_time"] = time()
+                        state["paused"]     = False
+                    else:
+                        state["song_offset"] = _elapsed()
+                        pygame.mixer.music.pause()
+                        state["paused"]      = True
+                elif key == 'n':
+                    nxt = (state["current_idx"] + 1) % len(audio_files)
+                    _play(nxt)
+                    state["selected"] = nxt
+                elif key == 's':
+                    state["in_player"] = False
+                elif key == 'esc':
+                    state["in_player"] = False
+
+    finally:
+        sys.stdout.write("\033[?25h")   # restore cursor
+        sys.stdout.flush()
+        music.play(resource_path("audio/Menu.ogg"))
+
+
 def about_screen():
     clear_screen()
     title("ABOUT")
@@ -9490,6 +9879,7 @@ def main():
                 "Continue Game",
                 "Delete Save",
                 "Settings",
+                "Jukebox",
                 "About",
                 "Check For Updates",
                 "Exit"
@@ -9521,10 +9911,12 @@ def main():
                 case 3:
                     settings_screen()
                 case 4:
-                    about_screen()
+                    jukebox_screen()
                 case 5:
-                    check_for_updates()
+                    about_screen()
                 case 6:
+                    check_for_updates()
+                case 7:
                     clear_screen()
                     print("Exiting...\033[K")
                     break
