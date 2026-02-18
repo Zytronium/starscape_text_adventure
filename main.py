@@ -2827,7 +2827,7 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
 
                 # Set projectile speed based on fleet type
                 if is_crystalline:
-                    speed = random.uniform(0.75, 1.2)  # Much faster than normal
+                    speed = random.uniform(0.5, 0.8)  # x2 faster than normal
                 else:
                     # Scale speed slightly with fleet size
                     base_speed = 0.4 if fleet_size <= 3 else 0.5 if fleet_size <= 7 else 0.6
