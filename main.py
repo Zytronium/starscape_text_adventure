@@ -63,33 +63,189 @@ discord_rpc = None
 
 
 class MusicManager:
+    _AMBIANCE_FILES = [f"audio/Ambiance{i}.mp3" for i in range(1, 6)]
+    _BATTLE_FILES   = [f"audio/Battle{i}.mp3"   for i in range(1, 3)]
+
     def __init__(self):
         self._lock = threading.Lock()
         self._current_track = None
+        self._mode = None          # 'ambiance' | 'battle' | 'vex' | 'intro' | 'menu' | None
+        self._ambiance_queue = []
+        self._battle_queue   = []
+        self._monitor_thread = None
+        self._stop_monitor   = False
+        # Per-mode volumes (0.0–1.0); loaded from settings on first use
+        self._volumes = {'ambiance': 1.0, 'battle': 1.0, 'vex': 1.0,
+                         'intro': 1.0, 'menu': 1.0}
+
         if MUSIC_AVAILABLE:
             pygame.mixer.init()
 
+
+    def load_volumes(self):
+        """Sync volume levels from the settings file."""
+        try:
+            settings = get_settings()
+            self._volumes['ambiance'] = max(0.0, min(1.0,
+                settings.get('ambiance_volume', 100) / 100.0))
+            # Battle volume applies to both battle tracks and Vex
+            bv = max(0.0, min(1.0, settings.get('battle_volume', 100) / 100.0))
+            self._volumes['battle'] = bv
+            self._volumes['vex']    = bv
+        except Exception:
+            pass
+
+    def _vol(self):
+        """Return the volume for the current mode."""
+        return self._volumes.get(self._mode, 1.0)
+
+    def _next_ambiance(self):
+        """Return the next ambiance path, refilling & reshuffling when empty."""
+        if not self._ambiance_queue:
+            pool = self._AMBIANCE_FILES.copy()
+            random.shuffle(pool)
+            # Avoid immediately repeating the track that just finished
+            if self._current_track and len(pool) > 1:
+                just_played = self._current_track
+                while pool[0] == just_played:
+                    random.shuffle(pool)
+            self._ambiance_queue = pool
+        return self._ambiance_queue.pop(0)
+
+    def _next_battle(self):
+        """Return the next battle path, cycling randomly."""
+        if not self._battle_queue:
+            pool = self._BATTLE_FILES.copy()
+            random.shuffle(pool)
+            if self._current_track and len(pool) > 1:
+                just_played = self._current_track
+                while pool[0] == just_played:
+                    random.shuffle(pool)
+            self._battle_queue = pool
+        return self._battle_queue.pop(0)
+
+    def _load_and_play(self, filepath, fade_ms=1500, loops=0):
+        """Load and start a track.  loops=0 means play once (monitor chains next)."""
+        if not MUSIC_AVAILABLE:
+            return
+        try:
+            pygame.mixer.music.fadeout(fade_ms // 2)
+            sleep(fade_ms / 2000)
+            pygame.mixer.music.load(resource_path(filepath))
+            pygame.mixer.music.set_volume(self._vol())
+            pygame.mixer.music.play(loops=loops, fade_ms=fade_ms)
+            self._current_track = filepath
+        except Exception:
+            pass
+
+    def _monitor_loop(self):
+        """Background daemon: when a queued track ends, play the next one."""
+        while not self._stop_monitor:
+            sleep(0.4)
+            if not MUSIC_AVAILABLE:
+                continue
+            with self._lock:
+                mode = self._mode
+            if mode not in ('ambiance', 'battle'):
+                continue
+            if pygame.mixer.music.get_busy():
+                continue
+            # Track finished – queue the next one
+            with self._lock:
+                mode = self._mode          # re-check inside lock
+                if mode == 'ambiance':
+                    track = self._next_ambiance()
+                elif mode == 'battle':
+                    track = self._next_battle()
+                else:
+                    continue
+            self._load_and_play(track, fade_ms=1000)
+
+    def _ensure_monitor(self):
+        if self._monitor_thread is None or not self._monitor_thread.is_alive():
+            self._stop_monitor = False
+            self._monitor_thread = threading.Thread(
+                target=self._monitor_loop, daemon=True, name="MusicMonitor"
+            )
+            self._monitor_thread.start()
+
+
+    def play_ambiance(self, fade_ms=2000):
+        """Switch to shuffled ambiance music (loops forever via monitor)."""
+        if not MUSIC_AVAILABLE:
+            return
+        self.load_volumes()
+        self._ensure_monitor()
+        with self._lock:
+            self._mode = 'ambiance'
+            track = self._next_ambiance()
+        self._load_and_play(track, fade_ms)
+
+    def play_battle(self, fade_ms=1000):
+        """Switch to randomly-chained battle music."""
+        if not MUSIC_AVAILABLE:
+            return
+        self.load_volumes()
+        self._ensure_monitor()
+        with self._lock:
+            self._mode = 'battle'
+            track = self._next_battle()
+        self._load_and_play(track, fade_ms)
+
+    def play_vex(self, fade_ms=1500):
+        """Play Vex.mp3 on loop (Vexnium anomaly / crystalline combat)."""
+        if not MUSIC_AVAILABLE:
+            return
+        self.load_volumes()
+        self._ensure_monitor()
+        with self._lock:
+            self._mode = 'vex'
+        self._load_and_play("audio/Vex.mp3", fade_ms=fade_ms, loops=-1)
+
+    def play_intro(self, fade_ms=1500):
+        """Play Intro.mp3 once (monitor stays idle until mode changes)."""
+        if not MUSIC_AVAILABLE:
+            return
+        self.load_volumes()
+        self._ensure_monitor()
+        with self._lock:
+            self._mode = 'intro'
+            self._current_track = "audio/Intro.mp3"
+        try:
+            pygame.mixer.music.fadeout(fade_ms // 2)
+            sleep(fade_ms / 2000)
+            pygame.mixer.music.load(resource_path("audio/Intro.mp3"))
+            pygame.mixer.music.set_volume(self._vol())
+            pygame.mixer.music.play(loops=0, fade_ms=fade_ms)
+        except Exception:
+            pass
+
     def play(self, filepath, loops=-1, fade_ms=2000):
-        """Play a music track in the background. loops=-1 means infinite."""
+        """Play a specific file directly (e.g. Menu.ogg with infinite loop)."""
         if not MUSIC_AVAILABLE:
             return
         with self._lock:
-            try:
-                pygame.mixer.music.fadeout(fade_ms // 2)
-                pygame.mixer.music.load(filepath)
-                pygame.mixer.music.play(loops=loops, fade_ms=fade_ms)
-                self._current_track = filepath
-            except Exception as e:
-                pass  # Don't interrupt gameplay
+            self._mode = 'menu'
+            self._current_track = filepath
+        try:
+            pygame.mixer.music.fadeout(fade_ms // 2)
+            sleep(fade_ms / 2000)
+            pygame.mixer.music.load(filepath)
+            pygame.mixer.music.set_volume(self._vol())
+            pygame.mixer.music.play(loops=loops, fade_ms=fade_ms)
+        except Exception:
+            pass
 
     def stop(self, fade_ms=2000):
         if not MUSIC_AVAILABLE:
             return
+        with self._lock:
+            self._mode = None
+            self._current_track = None
         pygame.mixer.music.fadeout(fade_ms)
-        self._current_track = None
 
     def set_volume(self, volume: float):
-        """Volume from 0.0 to 1.0"""
+        """Immediately change the volume of whatever is currently playing (0.0–1.0)."""
         if not MUSIC_AVAILABLE:
             return
         pygame.mixer.music.set_volume(max(0.0, min(1.0, volume)))
@@ -1425,6 +1581,7 @@ def enemy_encounter(enemy_fleet, system, save_name, data, previous_content=""):
     if choice == 0:
         # Fight
         result = combat_loop(enemy_fleet, system, save_name, data)
+        music.play_ambiance()
         return result
 
     elif choice == 1:
@@ -1456,7 +1613,9 @@ def attempt_escape(enemy_fleet, system, save_name, data):
         sleep(2)
         input("Press Enter to engage...")
 
-        return combat_loop(enemy_fleet, system, save_name, data, forced_combat=True)
+        result = combat_loop(enemy_fleet, system, save_name, data, forced_combat=True)
+        music.play_ambiance()
+        return result
 
     # Base escape chance: 75%
     escape_chance = 0.75
@@ -1480,7 +1639,9 @@ def attempt_escape(enemy_fleet, system, save_name, data):
         print()
         input("Press Enter to engage in combat...")
 
-        return combat_loop(enemy_fleet, system, save_name, data, forced_combat=True)
+        result = combat_loop(enemy_fleet, system, save_name, data, forced_combat=True)
+        music.play_ambiance()
+        return result
 
 
 def ignore_enemies(enemy_fleet, system, save_name, data):
@@ -2361,6 +2522,10 @@ def wave_transition(player_ship, enemy_fleet, data, save_name):
 def realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat=False, structure=None):
     """New unified real-time combat system matching original design"""
     update_discord_presence(data=data, context="combat")
+    if enemy_fleet.get('type') == 'Crystalline Guardians':
+        music.play_vex()
+    else:
+        music.play_battle()
 
     player_ship = get_active_ship(data)
     combat_skill = data.get("skills", {}).get("combat", 0)
@@ -4092,6 +4257,10 @@ def mine_anomaly(save_name, data, anomaly):
 
     update_discord_presence(data=data, context="mining")
 
+    # Vexnium anomalies get their own atmospheric track
+    if anomaly_type == "VX":
+        music.play_vex()
+
     # Define ore types and quantities for each anomaly type
     ore_configs = {
         "AT": {
@@ -4186,15 +4355,21 @@ def mine_anomaly(save_name, data, anomaly):
             # Save asteroid states before leaving
             save_data(save_name, data)
             update_discord_presence(data=data, context="traveling")
+            if anomaly_type == "VX":
+                music.play_ambiance()
             return
 
         # Mine the selected asteroid
         result = mine_asteroid(save_name, data, asteroids[choice], vexnium_guarded)
 
         if result == "death":
+            if anomaly_type == "VX":
+                music.play_ambiance()
             animated_death_screen(save_name, data)
             return
         elif result == "escaped":
+            if anomaly_type == "VX":
+                music.play_ambiance()
             save_data(save_name, data)
             return
         elif result == "completed":
@@ -4214,6 +4389,8 @@ def mine_anomaly(save_name, data, anomaly):
                 system_anomalies.remove(anomaly)
                 save_data(save_name, data)
 
+        if anomaly_type == "VX":
+            music.play_ambiance()
         clear_screen()
         title("ANOMALY DEPLETED")
         print()
@@ -4314,6 +4491,7 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
 
         system = system_data(data["current_system"])
         result = combat_loop(enemy_fleet, system, save_name, data, forced_combat=True)
+        music.play_ambiance()
 
         if result == "death":
             return "death"
@@ -5706,6 +5884,9 @@ def game_loop(save_name, data):
         update_discord_presence(data=data, context="docked")
     else:
         update_discord_presence(data=data, context="traveling")
+
+    # Start ambiance music for gameplay
+    music.play_ambiance()
 
     while True:
         main_screen(save_name, data)
@@ -7999,6 +8180,10 @@ def system_data(system_name):
 
 def new_game():
     """Start a new game with dialogue and player name input"""
+
+    # Play intro music for new-game experience
+    music.play_intro()
+
     clear_screen()
     print("=" * 60)
     print()
@@ -8191,7 +8376,9 @@ def get_settings():
     # Default settings
     default_settings = {
         "display_startup_dialog": True,
-        "adaptive_discord_presence": True
+        "adaptive_discord_presence": True,
+        "ambiance_volume": 100,
+        "battle_volume": 100,
     }
 
     # Load existing settings or use defaults
@@ -8217,7 +8404,9 @@ def settings_screen():
     # Default settings
     default_settings = {
         "display_startup_dialog": True,
-        "adaptive_discord_presence": True
+        "adaptive_discord_presence": True,
+        "ambiance_volume": 100,
+        "battle_volume": 100,
     }
 
     # Load existing settings or create defaults
@@ -8240,51 +8429,147 @@ def settings_screen():
         with open(settings_path, 'w') as f:
             json.dump(settings, f, indent=4)
 
-    while True:
-        # Build menu options based on current settings
-        startup_dialog_status = "ON" if settings["display_startup_dialog"] else "OFF"
-        discord_presence_status = "ON" if settings["adaptive_discord_presence"] else "OFF"
+    def volume_bar(pct):
+        """Render a compact ASCII volume bar for a 0-100 percentage."""
+        filled = pct // 5          # 20 segments total
+        empty  = 20 - filled
+        return f"[{'█' * filled}{'░' * empty}] {pct:3d}%"
 
-        options = [
-            f"Display dialog on startup: {startup_dialog_status}",
-            f"Adaptive Discord rich presence: {discord_presence_status}",
-            "Reset settings to default",
-            "Save and exit to menu"
-        ]
-
-        choice = arrow_menu("SETTINGS", options)
-
-        if choice == 0:
-            # Toggle startup dialog
-            settings["display_startup_dialog"] = not settings["display_startup_dialog"]
-
-        elif choice == 1:
-            # Toggle Discord presence
-            settings["adaptive_discord_presence"] = not settings["adaptive_discord_presence"]
-
-        elif choice == 2:
-            # Reset settings to default
+    def edit_volume(label, key):
+        """Interactive left/right slider for a volume setting. Returns on Enter."""
+        while True:
             clear_screen()
-            title("RESET SETTINGS")
+            title(f"SETTINGS  ›  {label.upper()}")
             print()
-            print("This will reset all settings to their default values.\033[K")
-            print("Type 'RESET' to confirm.\033[K")
+            print(f"  {label}\033[K")
+            print()
+            print(f"  {volume_bar(settings[key])}\033[K")
+            print()
+            print("  ◄ / ► or ← / →  Change by 5%\033[K")
+            print("  [ / ]            Change by 1%\033[K")
+            print("  Enter            Confirm\033[K")
             print()
 
-            confirmation = input("> ").strip()
+            key_pressed = get_key()
+            if key_pressed in ('right', 'd'):
+                settings[key] = min(100, settings[key] + 5)
+            elif key_pressed in ('left', 'a'):
+                settings[key] = max(0, settings[key] - 5)
+            elif key_pressed == ']':
+                settings[key] = min(100, settings[key] + 1)
+            elif key_pressed == '[':
+                settings[key] = max(0, settings[key] - 1)
+            elif key_pressed == 'enter':
+                # Apply immediately to currently-playing music
+                music.load_volumes()
+                music.set_volume(music._vol())
+                return
 
-            if confirmation == "RESET":
-                settings = default_settings.copy()
-                print("\nSettings reset to default.\033[K")
-                input("Press Enter to continue...")
+    # Patch get_key to recognise left/right arrow in the volume editor.
+    # (The existing get_key already returns 'up'/'down'; we need 'left'/'right'.)
+    # We shadow it locally with an extended version.
+    _orig_get_key = get_key
+
+    def get_key_extended():
+        """get_key extended with left/right arrow support."""
+        if os.name == 'nt':
+            import msvcrt
+            key = msvcrt.getch()
+            if key in [b'\xe0', b'\x00']:
+                key2 = msvcrt.getch()
+                if key2 == b'H': return 'up'
+                if key2 == b'P': return 'down'
+                if key2 == b'K': return 'left'
+                if key2 == b'M': return 'right'
+            elif key == b'\r':  return 'enter'
+            elif key == b'\x1b': return 'esc'
             else:
-                print("\nReset cancelled.\033[K")
-                input("Press Enter to continue...")
+                try: return key.decode('utf-8').lower()
+                except: return None
+        else:
+            import termios, tty
+            fd = sys.stdin.fileno()
+            old = termios.tcgetattr(fd)
+            try:
+                tty.setraw(fd)
+                ch = sys.stdin.read(1)
+                if ch == '\x1b':
+                    ch2 = sys.stdin.read(1)
+                    if ch2 == '[':
+                        ch3 = sys.stdin.read(1)
+                        if ch3 == 'A': return 'up'
+                        if ch3 == 'B': return 'down'
+                        if ch3 == 'C': return 'right'
+                        if ch3 == 'D': return 'left'
+                    return 'esc'
+                elif ch in ('\n', '\r'): return 'enter'
+                else: return ch.lower()
+            finally:
+                termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
-        elif choice == 3:
-            # Save and exit
-            save_settings()
-            return
+    # Temporarily replace module-level get_key so edit_volume uses the richer version
+    import builtins
+    _saved = globals().get('get_key')
+    globals()['get_key'] = get_key_extended
+
+    try:
+        while True:
+            # Build menu options based on current settings
+            startup_dialog_status   = "ON"  if settings["display_startup_dialog"]    else "OFF"
+            discord_presence_status = "ON"  if settings["adaptive_discord_presence"] else "OFF"
+            av = volume_bar(settings["ambiance_volume"])
+            bv = volume_bar(settings["battle_volume"])
+
+            options = [
+                f"Display dialog on startup:        {startup_dialog_status}",
+                f"Adaptive Discord rich presence:   {discord_presence_status}",
+                f"Ambiance music volume:  {av}",
+                f"Battle music volume:    {bv}",
+                "Reset settings to default",
+                "Save and exit to menu",
+            ]
+
+            choice = arrow_menu("SETTINGS", options)
+
+            if choice == 0:
+                settings["display_startup_dialog"] = not settings["display_startup_dialog"]
+
+            elif choice == 1:
+                settings["adaptive_discord_presence"] = not settings["adaptive_discord_presence"]
+
+            elif choice == 2:
+                edit_volume("Ambiance music volume", "ambiance_volume")
+
+            elif choice == 3:
+                edit_volume("Battle music volume (also applies to Vex)", "battle_volume")
+
+            elif choice == 4:
+                # Reset settings to default
+                clear_screen()
+                title("RESET SETTINGS")
+                print()
+                print("This will reset all settings to their default values.\033[K")
+                print("Type 'RESET' to confirm.\033[K")
+                print()
+
+                confirmation = input("> ").strip()
+
+                if confirmation == "RESET":
+                    settings = default_settings.copy()
+                    music.load_volumes()
+                    music.set_volume(music._vol())
+                    print("\nSettings reset to default.\033[K")
+                    input("Press Enter to continue...")
+                else:
+                    print("\nReset cancelled.\033[K")
+                    input("Press Enter to continue...")
+
+            elif choice == 5:
+                # Save and exit
+                save_settings()
+                return
+    finally:
+        globals()['get_key'] = _saved
 
 
 def about_screen():
@@ -9179,8 +9464,6 @@ def main():
     # Initialize Discord Rich Presence
     init_discord_rpc()
 
-    music.play(resource_path("audio/Chance.mp3"))
-
     # Display startup dialog if enabled in settings
     if settings.get("display_startup_dialog", True):
         startup_lines = [
@@ -9194,6 +9477,8 @@ def main():
 
         clear_screen()
         type_lines(startup_lines)
+
+    music.play(resource_path("audio/Menu.ogg"))
 
     try:
         while True:
