@@ -4,6 +4,7 @@ A text-based recreation of the Roblox game Starscape by Zolar Keth
 """
 import math
 import random
+import signal
 import sys
 import json
 import os
@@ -61,6 +62,15 @@ DISCORD_CLIENT_ID = "1469089302578200799"
 # Global Discord RPC instance
 discord_rpc = None
 
+# Global combat tracker for preventing keyboard interrupt during combat
+in_combat = False
+
+
+def _sigint_combat_handler(sig, frame):
+    """SIGINT handler active only during combat — ignores Ctrl+C with a taunt."""
+    clear_screen()
+    print("\nNice try ;)", flush=True)
+    sleep(0.5)
 
 class MusicManager:
     _AMBIANCE_FILES = [f"audio/Ambiance{i}.mp3" for i in range(1, 6)]
@@ -2020,7 +2030,14 @@ class Turret:
 
 def combat_loop(enemy_fleet, system, save_name, data, forced_combat=False):
     """Main real-time combat system"""
-    return realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat)
+    global in_combat
+    in_combat = True
+    original_handler = signal.signal(signal.SIGINT, _sigint_combat_handler)
+    try:
+        return realtime_combat_loop(enemy_fleet, system, save_name, data, forced_combat)
+    finally:
+        signal.signal(signal.SIGINT, original_handler)
+        in_combat = False
 
 
 def generate_projectiles(alive_enemies, difficulty_multiplier=1.0):
