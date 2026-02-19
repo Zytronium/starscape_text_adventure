@@ -2951,8 +2951,8 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
                         print(box_line("WARP SUCCESSFUL!", 60) + "\033[K")
                         print("╠════════════════════════════════════════════════════════════╣\033[K")
                         reset_color()
-                        print(box_line("Your ship warps away to another planet.", 60) + "\033[K")
-                        print(box_line(f"Energy consumed: {int(energy_cost)}/{max_energy}", 60) + "\033[K")
+                        print(box_line("Your ship warps away to another planet.", 60, border_color="cyan") + "\033[K")
+                        print(box_line(f"Energy consumed: {int(energy_cost)}/{max_energy}", 60, border_color="cyan") + "\033[K")
                         set_color("cyan")
                         print("╚════════════════════════════════════════════════════════════╝\033[K")
                         reset_color()
@@ -2986,11 +2986,13 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
                         print(box_line("WARP FAILURE!", 60) + "\033[K")
                         print("╠════════════════════════════════════════════════════════════╣\033[K")
                         reset_color()
-                        print(box_line("Warp jump failed! You took additional damage!", 60) + "\033[K")
-                        print(box_line(f"Damage taken: {int(failure_damage)}", 60) + "\033[K")
+                        print(box_line("Warp jump failed! You took additional damage!", 60, border_color="red") + "\033[K")
+                        print(box_line(f"Damage taken: {int(failure_damage)}", 60, border_color="red") + "\033[K")
                         set_color("red")
                         print("╚════════════════════════════════════════════════════════════╝\033[K")
                         reset_color()
+                        # Clear any remaining lines below
+                        print("\033[J", end="", flush=True)
                         sleep(1.5)
 
                         combo = 1  # Break combo
