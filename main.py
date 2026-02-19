@@ -2940,8 +2940,13 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
                     agility_bonus = (ship_agility - 100) / 500.0  # ±0.2 based on agility
                     energy_bonus = (player_energy / max_energy) * 0.1  # Up to 10% bonus for high energy
 
+                    if enemy_fleet["warp_disruptor"]:
+                        base_success_chance = 0.05
                     success_chance = base_success_chance + agility_bonus + energy_bonus
-                    success_chance = max(0.3, min(0.95, success_chance))  # Clamp between 30% and 95%
+                    if not enemy_fleet["warp_disruptor"]:
+                        success_chance = max(0.3, min(0.95, success_chance))  # Clamp between 30% and 95%
+                    else:
+                        success_chance = max(0.01, min(0.4, success_chance))  # Clamp between 1% and 40%
 
                     if random.random() < success_chance:
                         # SUCCESS! Escape combat
