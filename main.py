@@ -44,7 +44,7 @@ if not DISCORD_AVAILABLE or not MUSIC_AVAILABLE:
     sleep(3)
 
 # Version codes
-APP_VERSION_CODE = "0.1.3.1"  # 0.1.x = alpha; 0.2.x = beta; 1.x = release
+APP_VERSION_CODE = "0.1.3.2"  # 0.1.x = alpha; 0.2.x = beta; 1.x = release
 SAVE_VERSION_CODE = 2         # Save format version code
 
 # Color codes
@@ -4372,8 +4372,8 @@ def mine_anomaly(save_name, data, anomaly):
                 music.play_ambiance()
             save_data(save_name, data)
             return
-        elif result == "completed":
-            # Remove the depleted asteroid
+        elif result in ["completed", "skipped"]:
+            # Remove the depleted or skipped asteroid
             asteroids.pop(choice)
             # Save updated asteroid list
             save_data(save_name, data)
@@ -4638,7 +4638,6 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                 print()
                 input("Press Enter to continue...")
 
-
             elif event_type == "dense_formation":
                 bonus_ore = event_data["bonus_ore"]
                 ore_extracted += bonus_ore
@@ -4649,7 +4648,6 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                 print(f"     Bonus: +{bonus_ore:.1f} units of {ore_name}\033[K")
                 print()
                 input("Press Enter to continue...")
-
 
             elif event_type == "collision":
                 ore_lost = event_data["ore_lost"]
@@ -4718,7 +4716,6 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                     data["inventory"]["Ancient Artifact"] += 1
                     input("Press Enter to continue...")
 
-
             elif event_type == "proximity_mine":
                 mine_defused = event_data["defused"]
                 mine_detonated = event_data["detonated"]
@@ -4757,6 +4754,37 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                     reset_color()
                     print()
                     sleep(1.5)
+
+                    # Add collected ore to inventory
+                    ore_collected = int(units_collected - current_mined)
+                    if ore_collected > 0:
+                        if ore_name not in data.get("inventory", {}):
+                            data["inventory"][ore_name] = 0
+                        data["inventory"][ore_name] += ore_collected
+
+                    # Award mining XP
+                    if total_xp_gained > 0:
+                        old_level = mining_skill
+                        old_xp = data.get("skills", {}).get("mining_xp", 0)
+                        levels_gained = add_skill_xp(data, "mining",
+                                                     total_xp_gained)
+                        new_level = data["skills"]["mining"]
+                        new_xp = data["skills"]["mining_xp"]
+
+                        clear_screen()
+                        title("MINING COMPLETE")
+                        print()
+                        print(f"  Collected {ore_collected}x {ore_name}!\033[K")
+                        print()
+
+                        display_xp_gain("mining", total_xp_gained,
+                                        levels_gained, new_level, new_xp)
+
+                        print()
+                        save_data(save_name, data)
+                        sleep(1)
+                        input("Press Enter to continue...")
+
                     return "skipped"
 
 
@@ -4912,6 +4940,9 @@ def check_mining_event(data, ore_name, stability, security_level, intensity, ano
     if ore_name in ["Gellium Ore", "Gellium Ore (Superior)", "Gellium Ore (Pristine)", "Red Narcor Ore"]:
         event_chances["gas_pocket"] *= 1.8
 
+    if ore_name == "Water Ice":
+        event_chances["gas_pocket"] *= 3
+
     if ore_name in ["Vexnium Ore", "Axnit Ore", "Axnit Ore (Pristine)",
                     "Korrelite Ore (Pristine)", "Reknite Ore (Pristine)"]:
         event_chances["dense_formation"] *= 1.6
@@ -4925,13 +4956,13 @@ def check_mining_event(data, ore_name, stability, security_level, intensity, ano
     # Modify based on security level
     if security_level == "Wild":
         event_chances["artifact"] *= 3.0
-        event_chances["proximity_mine"] *= 2.5
+        event_chances["proximity_mine"] *= 2.0
     elif security_level == "Unsecure":
         event_chances["proximity_mine"] *= 1.5
     elif security_level in ["Contested"]:
         event_chances["proximity_mine"] *= 1.2
     elif security_level == "Secure":
-        event_chances["proximity_mine"] = 0
+        event_chances["proximity_mine"] = 0.0
         event_chances["artifact"] *= 0.25
 
     # Roll for each event
