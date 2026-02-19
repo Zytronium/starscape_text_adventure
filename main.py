@@ -908,7 +908,7 @@ def default_data():
     return {
         "v": SAVE_VERSION_CODE,  # save version code.
         "player_name": "Player",
-        "credits": 5000,
+        "credits": 2500,
         "current_system": "The Citadel",
         "docked_at": "The Citadel",
         "ships": [
@@ -8231,7 +8231,7 @@ def new_game():
         "",
         "You are the last player to clone out of the cloning bay",
         "for their first time. You have a lot to learn. With just a",
-        "Stratos and 5,000 credits to your name, you're ready to",
+        "Stratos and 2,500 credits to your name, you're ready to",
         "begin the greatest adventure one could dream of. Go, make",
         "this truly a Starscape.",
         ""
@@ -8292,7 +8292,7 @@ def new_game():
     sleep(1)
     print("  You have been assigned:\033[K")
     print("    - Stratos (Starter Ship)\033[K")
-    print("    - 5,000 Credits\033[K")
+    print("    - 2,500 Credits\033[K")
     print()
     input("Press Enter to continue...")
 
