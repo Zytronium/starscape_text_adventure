@@ -3940,18 +3940,23 @@ def manage_system_anomalies(save_name, data, system_name):
     last_visit = data["last_system_visit"].get(system_name, 0)
     time_since_visit = current_time - last_visit
 
+    MAX_ANOMALIES = 12
+
     # Generate new anomalies if enough time has passed (every 12 hours, capped at 48 hours)
     if last_visit == 0:
         # First visit - generate anomalies
-        new_anomalies = generate_anomalies(system_name, system_security, all_systems_data)
-        cleaned_anomalies.extend(new_anomalies)
+        if len(cleaned_anomalies) < MAX_ANOMALIES:
+            new_anomalies = generate_anomalies(system_name, system_security, all_systems_data)
+            cleaned_anomalies.extend(new_anomalies[:MAX_ANOMALIES - len(cleaned_anomalies)])
     elif time_since_visit >= 12 * 3600:
         # Generate anomalies for each 12-hour period, capped at 48 hours
         periods_elapsed = min(int(time_since_visit / (12 * 3600)), 4)  # Cap at 4 periods (48 hours)
 
         for _ in range(periods_elapsed):
+            if len(cleaned_anomalies) >= MAX_ANOMALIES:
+                break
             new_anomalies = generate_anomalies(system_name, system_security, all_systems_data)
-            cleaned_anomalies.extend(new_anomalies)
+            cleaned_anomalies.extend(new_anomalies[:MAX_ANOMALIES - len(cleaned_anomalies)])
 
     # Process wormholes & create pairs
     for anomaly in cleaned_anomalies:
@@ -4471,8 +4476,16 @@ def mine_anomaly(save_name, data, anomaly):
     if "asteroids" not in anomaly:
         # Generate asteroids for first visit
         asteroids = []
+
+        # Monuments use a single ore type for all asteroids
+        if anomaly_type == "MT":
+            monument_ore = random.choice(config["ores"])
+
         for _ in range(config["count"]):
-            ore_type = random.choice(config["ores"])
+            if anomaly_type == "MT":
+                ore_type = monument_ore
+            else:
+                ore_type = random.choice(config["ores"])
             # Adjust quantity based on anomaly type
             if anomaly_type == "VX":
                 quantity = random.randint(4, 8)
