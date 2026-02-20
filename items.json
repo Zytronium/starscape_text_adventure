@@ -29,6 +29,22 @@
       "buy_price": ""
     },
     {
+      "name": "Combat Turret",
+      "description": "A turret that can be equipped on a warship to enable it to fire weapons.",
+      "type": "Turret",
+      "turret_type": "combat",
+      "sell_price": "400",
+      "buy_price": "800"
+    },
+    {
+      "name": "Mining Turret",
+      "description": "A turret that can be equipped on a warship miner to enable it to mine efficiently.",
+      "type": "Turret",
+      "turret_type": "mining",
+      "sell_price": "400",
+      "buy_price": "800"
+    },
+    {
       "name": "Korrelite Ore (Inferior)",
       "description": "Unrefined Korrelite ore (inferior quality).",
       "type": "Ore",

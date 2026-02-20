@@ -169,5 +169,25 @@
       "Axnit": 300,
       "Narcor": 100
     }
+  },
+  {
+    "name": "Combat Turret",
+    "type": "item",
+    "time": 15.0,
+    "materials": {
+      "Korrelite": 80,
+      "Reknite": 60,
+      "Gellium": 40
+    }
+  },
+  {
+    "name": "Mining Turret",
+    "type": "item",
+    "time": 5.0,
+    "materials": {
+      "Korrelite": 60,
+      "Reknite": 60,
+      "Gellium": 40
+    }
   }
 ]

@@ -1817,6 +1817,10 @@ def get_numpad_key(timeout=0.05):
                             return int(char)
                         elif char.lower() in 'qe':  # Firing mode keys (Q=focus, E=spread)
                             return char.lower()
+                        elif char == '0':  # Idle command for mining turrets
+                            return '0'
+                        elif char.isalpha():  # Turret selection keys (a, b, c...) for mining
+                            return char.lower()
                     except:
                         pass
             sleep(0.001)  # Check every 1ms for maximum responsiveness
@@ -1868,6 +1872,10 @@ def get_numpad_key(timeout=0.05):
                         return ch
                     return int(ch)
                 elif ch.lower() in 'qe':  # Firing mode keys (Q=focus, E=spread)
+                    return ch.lower()
+                elif ch == '0':  # Idle command for mining turrets
+                    return '0'
+                elif ch.isalpha():  # Turret selection keys (a, b, c...) for mining
                     return ch.lower()
             return None
         finally:
@@ -1974,14 +1982,13 @@ def is_warship(ship_name):
     added ships of those classes work automatically.
     """
     ships = load_ships_data()
-    for ship in ships:
-        if ship.get('name', '').lower() == ship_name.lower():
-            if ship.get('warship', False):
-                return True
-            # Fallback: class-based detection
-            ship_class = ship.get('class', '').lower()
-            return ship_class in ('corvette', 'frigate', 'destroyer')
-    # If not found in data, fall back to class keyword in name (legacy safety net)
+    ship = ships.get(ship_name.lower())
+    if ship:
+        if ship.get('warship', False):
+            return True
+        ship_class = ship.get('class', '').lower()
+        return ship_class in ('corvette', 'frigate', 'destroyer')
+    # Legacy fallback
     ship_lower = ship_name.lower()
     return any(kw in ship_lower for kw in ('corvette', 'frigate', 'destroyer'))
 
@@ -1993,21 +2000,73 @@ def get_turret_count(ship_name):
     Falls back to class-based defaults (Corvette=2, Frigate=3, Destroyer=4).
     """
     ships = load_ships_data()
-    for ship in ships:
-        if ship.get('name', '').lower() == ship_name.lower():
-            turrets = ship.get('stats', {}).get('Turrets')
-            if turrets is not None:
-                return int(turrets)
-            # Class-based default
-            ship_class = ship.get('class', '').lower()
-            if ship_class == 'corvette':
-                return 4
-            elif ship_class == 'frigate':
-                return 6
-            elif ship_class == 'destroyer':
-                return 8
-            return 2
+    ship = ships.get(ship_name.lower())
+    if ship:
+        turrets = ship.get('stats', {}).get('Turrets')
+        if turrets is not None:
+            return int(turrets)
+        # Class-based default
+        ship_class = ship.get('class', '').lower()
+        if ship_class == 'corvette':
+            return 4
+        elif ship_class == 'frigate':
+            return 6
+        elif ship_class == 'destroyer':
+            return 8
+        return 2
     return 2
+
+
+def get_turret_type_from_item(item_name, items_data=None):
+    """Return 'combat', 'mining', or None for an item name."""
+    if items_data is None:
+        items_data = load_items_data()
+    info = items_data.get(item_name, {})
+    t = info.get('turret_type', '').lower()
+    if t in ('combat', 'mining'):
+        return t
+    name_lower = item_name.lower()
+    if 'combat' in name_lower:
+        return 'combat'
+    if 'mining' in name_lower:
+        return 'mining'
+    return None
+
+
+def get_equipped_turrets_list(ship_data):
+    """Return the list of turret slot contents for a ship (initialises if missing)."""
+    if 'turrets' not in ship_data:
+        slot_count = get_turret_count(ship_data.get('name', ''))
+        ship_data['turrets'] = [None] * slot_count
+    return ship_data['turrets']
+
+
+def build_combat_turrets(ship_data):
+    """Build staggered Turret objects for all equipped combat turrets."""
+    items_data = load_items_data()
+    slots = get_equipped_turrets_list(ship_data)
+    combat_items = [s for s in slots if s and get_turret_type_from_item(s, items_data) == 'combat']
+    n = len(combat_items)
+    turrets = []
+    for i in range(n):
+        delay = (Turret.COMBAT_COOLDOWN / n * i) if n > 0 else 0.0
+        turrets.append(Turret(turret_id=i, turret_type='combat', initial_delay=delay))
+    return turrets
+
+
+def count_turret_type(ship_data, turret_type, items_data=None):
+    """Count equipped turrets of a given type."""
+    if items_data is None:
+        items_data = load_items_data()
+    slots = get_equipped_turrets_list(ship_data)
+    return sum(1 for s in slots if s and get_turret_type_from_item(s, items_data) == turret_type)
+
+
+def get_ship_class(ship_name):
+    """Return the class string for a ship."""
+    ships = load_ships_data()
+    entry = ships.get(ship_name.lower(), {})
+    return entry.get('class', 'Fighter')
 
 
 def calculate_movement_time(ship_agility, from_pos, to_pos):
@@ -2034,11 +2093,16 @@ class Projectile:
 
 
 class Turret:
-    """Represents a warship turret"""
-    def __init__(self, turret_id, cooldown=2.5):
-        self.turret_id = turret_id
-        self.cooldown = cooldown
-        self.time_until_ready = 0
+    """Represents a warship turret (combat or mining)"""
+    COMBAT_COOLDOWN  = 3    # seconds between shots
+    COMBAT_DAMAGE    = 40   # base damage per shot
+    COMBAT_ACCURACY  = 0.50 # base hit chance (50%)
+
+    def __init__(self, turret_id, cooldown=None, turret_type='combat', initial_delay=0.0):
+        self.turret_id   = turret_id
+        self.turret_type = turret_type   # 'combat' | 'mining'
+        self.cooldown    = cooldown if cooldown is not None else self.COMBAT_COOLDOWN
+        self.time_until_ready = initial_delay  # stagger so they don't all fire at once
         self.target = None
 
     def update(self, delta_time):
@@ -2093,9 +2157,7 @@ def draw_dodge_arena(player_pos, projectiles, combo, time_remaining):
         for j in range(3):
             pos = positions[i * 3 + j]
             if pos == player_pos:
-                set_color("green")
-                row_content += "[★]"
-                reset_color()
+                row_content += f"{get_color('green')}[★]{get_color('reset')}"
             else:
                 row_content += f"[{pos}]"
             row_content += " "
@@ -2204,10 +2266,11 @@ def dodge_phase(player_ship, alive_enemies, combo, data):
     return new_combo, damage_taken, successful_dodges, total_projectiles
 
 
-def assign_turret_targets(turrets, alive_enemies, assignment_mode="spread"):
+def assign_turret_targets(turrets, alive_enemies, assignment_mode="spread", focus_target=None):
     """Assign targets to turrets"""
     if assignment_mode == "focus":
-        target = alive_enemies[0] if alive_enemies else None
+        # Use the explicitly passed target if given, otherwise fall back to first enemy
+        target = focus_target if focus_target in alive_enemies else (alive_enemies[0] if alive_enemies else None)
         for turret in turrets:
             turret.target = target
     elif assignment_mode == "priority":
@@ -2397,11 +2460,14 @@ def auto_fire_phase(player_ship, alive_enemies, combo, data, turrets=None, assig
                     base_dps = ship_stats.get('DPS', 100)
                     damage = int(base_dps * 0.4 * combo)
 
-                    apply_damage_to_enemy(turret.target, damage)
-                    total_damage += damage
-
+                    hit = random.random() < Turret.COMBAT_ACCURACY
                     target_name = turret.target['name'][:20]
-                    print(box_line(f"Turret {turret.turret_id + 1}: Firing at {target_name} ({damage} dmg)", 60) + "\033[K")
+                    if hit:
+                        apply_damage_to_enemy(turret.target, damage)
+                        total_damage += damage
+                        print(box_line(f"Turret {turret.turret_id + 1}: Hit {target_name} ({damage} dmg)", 60) + "\033[K")
+                    else:
+                        print(box_line(f"Turret {turret.turret_id + 1}: Missed {target_name}!", 60) + "\033[K")
                     sleep(0.3)
 
             sleep(0.1)
@@ -2807,6 +2873,12 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
     shield_regen_rate = get_shield_regen(player_ship)  # HP per second
     shield_regen_accumulator = 0.0  # Tracks partial seconds
 
+    # Combat turrets (warships only) - auto-fire staggered every 2.5s
+    combat_turrets = []
+    if is_warship(player_ship.get('name', '')):
+        combat_turrets = build_combat_turrets(player_ship)
+    turret_events = []  # Recent fire events for UI display: (turret_id, target_name, damage)
+
     start_time = time()
     last_update = start_time
 
@@ -2934,6 +3006,11 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
         # Decay weapon heat when not firing
         weapon_heat = max(0.0, weapon_heat - heat_decay_rate * delta_time)
 
+        # Advance turret cooldown timers every frame (firing only happens on SPACE)
+        if combat_turrets:
+            for ct in combat_turrets:
+                ct.update(delta_time)
+
         # Get input with full frame-time window to reliably catch single presses
         key = get_numpad_key(timeout=0.033)  # Full 33ms window = 100% of frame time at 30 FPS
 
@@ -3057,7 +3134,7 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
 
             # Space to fire (check this separately)
             if key == ' ':
-                # Check cooldown, energy, and weapon heat
+                # Regular weapon fire (cooldown, energy, heat gated)
                 if (current_time - last_shot_time >= shot_cooldown and
                     player_energy >= energy_cost_per_shot and
                     weapon_heat < 1.0):  # Can't fire if overheated
@@ -3082,6 +3159,28 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
                     player_energy -= energy_cost_per_shot
                     weapon_heat = min(1.0, weapon_heat + heat_per_shot)  # Add heat
                     last_shot_time = current_time
+
+                # Turret fire -- only while SPACE is held; each turret respects its own cooldown.
+                # Focus mode: all turrets concentrate on the player's selected target.
+                # Spread mode: turrets distribute across all alive enemies.
+                if combat_turrets and alive_enemies:
+                    if firing_mode == "focus":
+                        focused_enemy = alive_enemies[current_target_idx] if current_target_idx < len(alive_enemies) else alive_enemies[0]
+                        assign_turret_targets(combat_turrets, alive_enemies, assignment_mode="focus", focus_target=focused_enemy)
+                    else:
+                        assign_turret_targets(combat_turrets, alive_enemies, assignment_mode="spread")
+                    for ct in combat_turrets:
+                        if ct.can_fire() and ct.target and ct.target in alive_enemies:
+                            ct.fire()
+                            hit = random.random() < Turret.COMBAT_ACCURACY
+                            dmg = Turret.COMBAT_DAMAGE if hit else 0
+                            if hit:
+                                apply_damage_to_enemy(ct.target, dmg)
+                                damage_dealt += dmg
+                            t_name = ct.target['name'][:20]
+                            turret_events.append((ct.turret_id, t_name, dmg, hit))
+                            if len(turret_events) > 4:
+                                turret_events.pop(0)
 
             # Firing mode switches (Q/E)
             if isinstance(key, str):
@@ -3110,7 +3209,8 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
             player_ship, player_pos, alive_enemies, projectiles,
             combo, firing_mode, player_energy, max_energy,
             current_target_idx, current_time - start_time, weapon_heat, display_offset,
-            warp_charge_level, is_moving
+            warp_charge_level, is_moving,
+            combat_turrets=combat_turrets, turret_events=turret_events
         )
 
         sleep(0.033)  # ~30 FPS - slower, more relaxed pace
@@ -3153,13 +3253,15 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
 
 def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
                            combo, firing_mode, energy, max_energy, target_idx, elapsed_time, weapon_heat, display_offset=0,
-                           warp_charge_level=0.0, is_moving=False):
+                           warp_charge_level=0.0, is_moving=False, combat_turrets=None, turret_events=None):
     """Draw the unified combat UI matching original design
 
     Args:
         display_offset: Starting index for displaying enemies (for scrolling when > 3 enemies)
         warp_charge_level: Current warp drive charge level (0.0 to 1.0)
         is_moving: Whether the player is currently moving to a new position
+        combat_turrets: List of Turret objects for warship display
+        turret_events: Recent turret fire events [(turret_id, target_name, damage)]
     """
     print("\033[H", end="", flush=True)
 
@@ -3212,9 +3314,7 @@ def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
                     grid_str += "\033[41m\033[32m[★]\033[0m"  # Red bg + green text + reset
                 else:
                     # Just green star - safe position
-                    set_color("green")
-                    grid_str += "[★]"
-                    reset_color()
+                    grid_str += f"{get_color('green')}[★]{get_color('reset')}"
             elif pos in targeted_positions:
                 # Use direct ANSI code for red background (100% guaranteed to work)
                 grid_str += "\033[41m[X]\033[0m"  # Red background + reset
@@ -3268,9 +3368,7 @@ def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
             proj = visible_projectiles[i]
             progress_filled = int(proj.progress * 15)
             progress_bar = "━" * progress_filled + "━" * (15 - progress_filled)
-            set_color("red")
-            line_content = f" ║ ━━━> [{proj.target_position}]"
-            reset_color()
+            line_content = f"{get_color('red')} ║ ━━━> [{proj.target_position}]{get_color('reset')}"
             # Visual length is without ANSI codes
             content_visual_len = len(" ║ ━━━> [X]")  # Fixed length
             padding = " " * (76 - content_visual_len)
@@ -3319,22 +3417,50 @@ def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
 
     # Movement status
     if is_moving:
-        set_color("yellow")
-        move_text = " MANEUVERING..."
-        reset_color()
-        move_visual_len = len(strip_ansi(move_text))
+        move_text = f"{get_color('yellow')} MANEUVERING...{get_color('reset')}"
+        move_visual_len = len(" MANEUVERING...")
         move_padding = " " * (76 - move_visual_len)
         print(f"║{move_text}{move_padding}║\033[K")
 
     print("║" + " " * 76 + "║" + "\033[K")
 
     # Controls line (no cooldown indicator needed anymore)
-    set_color("cyan")
     controls = " [SPACE] Fire  [NUMPAD] Dodge  [Q/E] Mode  [TAB] Target  [ESC] Warp"
-    reset_color()
     controls_visual_len = len(strip_ansi(controls))
     controls_padding = " " * (76 - controls_visual_len)
     print(f"║{controls}{controls_padding}║\033[K")
+
+    # Combat turret status row (warships only)
+    if combat_turrets:
+        turret_header = f"{get_color("yellow")} TURRETS:{get_color("reset")}"
+        th_visual = len(strip_ansi(turret_header))
+        th_padding = " " * (76 - th_visual)
+        print(f"║{turret_header}{th_padding}║\033[K")
+        # One line per turret showing ready/reloading
+        for ct in combat_turrets:
+            if ct.can_fire():
+                status_str = "READY"
+                color = "green"
+            else:
+                pct = max(0, min(100, int((1.0 - ct.time_until_ready / ct.cooldown) * 100)))
+                status_str = f"Reloading {pct}%"
+                color = "yellow"
+            t_line = f"  Turret {ct.turret_id + 1}: {get_color(color)}{status_str}{get_color('reset')}"
+            t_visual = len(f"  Turret {ct.turret_id + 1}: {status_str}")
+            t_padding = " " * (76 - t_visual)
+            print(f"║{t_line}{t_padding}║\033[K")
+        # Recent turret fire events
+        if turret_events:
+            for evt_tid, evt_name, evt_dmg, evt_hit in turret_events[-2:]:
+                if evt_hit:
+                    evt_line = f"{get_color('yellow')}  Turret {evt_tid + 1} hit {evt_name[:25]} for {evt_dmg} dmg{get_color('reset')}"
+                    evt_visual = len(f"  Turret {evt_tid + 1} hit {evt_name[:25]} for {evt_dmg} dmg")
+                else:
+                    evt_line = f"{get_color('red')}  Turret {evt_tid + 1} missed {evt_name[:25]}!{get_color('reset')}"
+                    evt_visual = len(f"  Turret {evt_tid + 1} missed {evt_name[:25]}!")
+                evt_padding = " " * (76 - evt_visual)
+                print(f"║{evt_line}{evt_padding}║\033[K")
+        print("║" + " " * 76 + "║" + "\033[K")
 
     print("╠" + "═" * 76 + "╣" + "\033[K")
 
@@ -3343,11 +3469,9 @@ def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
     mode_color = "cyan" if firing_mode == "focus" else "green"  # Focus is cyan, Spread is green
 
     status_base = f" Time: {elapsed_time:.1f}s | Combo: x{combo} | Mode: "
-    set_color(mode_color)
-    status_line = status_base + mode_display
-    reset_color()
+    status_line = status_base + f"{get_color(mode_color)}{mode_display}{get_color('reset')}"
 
-    status_visual_len = len(strip_ansi(status_line))
+    status_visual_len = len(status_base) + len(mode_display)
     status_padding = " " * (76 - status_visual_len)
     print(f"║{status_line}{status_padding}║\033[K")
     print("╚" + "═" * 76 + "╝" + "\033[K")
@@ -4365,8 +4489,10 @@ def mine_anomaly(save_name, data, anomaly):
             if "anomaly_type" not in asteroid:
                 asteroid["anomaly_type"] = anomaly_type
 
-    # Check for crystalline entities at VX anomalies
-    vexnium_guarded = anomaly_type == "VX" and random.random() < 0.8
+    # Check for crystalline entities at VX anomalies.
+    # They appear exactly once per anomaly — on the very first mining attempt —
+    # then the flag is cleared and they never return.
+    vexnium_guarded = anomaly_type == "VX" and not anomaly.get("crystalline_cleared", False)
     if vexnium_guarded:
         clear_screen()
         title("VEXNIUM ANOMALY")
@@ -4393,7 +4519,8 @@ def mine_anomaly(save_name, data, anomaly):
             ore_name = asteroid["ore"]
             quantity = asteroid["quantity"]
             mined = asteroid["mined"]
-            progress_str = f" [{mined}/{quantity} mined]" if mined > 0 else ""
+            remaining = quantity - mined
+            progress_str = f" [{remaining}/{quantity} remaining]" if mined > 0 else ""
             options.append(f"{ore_name} ({quantity} units){progress_str}")
         options.append("Leave anomaly")
 
@@ -4409,6 +4536,12 @@ def mine_anomaly(save_name, data, anomaly):
 
         # Mine the selected asteroid
         result = mine_asteroid(save_name, data, asteroids[choice], vexnium_guarded)
+
+        # After the first mining attempt at a VX anomaly, mark crystalline as cleared
+        # so they never appear again for this anomaly instance.
+        if vexnium_guarded and result != "death":
+            anomaly["crystalline_cleared"] = True
+            vexnium_guarded = False  # Won't retrigger within this visit either
 
         if result == "death":
             if anomaly_type == "VX":
@@ -4446,6 +4579,318 @@ def mine_anomaly(save_name, data, anomaly):
         print("  The anomaly has dissipated.\033[K")
         print()
         input("Press Enter to continue...")
+
+
+def mine_asteroid_with_turrets(save_name, data, asteroid, player_ship, ship_class,
+                               mining_skill, base_efficiency, stability, remaining_ore,
+                               total_quantity, units_collected, ore_name, security_level,
+                               mining_turret_names):
+    """Mining sub-loop for warships with mining turrets equipped.
+
+    Controls:
+      [a/b/c...] Select a turret to configure
+      [1-5]      Set power for the selected turret
+      [0]        Set selected turret to idle
+      [ESC]      Stop mining
+
+    Every 2 seconds, each active turret fires one blast equivalent to a
+    standard mining laser shot at its configured intensity, but with +40%
+    ore yield.  Stability costs and random event chances are identical to
+    normal manual mining per blast.
+    """
+    num_turrets = len(mining_turret_names)
+    turret_power = [0] * num_turrets   # 0 = idle, 1-5 = active power level
+    selected_turret = None
+    last_fire_time = time()
+    FIRE_INTERVAL = 2.0
+    TURRET_EFFICIENCY_BONUS = 1.4
+    total_xp_gained = 0
+
+    intensity_data = {
+        1: {"speed": 0.5, "stability_loss": 0, "stability_gain": 5, "vaporize_chance": 0},
+        2: {"speed": 1.0, "stability_loss": 0, "stability_gain": 0, "vaporize_chance": 0},
+        3: {"speed": 1.8, "stability_loss": 5, "stability_gain": 0, "vaporize_chance": 0.02},
+        4: {"speed": 2.8, "stability_loss": 10, "stability_gain": 0, "vaporize_chance": 0.05},
+        5: {"speed": 4.0, "stability_loss": 20, "stability_gain": 0, "vaporize_chance": 0.10},
+    }
+
+    ore_xp_values = {
+        "Korrelite Ore (Inferior)": 1, "Korrelite Ore": 2,
+        "Korrelite Ore (Superior)": 3, "Korrelite Ore (Pristine)": 5,
+        "Reknite Ore (Inferior)": 2, "Reknite Ore": 3,
+        "Reknite Ore (Superior)": 4, "Reknite Ore (Pristine)": 6,
+        "Gellium Ore": 5, "Gellium Ore (Superior)": 7, "Gellium Ore (Pristine)": 10,
+        "Axnit Ore": 8, "Axnit Ore (Pristine)": 15,
+        "Narcor Ore": 12, "Red Narcor Ore": 20, "Vexnium Ore": 30, "Water Ice": 3,
+    }
+    int_desc = {1: "Minimum", 2: "Low", 3: "Medium", 4: "High", 5: "Maximum"}
+
+    while remaining_ore > 0 and stability > 0:
+        print("[H", end="", flush=True)  # Cursor home, no flash
+        update_discord_presence(data=data, context="mining")
+        title("MINING ASTEROID  [TURRET MODE]")
+        print("\033[K")
+        ship_nick = player_ship.get("nickname", player_ship["name"].title())
+        print(f"  Ore: {ore_name}\033[K")
+        print(f"  Ship: {ship_nick} ({ship_class})\033[K")
+        bonus_pct = int((TURRET_EFFICIENCY_BONUS - 1) * 100)
+        print(f"  Mining Skill: Level {mining_skill}  |  Turret Efficiency: +{bonus_pct}%\033[K")
+        print("\033[K")
+
+        ore_percent = (remaining_ore / total_quantity) * 100
+        stability_color = get_stability_color(stability)
+        print(f"  Ore Remaining: {int(remaining_ore)}/{total_quantity} ({ore_percent:.1f}%)\033[K")
+        print(f"  Asteroid Stability: {stability_color}{stability:.1f}%{RESET_COLOR}\033[K")
+        print("\033[K")
+
+        bar_width = 40
+        filled = int((stability / 100) * bar_width)
+        empty = bar_width - filled
+        stab_bar = f"[{stability_color}{'█' * filled}{'░' * empty}{RESET_COLOR}]"
+        print(f"  {stab_bar}\033[K")
+        print("\033[K")
+
+        print("=" * 60 + "\033[K")
+        print("\033[K")
+        print("  Mining Turrets:\033[K")
+        for i, name in enumerate(mining_turret_names):
+            key_char = chr(ord('a') + i)
+            pwr = turret_power[i]
+            sel_marker = " \u25c4 SELECTED" if selected_turret == i else ""
+            status = "IDLE" if pwr == 0 else f"Power {pwr} ({int_desc[pwr]})"
+            if selected_turret == i:
+                set_color("cyan")
+            print(f"  [{key_char}] Turret {i + 1} ({name}): {status}{sel_marker}\033[K")
+            reset_color()
+
+        active_turrets = [i for i in range(num_turrets) if turret_power[i] > 0]
+
+        print("\033[K")
+        print("=" * 60 + "\033[K")
+        print("\033[K")
+        if selected_turret is not None:
+            print(f"  Turret {selected_turret + 1} selected — press [1-5] to set power, [0] to idle.\033[K")
+        else:
+            print("  Press [a-z] to select a turret, then [1-5] to set its power.\033[K")
+        print("\033[K")
+
+        if active_turrets:
+            set_color("green")
+            beam_dots = "." * (int(time() * 3) % 4)
+            print(f"  Mining beam active{beam_dots:<3}  {len(active_turrets)} turret(s) firing continuously\033[K")
+            reset_color()
+        else:
+            set_color("yellow")
+            print("  No active turrets. Select a turret and set its power to begin.\033[K")
+            reset_color()
+
+        print("\033[K")
+        print("  [ESC] Stop mining\033[K")
+        print("\033[K")
+        print("\033[J", end="", flush=True)  # Clear below last line
+
+        key = get_numpad_key(timeout=0.1)
+
+        if key == 'esc':
+            break
+
+        # Letter keys select a turret
+        if key and isinstance(key, str) and len(key) == 1 and key.isalpha():
+            idx = ord(key) - ord('a')
+            if 0 <= idx < num_turrets:
+                selected_turret = idx
+
+        # String digit keys set power on selected turret
+        if key and isinstance(key, str) and key in '012345' and selected_turret is not None:
+            turret_power[selected_turret] = int(key)
+            selected_turret = None
+
+        # Integer keys from numpad also set power
+        if key and isinstance(key, int) and 0 <= key <= 5 and selected_turret is not None:
+            turret_power[selected_turret] = key
+            selected_turret = None
+
+        # Fire cycle — every FIRE_INTERVAL seconds
+        now = time()
+        if now - last_fire_time >= FIRE_INTERVAL and active_turrets:
+            last_fire_time = now
+            for t_idx in active_turrets:
+                intensity = turret_power[t_idx]
+                idata = intensity_data[intensity]
+
+                base_extraction = 2 + (intensity * 1.5)
+                ore_extracted = (base_extraction * idata["speed"] * 0.1
+                                 * base_efficiency * TURRET_EFFICIENCY_BONUS)
+
+                vaporized = 0
+                if random.random() < idata["vaporize_chance"]:
+                    vap_pct = random.uniform(0.05, 0.15)
+                    vaporized = int(ore_extracted * vap_pct)
+                    ore_extracted -= vaporized
+
+                ore_extracted = min(ore_extracted, remaining_ore)
+
+                stab_change = idata["stability_gain"] - idata["stability_loss"]
+                if stab_change < 0:
+                    stab_change *= (1.0 - mining_skill * 0.02)
+                stability = max(0, min(100, stability + stab_change))
+
+                remaining_ore = max(0, remaining_ore - ore_extracted)
+                units_collected += ore_extracted
+                total_xp_gained += int(ore_extracted * ore_xp_values.get(ore_name, 2))
+
+                # Random events (same chance as a manual blast)
+                event = check_mining_event(
+                    data, ore_name, stability, security_level, intensity,
+                    anomaly_type=asteroid.get("anomaly_type", "AT")
+                )
+                if event:
+                    ev_type, ev_data = event
+                    if ev_type == "gas_pocket":
+                        ore_lost = ev_data["ore_lost"]
+                        stability_lost = ev_data["stability_lost"]
+                        ship_damage = ev_data["ship_damage"]
+                        remaining_ore = max(0, remaining_ore - ore_lost)
+                        stability = max(0, stability - stability_lost)
+
+                        clear_screen()
+                        title("MINING EVENT - GAS POCKET")
+                        print()
+                        set_color("yellow")
+                        print(f"  Gas Pocket Exposed!\033[K")
+                        reset_color()
+                        print(f"     Lost {ore_lost:.1f} units of ore\033[K")
+                        print(f"     Stability decreased by {stability_lost:.1f}%\033[K")
+                        if ship_damage > 0:
+                            if apply_damage_to_player(player_ship, ship_damage):
+                                print()
+                                set_color("red")
+                                set_color("blinking")
+                                print("     ⚠ CRITICAL: SHIP DESTROYED ⚠\033[K")
+                                reset_color()
+                                print()
+                                input("Press Enter to continue...")
+                                return "death"
+                        print()
+                        input("Press Enter to continue...")
+
+                    elif ev_type == "dense_formation":
+                        bonus = min(ev_data["bonus_ore"], remaining_ore)
+                        units_collected += bonus
+
+                        clear_screen()
+                        title("MINING EVENT - DENSE FORMATION")
+                        print()
+                        set_color("green")
+                        print(f"  Dense Mineral Formation Uncovered!\033[K")
+                        reset_color()
+                        print(f"     Bonus: +{bonus:.1f} units of {ore_name}\033[K")
+                        print()
+                        input("Press Enter to continue...")
+
+                    elif ev_type == "artifact":
+                        if not ev_data["destroyed"]:
+                            data["inventory"]["Ancient Artifact"] = (
+                                data.get("inventory", {}).get("Ancient Artifact", 0) + 1)
+                            clear_screen()
+                            title("MINING EVENT - ARTIFACT FOUND")
+                            print()
+                            set_color("green")
+                            print(f"  Ancient Artifact Uncovered!\033[K")
+                            reset_color()
+                            print(f"     Added to inventory: Ancient Artifact\033[K")
+                            print(f"     This can be sold for a high price!\033[K")
+                        else:
+                            clear_screen()
+                            title("MINING EVENT - ARTIFACT DESTROYED")
+                            print()
+                            set_color("red")
+                            print(f"  Ancient Artifact Vaporized!\033[K")
+                            reset_color()
+                            print(f"     The high-intensity laser destroyed a valuable artifact!\033[K")
+                        print()
+                        input("Press Enter to continue...")
+
+                    elif ev_type == "proximity_mine":
+                        mine_detonated = ev_data.get("detonated")
+                        mine_defused = ev_data.get("defused")
+
+                        if mine_detonated:
+                            clear_screen()
+                            title("MINING EVENT - PROXIMITY MINE")
+                            print()
+                            set_color("red")
+                            print(f"  MINE DETONATED!\033[K")
+                            reset_color()
+                            print(f"     Asteroid destroyed - all remaining ore lost\033[K")
+                            print()
+                            if apply_damage_to_player(player_ship, ev_data["damage"]):
+                                set_color("red")
+                                set_color("blinking")
+                                print("     ⚠ CRITICAL: SHIP DESTROYED ⚠\033[K")
+                                reset_color()
+                                print()
+                                input("Press Enter to continue...")
+                                return "death"
+                            input("Press Enter to continue...")
+                            remaining_ore = 0
+                            stability = 0
+                            break
+                        elif mine_defused:
+                            clear_screen()
+                            title("MINING EVENT - PROXIMITY MINE")
+                            print()
+                            set_color("green")
+                            print(f"  Mine successfully defused!\033[K")
+                            reset_color()
+                            print()
+                            input("Press Enter to continue...")
+                        else:
+                            # Player chose to skip the asteroid
+                            clear_screen()
+                            title("MINING EVENT - PROXIMITY MINE")
+                            print()
+                            set_color("yellow")
+                            print(f"  You decided to skip this asteroid to avoid the mine\033[K")
+                            reset_color()
+                            print()
+                            input("Press Enter to continue...")
+                            remaining_ore = 0
+                            break
+
+                if stability <= 0 or remaining_ore <= 0:
+                    break
+
+    # Award collected ore and XP
+    ore_collected = int(units_collected - asteroid["mined"])
+    if ore_collected > 0:
+        if ore_name not in data.get("inventory", {}):
+            data["inventory"][ore_name] = 0
+        data["inventory"][ore_name] += ore_collected
+
+    # Save partial progress back to asteroid
+    asteroid["mined"] = int(units_collected)
+
+    if total_xp_gained > 0 or ore_collected > 0:
+        levels_gained = add_skill_xp(data, "mining", total_xp_gained) if total_xp_gained > 0 else 0
+        new_level = data["skills"]["mining"]
+        new_xp = data["skills"]["mining_xp"]
+        clear_screen()
+        title("MINING COMPLETE")
+        print()
+        print(f"  Collected {ore_collected}x {ore_name}!\033[K")
+        print()
+        if total_xp_gained > 0:
+            display_xp_gain("mining", total_xp_gained, levels_gained, new_level, new_xp)
+        print()
+        save_data(save_name, data)
+        sleep(1)
+        input("Press Enter to continue...")
+
+    if remaining_ore <= 0 or stability <= 0:
+        return "completed"
+    else:
+        return "partial"
 
 
 def mine_asteroid(save_name, data, asteroid, guarded=False):
@@ -4543,7 +4988,7 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
 
         if result == "death":
             return "death"
-        elif result == "continue":
+        elif result in ("continue", "victory"):
             # Successfully defeated, continue mining
             pass
         else:
@@ -4552,6 +4997,21 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
 
     # Mining loop
     total_xp_gained = 0
+
+    # Mining turret mode (warship miners with mining turrets)
+    ship_turrets = get_equipped_turrets_list(player_ship)
+    items_data_ref = load_items_data()
+    mining_turret_names = [s for s in ship_turrets
+                           if s and get_turret_type_from_item(s, items_data_ref) == 'mining']
+    use_turret_mining = len(mining_turret_names) > 0 and is_warship(player_ship.get('name', ''))
+
+    if use_turret_mining:
+        result = mine_asteroid_with_turrets(
+            save_name, data, asteroid, player_ship, ship_class, mining_skill,
+            base_efficiency, stability, remaining_ore, total_quantity, units_collected,
+            ore_name, security_level, mining_turret_names
+        )
+        return result
 
     while remaining_ore > 0 and stability > 0:
         clear_screen()
@@ -4666,6 +5126,9 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                 remaining_ore -= ore_lost
                 stability -= stability_lost
 
+                clear_screen()
+                title("MINING EVENT - GAS POCKET")
+                print()
                 set_color("yellow")
                 print(f"  Gas Pocket Exposed!\033[K")
                 reset_color()
@@ -4689,7 +5152,11 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
             elif event_type == "dense_formation":
                 bonus_ore = event_data["bonus_ore"]
                 ore_extracted += bonus_ore
+                ore_extracted = min(ore_extracted, remaining_ore)  # cap to what's actually in the asteroid
 
+                clear_screen()
+                title("MINING EVENT - DENSE FORMATION")
+                print()
                 set_color("green")
                 print(f"  Dense Mineral Formation Uncovered!\033[K")
                 reset_color()
@@ -4703,6 +5170,9 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
 
                 remaining_ore -= ore_lost
 
+                clear_screen()
+                title("MINING EVENT - ASTEROID COLLISION")
+                print()
                 set_color("yellow")
                 print(f"  Asteroid Collision!\033[K")
                 reset_color()
@@ -4745,6 +5215,9 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                 artifact_destroyed = event_data["destroyed"]
 
                 if artifact_destroyed:
+                    clear_screen()
+                    title("MINING EVENT - ARTIFACT DESTROYED")
+                    print()
                     set_color("red")
                     print(f"  Ancient Artifact Vaporized!\033[K")
                     reset_color()
@@ -4752,6 +5225,9 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                     print()
                     input("Press Enter to continue...")
                 else:
+                    clear_screen()
+                    title("MINING EVENT - ARTIFACT FOUND")
+                    print()
                     set_color("green")
                     print(f"  Ancient Artifact Uncovered!\033[K")
                     reset_color()
@@ -4801,7 +5277,7 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                     print(f"  You decided to skip this asteroid to avoid the mine\033[K")
                     reset_color()
                     print()
-                    sleep(1.5)
+                    input("Press Enter to continue...")
 
                     # Add collected ore to inventory
                     ore_collected = int(units_collected - current_mined)
@@ -7878,6 +8354,9 @@ def view_ship_details(save_name, data, ship_index):
         options = []
         if ship_index != data["active_ship"]:
             options.append("Switch to this ship")
+        # Outfit Ship option - always shown so players can see it, but only
+        # turret sub-option is meaningful for warships.
+        options.append("Outfit Ship")
         if ship_name == "stratos":
             options.extend(["Rename ship", "Back"])
         else:
@@ -7898,6 +8377,10 @@ def view_ship_details(save_name, data, ship_index):
             print()
             input("  Press Enter to continue...")
             return
+
+        elif options[choice] == "Outfit Ship":
+            outfit_ship(save_name, data, ship_index)
+            return  # Refresh ship details after outfitting
 
         elif options[choice] == "Rename ship":
             # Rename ship
@@ -7974,6 +8457,246 @@ def view_ship_details(save_name, data, ship_index):
 
         elif options[choice] == "Back":
             return
+
+
+def outfit_ship(save_name, data, ship_index):
+    """Outfitting screen: Upgrades (grayed out) and Turrets (warships only)."""
+    ship = data["ships"][ship_index]
+    ship_name = ship["name"]
+    nickname = ship.get("nickname", ship_name.title())
+    warship = is_warship(ship_name)
+
+    while True:
+        clear_screen()
+        title("OUTFIT SHIP")
+        print()
+        print(f"  Ship: {nickname} ({ship_name.title()})[K")
+        print()
+
+        options = []
+        display_options = []
+
+        # Upgrades - greyed out (not yet implemented)
+        display_options.append("  [Upgrades]  ")
+        options.append("upgrades")
+
+        # Turrets - only for warships
+        if warship:
+            slots = get_equipped_turrets_list(ship)
+            filled = sum(1 for s in slots if s)
+            display_options.append(f"  Turrets  ({filled}/{len(slots)} slots filled)")
+            options.append("turrets")
+
+        display_options.append("  Back")
+        options.append("back")
+
+        print("  Select option:[K")
+        print()
+        for i, d in enumerate(display_options):
+            if options[i] == "upgrades":
+                # Grey out
+                print(f"[90m  {chr(ord('a') + i)}) {d.strip()}[0m[K")
+            else:
+                print(f"  {chr(ord('a') + i)}) {d.strip()}[K")
+
+        print()
+        print("  [a-c] Select | [ESC] Back[K")
+        print()
+
+        key = get_key()
+        if key == 'esc':
+            return
+        if key and len(key) == 1 and key.isalpha():
+            idx = ord(key) - ord('a')
+            if 0 <= idx < len(options):
+                chosen = options[idx]
+                if chosen == "back":
+                    return
+                elif chosen == "upgrades":
+                    clear_screen()
+                    title("UPGRADES")
+                    print()
+                    print("  Ship upgrades are not yet implemented.[K")
+                    print("  Check back in a future update![K")
+                    print()
+                    input("  Press Enter to continue...")
+                elif chosen == "turrets":
+                    outfit_turrets(save_name, data, ship_index)
+
+
+def outfit_turrets(save_name, data, ship_index):
+    """Turret slot management screen."""
+    items_data = load_items_data()
+
+    # Determine ship class for limit enforcement
+    ship = data["ships"][ship_index]
+    ship_name = ship["name"]
+    nickname = ship.get("nickname", ship_name.title())
+    ship_class = get_ship_class(ship_name)
+    is_miner_warship = ship_class == "Miner"
+
+    # Slot limits
+    MAX_MINING_ON_COMBAT = 2   # non-miner warship: max 2 mining turrets
+    MAX_COMBAT_ON_MINER  = 2   # miner warship: max 2 combat turrets
+
+    while True:
+        # Ensure slots are initialised
+        slots = get_equipped_turrets_list(ship)
+        num_slots = len(slots)
+
+        clear_screen()
+        title("TURRET SLOTS")
+        print()
+        print(f"  Ship: {nickname} ({ship_name.title()})  |  Turret slots: {num_slots}[K")
+        print()
+        print("  Current loadout:[K")
+        print("  " + "─" * 50 + "[K")
+
+        for i, slot_item in enumerate(slots):
+            if slot_item:
+                ttype = get_turret_type_from_item(slot_item, items_data) or "unknown"
+                print(f"  [{chr(ord('a') + i)}] Slot {i + 1}: {slot_item} ({ttype})[K")
+            else:
+                print(f"  [{chr(ord('a') + i)}] Slot {i + 1}: (empty)[K")
+
+        print("  " + "─" * 50 + "[K")
+        print()
+
+        # Count existing turrets of each type
+        n_combat = count_turret_type(ship, 'combat', items_data)
+        n_mining = count_turret_type(ship, 'mining', items_data)
+
+        if is_miner_warship:
+            print(f"  Combat turrets: {n_combat}/{MAX_COMBAT_ON_MINER} max  |  Mining turrets: {n_mining} (unlimited)[K")
+        else:
+            print(f"  Mining turrets: {n_mining}/{MAX_MINING_ON_COMBAT} max  |  Combat turrets: {n_combat} (unlimited)[K")
+
+        print()
+        print("  [a-z] Select slot to modify | [ESC] Back[K")
+        print()
+
+        key = get_key()
+        if key == 'esc':
+            save_data(save_name, data)
+            return
+        if key and len(key) == 1 and key.isalpha():
+            slot_idx = ord(key) - ord('a')
+            if 0 <= slot_idx < num_slots:
+                _modify_turret_slot(save_name, data, ship_index, slot_idx, items_data,
+                                    is_miner_warship, MAX_COMBAT_ON_MINER, MAX_MINING_ON_COMBAT)
+
+
+def _modify_turret_slot(save_name, data, ship_index, slot_idx, items_data,
+                        is_miner_warship, max_combat_on_miner, max_mining_on_combat):
+    """Let the player install or remove a turret in a specific slot."""
+    ship = data["ships"][ship_index]
+    slots = get_equipped_turrets_list(ship)
+    current = slots[slot_idx]
+
+    while True:
+        clear_screen()
+        title(f"SLOT {slot_idx + 1}")
+        print()
+        if current:
+            ttype = get_turret_type_from_item(current, items_data) or "unknown"
+            print(f"  Currently installed: {current} ({ttype})[K")
+        else:
+            print("  Currently installed: (empty)[K")
+        print()
+
+        slot_options = []
+        slot_labels = []
+
+        # Option to remove current turret
+        if current:
+            slot_options.append("remove")
+            slot_labels.append(f"Remove {current} (return to inventory)")
+
+        # Find turrets in inventory that can be installed here
+        for item_name, qty in data.get("inventory", {}).items():
+            if qty <= 0:
+                continue
+            ttype = get_turret_type_from_item(item_name, items_data)
+            if ttype is None:
+                continue
+            if item_name == current:
+                continue  # Already installed
+
+            # Check limits
+            if ttype == 'combat' and is_miner_warship:
+                n_combat = count_turret_type(ship, 'combat', items_data)
+                # If replacing an existing turret of same type, slot is already counted
+                if n_combat >= max_combat_on_miner:
+                    slot_labels.append(f"[90m{item_name} x{qty} (limit reached: {max_combat_on_miner} combat max)[0m")
+                    slot_options.append(f"__disabled__{item_name}")
+                    continue
+
+            if ttype == 'mining' and not is_miner_warship:
+                n_mining = count_turret_type(ship, 'mining', items_data)
+                if n_mining >= max_mining_on_combat:
+                    slot_labels.append(f"[90m{item_name} x{qty} (limit reached: {max_mining_on_combat} mining max)[0m")
+                    slot_options.append(f"__disabled__{item_name}")
+                    continue
+
+            slot_options.append(f"install_{item_name}")
+            slot_labels.append(f"Install {item_name} x{qty} ({ttype} turret)")
+
+        slot_options.append("back")
+        slot_labels.append("Back")
+
+        for i, label in enumerate(slot_labels):
+            print(f"  {chr(ord('a') + i)}) {label}[K")
+
+        print()
+        print("  [a-z] Select | [ESC] Back[K")
+        print()
+
+        key = get_key()
+        if key == 'esc':
+            return
+        if key and len(key) == 1 and key.isalpha():
+            act_idx = ord(key) - ord('a')
+            if 0 <= act_idx < len(slot_options):
+                action = slot_options[act_idx]
+                if action == "back":
+                    return
+                elif action.startswith("__disabled__"):
+                    continue
+                elif action == "remove":
+                    # Return turret to inventory
+                    if current not in data["inventory"]:
+                        data["inventory"][current] = 0
+                    data["inventory"][current] += 1
+                    slots[slot_idx] = None
+                    current = None
+                    save_data(save_name, data)
+                    print()
+                    set_color("green")
+                    print(f"  Turret removed and returned to inventory.[K")
+                    reset_color()
+                    sleep(1.0)
+                    return
+                elif action.startswith("install_"):
+                    item_name = action[len("install_"):]
+                    # Remove old turret first if present
+                    if current:
+                        if current not in data["inventory"]:
+                            data["inventory"][current] = 0
+                        data["inventory"][current] += 1
+                    # Install new turret
+                    data["inventory"][item_name] -= 1
+                    if data["inventory"][item_name] <= 0:
+                        del data["inventory"][item_name]
+                    slots[slot_idx] = item_name
+                    current = item_name
+                    save_data(save_name, data)
+                    print()
+                    set_color("green")
+                    print(f"  {item_name} installed in slot {slot_idx + 1}.[K")
+                    reset_color()
+                    sleep(1.0)
+                    return
+
 
 
 def ship_assembly_tab(save_name, data):
