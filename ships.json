@@ -226,6 +226,7 @@
       "name": "Infinity",
       "description": "The Infinity is a corvette designed with a focus around rapid response, having a comparatively flat warp speed and charge time, as well as substantial damage and shield regen. However, its lack of overall hull and shield durability make it susceptible to melting under pressure.",
       "class": "Corvette",
+      "warship": true,
       "stats": {
         "DPS": 193,
         "Shield": 1500,
@@ -234,13 +235,15 @@
         "Energy": 360,
         "Speed": 220,
         "Agility": 67,
-        "Warp Speed": 1.0
+        "Warp Speed": 1.0,
+        "Turrets": 4
       }
     },
     {
       "name": "Radix",
       "description": "The Radix corvette has a radical design, giving it a significant speed advantage over ships of a comparable size. It is significantly less armored, in the hopes that its speed and maneuverability allow it to avoid damage altogether.",
       "class": "Corvette",
+      "warship": true,
       "stats": {
         "DPS": 193,
         "Shield": 2500,
@@ -249,13 +252,15 @@
         "Energy": 400,
         "Speed": 230,
         "Agility": 63,
-        "Warp Speed": 1.1
+        "Warp Speed": 1.1,
+        "Turrets": 4
       }
     },
     {
       "name": "Chevron",
       "description": "The Chevron is a workhorse warship that makes up for its lack in agility with strength and stubbornness.",
       "class": "Corvette",
+      "warship": true,
       "stats": {
         "DPS": 193,
         "Shield": 900,
@@ -264,13 +269,15 @@
         "Energy": 440,
         "Speed": 210,
         "Agility": 60,
-        "Warp Speed": 0.8
+        "Warp Speed": 0.8,
+        "Turrets": 4
       }
     },
     {
       "name": "Ozark",
       "description": "The Ozark is a dedicated mining platform with the ability to quickly strip asteroid fields of ore using its considerable bonus to mining turret yield.",
       "class": "Miner",
+      "warship": true,
       "stats": {
         "DPS": 151.0,
         "Shield": 660.0,
@@ -279,7 +286,8 @@
         "Energy": 350.0,
         "Speed": 140.0,
         "Agility": 48.0,
-        "Warp Speed": 0.7
+        "Warp Speed": 0.7,
+        "Turrets": 3
       }
     }
   ]

@@ -226,6 +226,35 @@ class ShipEditor:
          .grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=10))
         row += 1
 
+        # Warship Section
+        (ttk.Label(editor_frame, text="Warship Settings:",
+                  font=('TkDefaultFont', 10, 'bold'))
+         .grid(row=row, column=0, columnspan=2, sticky=tk.W, pady=5))
+        row += 1
+
+        # Warship checkbox
+        self.is_warship_var = tk.BooleanVar(value=False)
+        warship_cb = ttk.Checkbutton(
+            editor_frame,
+            text="Is Warship  (enables turrets & warship combat mechanics)",
+            variable=self.is_warship_var,
+            command=self._toggle_turret_field)
+        warship_cb.grid(row=row, column=0, columnspan=2, sticky=tk.W, pady=5)
+        row += 1
+
+        # Turrets field (shown only when warship is checked)
+        self._turret_label = ttk.Label(editor_frame, text="Turrets:")
+        self._turret_label.grid(row=row, column=0, sticky=tk.W, pady=5)
+        self.turrets_entry = ttk.Entry(editor_frame, width=20)
+        self.turrets_entry.insert(0, "2")
+        self.turrets_entry.grid(row=row, column=1, sticky=tk.W, pady=5)
+        self._turret_row = row
+        row += 1
+
+        # Hide turret field initially
+        self._turret_label.grid_remove()
+        self.turrets_entry.grid_remove()
+
         # Crafting Recipe Section
         ttk.Label(editor_frame, text="Crafting Recipe:",
                   font=('TkDefaultFont', 10, 'bold')).grid(row=row, column=0,
@@ -333,6 +362,15 @@ class ShipEditor:
         ttk.Button(self.recipe_frame, text="+ Add Custom Material",
                    command=self.add_custom_material).grid(row=row, column=0,
                                                           columnspan=2, pady=5)
+
+    def _toggle_turret_field(self):
+        """Show/hide the Turrets entry based on the warship checkbox."""
+        if self.is_warship_var.get():
+            self._turret_label.grid()
+            self.turrets_entry.grid()
+        else:
+            self._turret_label.grid_remove()
+            self.turrets_entry.grid_remove()
 
     def toggle_recipe_section(self):
         """Show/hide the recipe section"""
@@ -497,6 +535,14 @@ class ShipEditor:
                 self.agility_entry.insert(0, str(stats['Agility']))
             if 'Warp Speed' in stats:
                 self.warp_speed_entry.insert(0, str(stats['Warp Speed']))
+
+            # Load warship flag and Turrets
+            if ship.get('warship', False):
+                self.is_warship_var.set(True)
+                self._toggle_turret_field()
+                if 'Turrets' in stats:
+                    self.turrets_entry.delete(0, tk.END)
+                    self.turrets_entry.insert(0, str(int(stats['Turrets'])))
 
             # Check for recipe
             recipe = self.load_ship_recipe(ship_name)
@@ -711,6 +757,21 @@ class ShipEditor:
                 messagebox.showerror("Error", "Warp Speed must be a number!")
                 return
 
+        # Save warship flag and Turrets stat
+        if self.is_warship_var.get():
+            ship['warship'] = True
+            turrets_str = self.turrets_entry.get().strip()
+            if turrets_str:
+                try:
+                    ship['stats']['Turrets'] = int(turrets_str)
+                except ValueError:
+                    messagebox.showerror("Error", "Turrets must be a whole number!")
+                    return
+        else:
+            # Remove warship flag and Turrets if unchecked
+            ship.pop('warship', None)
+            ship['stats'].pop('Turrets', None)
+
         # Save recipe if checkbox is checked
         if self.has_recipe_var.get():
             if not self.save_recipe(ship_name):
@@ -883,6 +944,11 @@ class ShipEditor:
         self.speed_entry.delete(0, tk.END)
         self.agility_entry.delete(0, tk.END)
         self.warp_speed_entry.delete(0, tk.END)
+
+        self.is_warship_var.set(False)
+        self.turrets_entry.delete(0, tk.END)
+        self.turrets_entry.insert(0, "2")
+        self._toggle_turret_field()
 
         self.has_recipe_var.set(False)
         self.toggle_recipe_section()

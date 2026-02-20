@@ -45,7 +45,7 @@ if not DISCORD_AVAILABLE or not MUSIC_AVAILABLE:
     sleep(3)
 
 # Version codes
-APP_VERSION_CODE = "0.1.3.2"  # 0.1.x = alpha; 0.2.x = beta; 1.x = release
+APP_VERSION_CODE = "0.1.3.3"  # 0.1.x = alpha; 0.2.x = beta; 1.x = release
 SAVE_VERSION_CODE = 2         # Save format version code
 
 # Color codes
@@ -1966,23 +1966,47 @@ def box_line(content, width=60, border_color=None, text_color=None):
 
 
 def is_warship(ship_name):
-    """Check if a ship is a warship (Corvette, Frigate, or Destroyer)"""
+    """Check if a ship is a warship.
+
+    Primary source: the ``"warship": true`` flag in ships.json.
+    Fallback: ships whose *class* is Corvette, Frigate, or Destroyer are
+    always treated as warships even if the flag is absent, so that newly
+    added ships of those classes work automatically.
+    """
+    ships = load_ships_data()
+    for ship in ships:
+        if ship.get('name', '').lower() == ship_name.lower():
+            if ship.get('warship', False):
+                return True
+            # Fallback: class-based detection
+            ship_class = ship.get('class', '').lower()
+            return ship_class in ('corvette', 'frigate', 'destroyer')
+    # If not found in data, fall back to class keyword in name (legacy safety net)
     ship_lower = ship_name.lower()
-    if 'corvette' in ship_lower or 'frigate' in ship_lower or 'destroyer' in ship_lower:
-        return True
-    warship_names = ['infinity', 'radix', 'chevron']
-    return any(name in ship_lower for name in warship_names)
+    return any(kw in ship_lower for kw in ('corvette', 'frigate', 'destroyer'))
 
 
 def get_turret_count(ship_name):
-    """Get number of turrets for a warship"""
-    ship_lower = ship_name.lower()
-    if 'corvette' in ship_lower or 'infinity' in ship_lower or 'radix' in ship_lower or 'chevron' in ship_lower:
-        return 2
-    elif 'frigate' in ship_lower:
-        return 3
-    elif 'destroyer' in ship_lower:
-        return 4
+    """Get the number of turrets for a warship.
+
+    Reads the ``"Turrets"`` stat from ships.json when present.
+    Falls back to class-based defaults (Corvette=2, Frigate=3, Destroyer=4).
+    """
+    ships = load_ships_data()
+    for ship in ships:
+        if ship.get('name', '').lower() == ship_name.lower():
+            turrets = ship.get('stats', {}).get('Turrets')
+            if turrets is not None:
+                return int(turrets)
+            # Class-based default
+            ship_class = ship.get('class', '').lower()
+            if ship_class == 'corvette':
+                return 4
+            elif ship_class == 'frigate':
+                return 6
+            elif ship_class == 'destroyer':
+                return 8
+            return 2
     return 2
 
 
