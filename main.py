@@ -5215,7 +5215,7 @@ def mine_asteroid(save_name, data, asteroid, guarded=False):
                             presses += 1
                             print(f"  Press #{presses}\033[K")
 
-                    recovery_rate = min(1.0, presses / 10)
+                    recovery_rate = min(1.0, presses / 20)
                     recovered = recoverable * recovery_rate
                     ore_extracted += recovered
 
