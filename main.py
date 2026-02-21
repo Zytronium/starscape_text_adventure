@@ -45,7 +45,7 @@ if not DISCORD_AVAILABLE or not MUSIC_AVAILABLE:
     sleep(3)
 
 # Version codes
-APP_VERSION_CODE = "0.1.3.3"  # 0.1.x = alpha; 0.2.x = beta; 1.x = release
+APP_VERSION_CODE = "0.1.3.4"  # 0.1.x = alpha; 0.2.x = beta; 1.x = release
 SAVE_VERSION_CODE = 2         # Save format version code
 
 # Color codes
@@ -6435,6 +6435,14 @@ def show_job_details(job_info):
     input("Press Enter to continue...")
 
 
+def visit_mission_agent(save_name, data):
+    clear_screen()
+    title("MISSION AGENCY")
+    print()
+    print("Not implemented yet\033[K")
+    input("Press Enter to continue...")
+
+
 def game_loop(save_name, data):
     clear_screen()
     if data["v"] < SAVE_VERSION_CODE:
@@ -7255,6 +7263,10 @@ def station_screen(system, station_num, save_name, data):
 
         if action == "manufacturing":
             visit_manufacturing_bay(save_name, data)
+            continue
+
+        if action == "mission_agent":
+            visit_mission_agent(save_name, data)
             continue
 
         if action == "ship_terminal":
