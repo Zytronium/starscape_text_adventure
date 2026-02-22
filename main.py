@@ -6435,12 +6435,71 @@ def show_job_details(job_info):
     input("Press Enter to continue...")
 
 
-def visit_mission_agent(save_name, data):
+def visit_field_office(office_name, save_name, data):
     clear_screen()
-    title("MISSION AGENCY")
+    title(f"{office_name.upper()} FIELD OFFICE")
+    print()
+    system = system_data(data["current_system"])
+    station_name = data["docked_at"]
+    station = ""
+    facility = ""
+    for s in system['Stations']:
+        if s["Name"] == station_name:
+            station = s
+            for f in station["Facilities"]:
+                if isinstance(f, dict) and f["Name"] == office_name:
+                    facility = f
+                    break
+            break
+    if station == "":  # handle unexpected error if station not found
+        set_color("red")
+        print("Error: station not found! Placing you back in your ship...")
+        reset_color()
+        data["docked_at"] = ""
+        save_data(save_name, data)
+        input("Press Enter to continue...")
+        return
+    if facility == "":  # handle unexpected error if field office not found
+        set_color("red")
+        print("Error: field office not found!")
+        reset_color()
+        input("Press Enter to continue...")
+        return
+    agent_a_tier = facility["Agents"][0]
+    agent_b_tier = facility["Agents"][1]
+    faction = facility["Faction"]
+    faction_display = "Lycentian" if faction == "Lycentia" else "Foralkan" if faction == "Foralkus" else faction
+    options = [
+        f"Visit Mission Agent A [Tier {agent_a_tier}]",
+        f"Visit Mission Agent B [Tier {agent_b_tier}]",
+        f"Open {faction_display} Terminal",
+        "Back"
+    ]
+
+    choice = arrow_menu("Select Action", options)
+
+    if choice in [0, 1]:
+        visit_agent(choice, office_name, save_name, data)
+    elif choice == 2:
+        view_faction_terminal(faction, save_name, data)
+    else:
+        return
+
+
+def visit_agent(agent_idx, office_name, save_name, data):
+    clear_screen()
+    title(f"MISSION AGENT {"A" if agent_idx == 0 else "B"}")
     print()
     print("Not implemented yet\033[K")
-    input("Press Enter to continue...")
+    input("Press Enter to go back...")
+
+
+def view_faction_terminal(faction, save_name, data):
+    clear_screen()
+    title(f"{faction.upper()} TERMINAL")
+    print()
+    print("Not implemented yet\033[K")
+    input("Press Enter to go back...")
 
 
 def game_loop(save_name, data):
@@ -7208,11 +7267,11 @@ def station_screen(system, station_num, save_name, data):
 
         # Check each facility type
         for facility in facilities:
-            # Handle mission agencies (they have tier info)
-            if "Mission Agency" in facility:
-                if "Visit Mission Agent" not in options:
-                    options.append("Visit Mission Agent")
-                    option_actions.append("mission_agent")
+            # Handle mission agencies
+            if isinstance(facility, dict):
+                if f"Visit {facility["Faction"]} Field Office" not in options:
+                    options.append(f"Visit {facility["Faction"]} Field Office")
+                    option_actions.append(facility["Name"])  # always ends in "Field Office"
             else:
                 # Check standard facilities
                 for facility_key, (option_text, action) in facility_mapping.items():
@@ -7265,8 +7324,8 @@ def station_screen(system, station_num, save_name, data):
             visit_manufacturing_bay(save_name, data)
             continue
 
-        if action == "mission_agent":
-            visit_mission_agent(save_name, data)
+        if action.endswith("Field Office"):
+            visit_field_office(action, save_name, data)
             continue
 
         if action == "ship_terminal":
