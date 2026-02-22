@@ -383,10 +383,15 @@
                 "Name": "Abjit Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 3)",
-                    "CoreSec Mission Agency (Tier 0)",
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 2)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            3,
+                            0
+                        ]
+                    }
                 ]
             }
         ]
@@ -2079,7 +2084,14 @@
                     "Ship Vendor",
                     "Manufacturing",
                     "Observatory",
-                    "Foralkan Mission Agency (Tier 1)"
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            1,
+                            5
+                        ]
+                    }
                 ]
             }
         ]
@@ -2367,10 +2379,16 @@
                 "Name": "Aetlocid Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
                     "Observatory",
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 4)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            4
+                        ]
+                    }
                 ]
             }
         ]
@@ -3504,9 +3522,16 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 3)",
                     "Manufacturing",
-                    "Observatory"
+                    "Observatory",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            3,
+                            0
+                        ]
+                    }
                 ]
             }
         ]
@@ -3548,7 +3573,14 @@
                 "Facilities": [
                     "Observatory",
                     "Ship Vendor",
-                    "Foralkan Mission Agency (Tier 4)"
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            4,
+                            3
+                        ]
+                    }
                 ]
             }
         ]
@@ -4211,7 +4243,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 3)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            3,
+                            4
+                        ]
+                    }
                 ]
             }
         ]
@@ -4351,10 +4390,16 @@
                 "Name": "Analt Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "Kavani Mission Agency (Tier 2)",
-                    "Kavani Mission Agency (Tier 4)",
                     "Manufacturing",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            2,
+                            4
+                        ]
+                    }
                 ]
             }
         ]
@@ -5892,7 +5937,14 @@
                     "Observatory",
                     "Ship Vendor",
                     "Manufacturing",
-                    "Foralkan Mission Agency (Tier 0)"
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            0,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -6664,8 +6716,15 @@
                 "Facilities": [
                     "Ship Vendor",
                     "Observatory",
-                    "Lycentian Mission Agency (Tier 1)",
-                    "Manufacturing"
+                    "Manufacturing",
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            1,
+                            0
+                        ]
+                    }
                 ]
             }
         ]
@@ -7056,7 +7115,14 @@
                 "Facilities": [
                     "Manufacturing",
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 0)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            0,
+                            5
+                        ]
+                    }
                 ]
             }
         ]
@@ -7552,10 +7618,16 @@
                 "Name": "Axsiolk Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "Kavani Mission Agency (Tier 2)",
                     "Manufacturing",
                     "Ship Vendor",
-                    "Kavani Mission Agency (Tier 1)"
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            2,
+                            1
+                        ]
+                    }
                 ]
             },
             {
@@ -7751,9 +7823,15 @@
                 "Type": "Military",
                 "Facilities": [
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 5)",
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            5,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -7873,8 +7951,14 @@
                 "Facilities": [
                     "Ship Vendor",
                     "Observatory",
-                    "Foralkan Mission Agency (Tier 1)",
-                    "Foralkan Mission Agency (Tier 1)"
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             },
             {
@@ -8048,7 +8132,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Manufacturing",
-                    "MiningGuild Mission Agency (Tier 1)"
+                    {
+                        "Name": "Mining Guild Field Office",
+                        "Faction": "Mining Guild",
+                        "Agents": [
+                            1,
+                            5
+                        ]
+                    }
                 ]
             },
             {
@@ -8217,7 +8308,14 @@
                 "Facilities": [
                     "Ship Vendor",
                     "Manufacturing",
-                    "Foralkan Mission Agency (Tier 2)"
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            2,
+                            4
+                        ]
+                    }
                 ]
             }
         ]
@@ -8693,8 +8791,15 @@
                 "Facilities": [
                     "Ship Vendor",
                     "Observatory",
-                    "CoreSec Mission Agency (Tier 2)",
-                    "Manufacturing"
+                    "Manufacturing",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            2,
+                            4
+                        ]
+                    }
                 ]
             }
         ]
@@ -8956,7 +9061,14 @@
                     "Ship Vendor",
                     "Observatory",
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 2)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            2,
+                            4
+                        ]
+                    }
                 ]
             },
             {
@@ -9381,9 +9493,16 @@
                 "Name": "Bri'ut Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "Kavani Mission Agency (Tier 3)",
                     "Manufacturing",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            3,
+                            5
+                        ]
+                    }
                 ]
             }
         ]
@@ -10719,8 +10838,14 @@
                 "Name": "Cidathma Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -11963,7 +12088,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            3
+                        ]
+                    }
                 ]
             }
         ]
@@ -12658,7 +12790,14 @@
                 "Facilities": [
                     "Manufacturing",
                     "Ship Vendor",
-                    "Lycentian Mission Agency (Tier 2)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            2,
+                            5
+                        ]
+                    }
                 ]
             },
             {
@@ -13385,10 +13524,16 @@
                 "Name": "Droocleawea-3 Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
-                    "CoreSec Mission Agency (Tier 2)",
                     "Manufacturing",
-                    "Observatory"
+                    "Observatory",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -14646,8 +14791,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "Lycentian Mission Agency (Tier 1)",
-                    "Lycentian Mission Agency (Tier 1)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -14898,8 +15049,14 @@
                 "Name": "Ebalkea Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "Lycentian Mission Agency (Tier 1)",
-                    "Lycentian Mission Agency (Tier 2)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            1,
+                            2
+                        ]
+                    }
                 ]
             },
             {
@@ -15317,8 +15474,15 @@
                 "Facilities": [
                     "Ship Vendor",
                     "Manufacturing",
-                    "Foralkan Mission Agency (Tier 1)",
-                    "Observatory"
+                    "Observatory",
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            1,
+                            5
+                        ]
+                    }
                 ]
             },
             {
@@ -16223,7 +16387,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 3)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            3,
+                            3
+                        ]
+                    }
                 ]
             }
         ]
@@ -16309,16 +16480,30 @@
                     "Ship Vendor",
                     "Manufacturing",
                     "Observatory",
-                    "Foralkan Mission Agency (Tier 2)"
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            2,
+                            5
+                        ]
+                    }
                 ]
             },
             {
                 "Name": "Eegydcae Military Station 2",
                 "Type": "Military",
                 "Facilities": [
-                    "Foralkan Mission Agency (Tier 5)",
                     "Manufacturing",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            5,
+                            3
+                        ]
+                    }
                 ]
             }
         ]
@@ -16495,7 +16680,14 @@
                     "Manufacturing",
                     "Ship Vendor",
                     "Observatory",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            5
+                        ]
+                    }
                 ]
             }
         ]
@@ -16845,8 +17037,15 @@
                 "Type": "Military",
                 "Facilities": [
                     "Observatory",
-                    "Kavani Mission Agency (Tier 1)",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            1,
+                            4
+                        ]
+                    }
                 ]
             }
         ]
@@ -18348,9 +18547,14 @@
                 "Name": "Eltikum Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
-                    "CoreSec Mission Agency (Tier 0)",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            0
+                        ]
+                    }
                 ]
             },
             {
@@ -19031,7 +19235,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 2)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            2,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -19126,10 +19337,17 @@
                 "Name": "Emuz Military Station 2",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
                     "Manufacturing",
                     "Ship Vendor",
-                    "Observatory"
+                    "Observatory",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            0
+                        ]
+                    }
                 ]
             }
         ]
@@ -19278,10 +19496,17 @@
                 "Name": "Eoc'ziosi Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 3)",
                     "Ship Vendor",
                     "Observatory",
-                    "Manufacturing"
+                    "Manufacturing",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            3,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -20196,10 +20421,16 @@
                 "Name": "Eoymotee Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "Lycentian Mission Agency (Tier 4)",
                     "Manufacturing",
                     "Ship Vendor",
-                    "Lycentian Mission Agency (Tier 2)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            4,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -21816,9 +22047,15 @@
                 "Type": "Military",
                 "Facilities": [
                     "Manufacturing",
-                    "TradeUnion Mission Agency (Tier 1)",
                     "Ship Vendor",
-                    "TradeUnion Mission Agency (Tier 0)"
+                    {
+                        "Name": "Trade Union Field Office",
+                        "Faction": "Trade Union",
+                        "Agents": [
+                            1,
+                            0
+                        ]
+                    }
                 ]
             }
         ]
@@ -22298,9 +22535,16 @@
                 "Name": "Fin Glipa Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
                     "Manufacturing",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            3
+                        ]
+                    }
                 ]
             },
             {
@@ -23098,9 +23342,16 @@
                 "Type": "Military",
                 "Facilities": [
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 1)",
                     "Observatory",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            0
+                        ]
+                    }
                 ]
             }
         ]
@@ -23441,9 +23692,15 @@
                 "Type": "Military",
                 "Facilities": [
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 3)",
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 2)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            3,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -24414,8 +24671,14 @@
                 "Name": "Gamma Ydgroo Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "Foralkan Mission Agency (Tier 1)",
-                    "Foralkan Mission Agency (Tier 5)"
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            1,
+                            5
+                        ]
+                    }
                 ]
             },
             {
@@ -25038,7 +25301,14 @@
                 "Facilities": [
                     "Manufacturing",
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            5
+                        ]
+                    }
                 ]
             }
         ]
@@ -26156,7 +26426,14 @@
                 "Facilities": [
                     "Manufacturing",
                     "Ship Vendor",
-                    "Lycentian Mission Agency (Tier 3)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            3,
+                            5
+                        ]
+                    }
                 ]
             },
             {
@@ -26165,8 +26442,15 @@
                 "Facilities": [
                     "Observatory",
                     "Manufacturing",
-                    "Lycentian Mission Agency (Tier 1)",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            1,
+                            3
+                        ]
+                    }
                 ]
             }
         ]
@@ -26953,9 +27237,15 @@
                 "Name": "Herhir Elas Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
                     "Observatory",
-                    "CoreSec Mission Agency (Tier 3)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            3
+                        ]
+                    }
                 ]
             }
         ]
@@ -27571,8 +27861,14 @@
                 "Facilities": [
                     "Manufacturing",
                     "Ship Vendor",
-                    "Lycentian Mission Agency (Tier 1)",
-                    "Lycentian Mission Agency (Tier 1)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -28010,7 +28306,14 @@
                 "Facilities": [
                     "Ship Vendor",
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             },
             {
@@ -29362,9 +29665,16 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 1)",
                     "Observatory",
-                    "Manufacturing"
+                    "Manufacturing",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            3
+                        ]
+                    }
                 ]
             }
         ]
@@ -29484,7 +29794,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 4)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            4,
+                            5
+                        ]
+                    }
                 ]
             }
         ]
@@ -29904,19 +30221,32 @@
                 "Name": "Iathu Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 2)",
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 4)",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            2,
+                            4
+                        ]
+                    }
                 ]
             },
             {
                 "Name": "Iathu Military Station 2",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
                     "Ship Vendor",
-                    "Observatory"
+                    "Observatory",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -30404,9 +30734,15 @@
                 "Type": "Military",
                 "Facilities": [
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 2)",
                     "Observatory",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            2,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -30596,8 +30932,14 @@
                 "Facilities": [
                     "Ship Vendor",
                     "Observatory",
-                    "CoreSec Mission Agency (Tier 2)",
-                    "CoreSec Mission Agency (Tier 2)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            2,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -31419,9 +31761,16 @@
                 "Name": "Illnian Military Station 2",
                 "Type": "Military",
                 "Facilities": [
-                    "Lycentian Mission Agency (Tier 2)",
                     "Manufacturing",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            2,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -31692,7 +32041,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Manufacturing",
-                    "TradeUnion Mission Agency (Tier 1)"
+                    {
+                        "Name": "Trade Union Field Office",
+                        "Faction": "Trade Union",
+                        "Agents": [
+                            1,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -32306,10 +32662,16 @@
                 "Name": "Inromzo Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "Lycentian Mission Agency (Tier 3)",
                     "Manufacturing",
                     "Ship Vendor",
-                    "Lycentian Mission Agency (Tier 1)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            3,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -32917,9 +33279,15 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 4)",
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            4,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -35194,8 +35562,15 @@
                 "Facilities": [
                     "Manufacturing",
                     "Observatory",
-                    "Kavani Mission Agency (Tier 1)",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            1,
+                            4
+                        ]
+                    }
                 ]
             }
         ]
@@ -37762,8 +38137,14 @@
                 "Facilities": [
                     "Observatory",
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 1)",
-                    "CoreSec Mission Agency (Tier 2)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -37788,10 +38169,16 @@
                 "Name": "Kited-dio Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
                     "Ship Vendor",
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -38526,7 +38913,14 @@
                 "Facilities": [
                     "Manufacturing",
                     "Ship Vendor",
-                    "Lycentian Mission Agency (Tier 3)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            3,
+                            1
+                        ]
+                    }
                 ]
             },
             {
@@ -38668,9 +39062,15 @@
                 "Name": "Kliac Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "Lycentian Mission Agency (Tier 1)",
                     "Ship Vendor",
-                    "Lycentian Mission Agency (Tier 2)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            1,
+                            2
+                        ]
+                    }
                 ]
             },
             {
@@ -39303,8 +39703,14 @@
                 "Facilities": [
                     "Observatory",
                     "Manufacturing",
-                    "Lycentian Mission Agency (Tier 0)",
-                    "Lycentian Mission Agency (Tier 3)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            0,
+                            3
+                        ]
+                    }
                 ]
             },
             {
@@ -39762,8 +40168,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "Syndicate Mission Agency (Tier 1)",
-                    "Syndicate Mission Agency (Tier 1)"
+                    {
+                        "Name": "Syndicate Field Office",
+                        "Faction": "Syndicate",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -40046,7 +40458,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -40280,10 +40699,15 @@
                 "Name": "Liter Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 2)",
-                    "CoreSec Mission Agency (Tier 1)",
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 4)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            2,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -41009,8 +41433,14 @@
                 "Facilities": [
                     "Ship Vendor",
                     "Manufacturing",
-                    "Lycentian Mission Agency (Tier 1)",
-                    "Lycentian Mission Agency (Tier 0)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            1,
+                            0
+                        ]
+                    }
                 ]
             }
         ]
@@ -42632,8 +43062,14 @@
                 "Facilities": [
                     "Ship Vendor",
                     "Observatory",
-                    "Kavani Mission Agency (Tier 0)",
-                    "Kavani Mission Agency (Tier 1)"
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            0,
+                            1
+                        ]
+                    }
                 ]
             },
             {
@@ -44690,8 +45126,14 @@
                 "Name": "Nerter Ior Military Station 2",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -44764,8 +45206,15 @@
                 "Name": "Nerves Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            0
+                        ]
+                    }
                 ]
             }
         ]
@@ -45223,9 +45672,15 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "Kavani Mission Agency (Tier 2)",
                     "Manufacturing",
-                    "Kavani Mission Agency (Tier 3)"
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            2,
+                            3
+                        ]
+                    }
                 ]
             }
         ]
@@ -45759,7 +46214,14 @@
                 "Facilities": [
                     "Observatory",
                     "Ship Vendor",
-                    "Lycentian Mission Agency (Tier 1)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            1,
+                            0
+                        ]
+                    }
                 ]
             },
             {
@@ -45767,7 +46229,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "Lycentian Mission Agency (Tier 0)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            0,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -46656,8 +47125,15 @@
                 "Facilities": [
                     "Observatory",
                     "Manufacturing",
-                    "Lycentian Mission Agency (Tier 1)",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -46700,7 +47176,14 @@
                     "Observatory",
                     "Ship Vendor",
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 2)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            2,
+                            2
+                        ]
+                    }
                 ]
             },
             {
@@ -47296,9 +47779,15 @@
                 "Name": "Ogek Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -48991,8 +49480,15 @@
                 "Name": "Oofbetod Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 0)",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            0,
+                            1
+                        ]
+                    }
                 ]
             },
             {
@@ -49117,10 +49613,16 @@
                 "Name": "Oojyxil Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 2)",
                     "Ship Vendor",
                     "Observatory",
-                    "CoreSec Mission Agency (Tier 4)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            2,
+                            4
+                        ]
+                    }
                 ]
             },
             {
@@ -49128,7 +49630,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Observatory",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            0
+                        ]
+                    }
                 ]
             }
         ]
@@ -49232,10 +49741,16 @@
                 "Name": "Oomca Military Station 2",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 4)",
                     "Manufacturing",
                     "Observatory",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            4,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -49655,7 +50170,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            4
+                        ]
+                    }
                 ]
             }
         ]
@@ -50313,9 +50835,15 @@
                 "Name": "Orpi Military Station 2",
                 "Type": "Military",
                 "Facilities": [
-                    "Kavani Mission Agency (Tier 3)",
-                    "Kavani Mission Agency (Tier 0)",
-                    "Manufacturing"
+                    "Manufacturing",
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            3,
+                            0
+                        ]
+                    }
                 ]
             }
         ]
@@ -50996,8 +51524,15 @@
                 "Name": "Ost Pixon Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            3
+                        ]
+                    }
                 ]
             }
         ]
@@ -51722,10 +52257,16 @@
                 "Name": "Othese Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
-                    "CoreSec Mission Agency (Tier 2)",
                     "Manufacturing",
-                    "Observatory"
+                    "Observatory",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            2
+                        ]
+                    }
                 ]
             },
             {
@@ -52132,9 +52673,15 @@
                 "Name": "Oxeos Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
-                    "CoreSec Mission Agency (Tier 1)",
-                    "Observatory"
+                    "Observatory",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -52959,7 +53506,14 @@
                     "Manufacturing",
                     "Observatory",
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            4
+                        ]
+                    }
                 ]
             },
             {
@@ -53040,8 +53594,15 @@
                 "Type": "Military",
                 "Facilities": [
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 0)",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            0,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -53403,8 +53964,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 5)",
-                    "CoreSec Mission Agency (Tier 4)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            5,
+                            4
+                        ]
+                    }
                 ]
             },
             {
@@ -53555,7 +54122,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 2)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            2,
+                            5
+                        ]
+                    }
                 ]
             }
         ]
@@ -53657,7 +54231,14 @@
                     "Ship Vendor",
                     "Manufacturing",
                     "Observatory",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            0
+                        ]
+                    }
                 ]
             }
         ]
@@ -54273,8 +54854,14 @@
                 "Facilities": [
                     "Manufacturing",
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 1)",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             },
             {
@@ -54506,7 +55093,14 @@
                     "Observatory",
                     "Manufacturing",
                     "Ship Vendor",
-                    "Lycentian Mission Agency (Tier 2)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            2,
+                            0
+                        ]
+                    }
                 ]
             }
         ]
@@ -55276,8 +55870,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 1)",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -56087,10 +56687,16 @@
                 "Name": "Quake Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "Foralkan Mission Agency (Tier 3)",
                     "Ship Vendor",
                     "Manufacturing",
-                    "Foralkan Mission Agency (Tier 5)"
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            3,
+                            5
+                        ]
+                    }
                 ]
             }
         ]
@@ -56897,8 +57503,14 @@
                 "Name": "Reno Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 2)",
-                    "CoreSec Mission Agency (Tier 0)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            2,
+                            0
+                        ]
+                    }
                 ]
             }
         ]
@@ -58640,8 +59252,14 @@
                 "Facilities": [
                     "Ship Vendor",
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 3)",
-                    "CoreSec Mission Agency (Tier 2)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            3,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -59020,8 +59638,14 @@
                 "Facilities": [
                     "Observatory",
                     "Ship Vendor",
-                    "Kavani Mission Agency (Tier 1)",
-                    "Kavani Mission Agency (Tier 3)"
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            1,
+                            3
+                        ]
+                    }
                 ]
             },
             {
@@ -59210,7 +59834,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Observatory",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            4
+                        ]
+                    }
                 ]
             },
             {
@@ -59258,10 +59889,17 @@
                 "Name": "Rovesuaw-22 Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 0)",
                     "Ship Vendor",
                     "Observatory",
-                    "Manufacturing"
+                    "Manufacturing",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            0,
+                            4
+                        ]
+                    }
                 ]
             },
             {
@@ -59344,8 +59982,14 @@
                 "Facilities": [
                     "Manufacturing",
                     "Observatory",
-                    "CoreSec Mission Agency (Tier 2)",
-                    "CoreSec Mission Agency (Tier 3)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            2,
+                            3
+                        ]
+                    }
                 ]
             }
         ]
@@ -59844,7 +60488,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            4
+                        ]
+                    }
                 ]
             }
         ]
@@ -61292,7 +61943,14 @@
                     "Ship Vendor",
                     "Manufacturing",
                     "Observatory",
-                    "Lycentian Mission Agency (Tier 1)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            1,
+                            4
+                        ]
+                    }
                 ]
             }
         ]
@@ -61655,7 +62313,14 @@
                 "Facilities": [
                     "Ship Vendor",
                     "Observatory",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            0
+                        ]
+                    }
                 ]
             }
         ]
@@ -62500,7 +63165,14 @@
                 "Facilities": [
                     "Ship Vendor",
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            3
+                        ]
+                    }
                 ]
             }
         ]
@@ -63376,7 +64048,14 @@
                 "Facilities": [
                     "Ship Vendor",
                     "Manufacturing",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -64447,9 +65126,15 @@
                 "Type": "Military",
                 "Facilities": [
                     "Manufacturing",
-                    "Foralkan Mission Agency (Tier 2)",
                     "Observatory",
-                    "Foralkan Mission Agency (Tier 2)"
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            2,
+                            2
+                        ]
+                    }
                 ]
             },
             {
@@ -64533,13 +65218,62 @@
                     "General Marketplace",
                     "Observatory",
                     "Repair Bay",
-                    "CoreSec Mission Agency (Tier 0)",
-                    "Syndicate Mission Agency (Tier 0)",
-                    "Trade Union Mission Agency (Tier 0)",
-                    "Mining Guild Mission Agency (Tier 0)",
-                    "Lycentia Mission Agency (Tier 0)",
-                    "Forakus Mission Agency (Tier 0)",
-                    "Kavani Mission Agency (Tier 0)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            0,
+                            3
+                        ]
+                    },
+                    {
+                        "Name": "Syndicate Field Office",
+                        "Faction": "Syndicate",
+                        "Agents": [
+                            0,
+                            1
+                        ]
+                    },
+                    {
+                        "Name": "Trade Union Field Office",
+                        "Faction": "Trade Union",
+                        "Agents": [
+                            0,
+                            5
+                        ]
+                    },
+                    {
+                        "Name": "Mining Guild Field Office",
+                        "Faction": "Mining Guild",
+                        "Agents": [
+                            0,
+                            2
+                        ]
+                    },
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            0,
+                            2
+                        ]
+                    },
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            0,
+                            3
+                        ]
+                    },
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            0,
+                            3
+                        ]
+                    }
                 ]
             }
         ]
@@ -64680,9 +65414,15 @@
                 "Type": "Military",
                 "Facilities": [
                     "Manufacturing",
-                    "Lycentian Mission Agency (Tier 2)",
                     "Ship Vendor",
-                    "Lycentian Mission Agency (Tier 1)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            2,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -66304,8 +67044,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Observatory",
-                    "CoreSec Mission Agency (Tier 1)",
-                    "CoreSec Mission Agency (Tier 0)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            0
+                        ]
+                    }
                 ]
             }
         ]
@@ -67249,9 +67995,15 @@
                 "Name": "Tuwo Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "Kavani Mission Agency (Tier 1)",
-                    "Kavani Mission Agency (Tier 3)",
-                    "Manufacturing"
+                    "Manufacturing",
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            1,
+                            3
+                        ]
+                    }
                 ]
             },
             {
@@ -67955,9 +68707,15 @@
                 "Name": "Uastcasi Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "Foralkan Mission Agency (Tier 1)",
                     "Manufacturing",
-                    "Foralkan Mission Agency (Tier 3)"
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            1,
+                            3
+                        ]
+                    }
                 ]
             },
             {
@@ -68314,9 +69072,16 @@
                 "Type": "Military",
                 "Facilities": [
                     "Manufacturing",
-                    "Lycentian Mission Agency (Tier 0)",
                     "Ship Vendor",
-                    "Observatory"
+                    "Observatory",
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            0,
+                            3
+                        ]
+                    }
                 ]
             },
             {
@@ -69701,8 +70466,14 @@
                 "Facilities": [
                     "Observatory",
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 2)",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            2,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -69850,8 +70621,15 @@
                 "Name": "Usoaxus Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "Lycentian Mission Agency (Tier 0)",
-                    "Manufacturing"
+                    "Manufacturing",
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            0,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -70549,9 +71327,16 @@
                 "Name": "Uzkemo Military Station 2",
                 "Type": "Military",
                 "Facilities": [
-                    "Kavani Mission Agency (Tier 3)",
                     "Ship Vendor",
-                    "Manufacturing"
+                    "Manufacturing",
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            3,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -70931,7 +71716,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Manufacturing",
-                    "Kavani Mission Agency (Tier 1)"
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            1,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -72133,8 +72925,15 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 1)",
-                    "Manufacturing"
+                    "Manufacturing",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            3
+                        ]
+                    }
                 ]
             },
             {
@@ -73108,9 +73907,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Observatory",
-                    "Kavani Mission Agency (Tier 3)",
-                    "Kavani Mission Agency (Tier 1)",
-                    "Kavani Mission Agency (Tier 1)"
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            3,
+                            1
+                        ]
+                    }
                 ]
             },
             {
@@ -73120,7 +73924,14 @@
                     "Manufacturing",
                     "Observatory",
                     "Ship Vendor",
-                    "Kavani Mission Agency (Tier 5)"
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            5,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -73245,9 +74056,15 @@
                 "Name": "Wialojit Military Station 2",
                 "Type": "Military",
                 "Facilities": [
-                    "Lycentian Mission Agency (Tier 1)",
                     "Manufacturing",
-                    "Lycentian Mission Agency (Tier 3)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            1,
+                            3
+                        ]
+                    }
                 ]
             }
         ]
@@ -73346,8 +74163,15 @@
                 "Name": "Winadath Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            2
+                        ]
+                    }
                 ]
             },
             {
@@ -74040,8 +74864,15 @@
                 "Type": "Military",
                 "Facilities": [
                     "Observatory",
-                    "CoreSec Mission Agency (Tier 3)",
-                    "Manufacturing"
+                    "Manufacturing",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            3,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -74338,9 +75169,15 @@
                 "Type": "Military",
                 "Facilities": [
                     "Manufacturing",
-                    "Kavani Mission Agency (Tier 1)",
                     "Observatory",
-                    "Kavani Mission Agency (Tier 1)"
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -74521,9 +75358,15 @@
                 "Type": "Military",
                 "Facilities": [
                     "Observatory",
-                    "Foralkan Mission Agency (Tier 1)",
                     "Ship Vendor",
-                    "Foralkan Mission Agency (Tier 1)"
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -74655,7 +75498,14 @@
                     "Ship Vendor",
                     "Manufacturing",
                     "Observatory",
-                    "Lycentian Mission Agency (Tier 2)"
+                    {
+                        "Name": "Lycentian Field Office",
+                        "Faction": "Lycentia",
+                        "Agents": [
+                            2,
+                            5
+                        ]
+                    }
                 ]
             }
         ]
@@ -75027,17 +75877,31 @@
                 "Facilities": [
                     "Ship Vendor",
                     "Manufacturing",
-                    "Foralkan Mission Agency (Tier 2)"
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            2,
+                            5
+                        ]
+                    }
                 ]
             },
             {
                 "Name": "Xoaydor Military Station 2",
                 "Type": "Military",
                 "Facilities": [
-                    "Foralkan Mission Agency (Tier 2)",
                     "Manufacturing",
                     "Ship Vendor",
-                    "Observatory"
+                    "Observatory",
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            2,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -75127,9 +75991,15 @@
                 "Name": "Xoruaher Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
-                    "CoreSec Mission Agency (Tier 1)",
-                    "Ship Vendor"
+                    "Ship Vendor",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -75342,8 +76212,14 @@
                 "Type": "Military",
                 "Facilities": [
                     "Ship Vendor",
-                    "Foralkan Mission Agency (Tier 1)",
-                    "Foralkan Mission Agency (Tier 3)"
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            1,
+                            3
+                        ]
+                    }
                 ]
             },
             {
@@ -76002,8 +76878,15 @@
                 "Name": "Yen Military Station 2",
                 "Type": "Military",
                 "Facilities": [
-                    "Kavani Mission Agency (Tier 0)",
-                    "Observatory"
+                    "Observatory",
+                    {
+                        "Name": "Kavani Field Office",
+                        "Faction": "Kavani",
+                        "Agents": [
+                            0,
+                            3
+                        ]
+                    }
                 ]
             }
         ]
@@ -77474,19 +78357,31 @@
                 "Name": "Zeayae Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "Foralkan Mission Agency (Tier 4)",
-                    "Foralkan Mission Agency (Tier 1)",
                     "Manufacturing",
-                    "Foralkan Mission Agency (Tier 2)"
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            4,
+                            1
+                        ]
+                    }
                 ]
             },
             {
                 "Name": "Zeayae Military Station 2",
                 "Type": "Military",
                 "Facilities": [
-                    "Foralkan Mission Agency (Tier 0)",
                     "Ship Vendor",
-                    "Manufacturing"
+                    "Manufacturing",
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            0,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -77978,8 +78873,14 @@
                 "Name": "Zeluw Si Military Station",
                 "Type": "Military",
                 "Facilities": [
-                    "CoreSec Mission Agency (Tier 1)",
-                    "CoreSec Mission Agency (Tier 1)"
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             }
         ]
@@ -78269,9 +79170,15 @@
                 "Type": "Military",
                 "Facilities": [
                     "Observatory",
-                    "Foralkan Mission Agency (Tier 1)",
                     "Ship Vendor",
-                    "Foralkan Mission Agency (Tier 1)"
+                    {
+                        "Name": "Foralkan Field Office",
+                        "Faction": "Forakus",
+                        "Agents": [
+                            1,
+                            1
+                        ]
+                    }
                 ]
             },
             {
@@ -78442,8 +79349,15 @@
                 "Facilities": [
                     "Manufacturing",
                     "Ship Vendor",
-                    "CoreSec Mission Agency (Tier 1)",
-                    "Observatory"
+                    "Observatory",
+                    {
+                        "Name": "CoreSec Field Office",
+                        "Faction": "CoreSec",
+                        "Agents": [
+                            1,
+                            2
+                        ]
+                    }
                 ]
             }
         ]
@@ -78685,139 +79599,139 @@
         "Name": "Zuta-4",
         "Planets": 6
     },
-  "G-01": {
-    "Faction": "Neutral",
-    "Region": "Uncharted",
-    "Sector": "Gate",
-    "SecurityLevel": "Wild",
-    "SpectralClass": "N",
-    "Spice": "None",
-    "Connections": [
-      "Hualt"
-    ],
-    "Name": "G-01",
-    "Planets": 1,
-    "hidden": true,
-    "gate_type": "intact"
-  },
-  "G-02": {
-    "Faction": "Neutral",
-    "Region": "Uncharted",
-    "Sector": "Gate",
-    "SecurityLevel": "Wild",
-    "SpectralClass": "N",
-    "Spice": "None",
-    "Connections": [
-      "Vesma"
-    ],
-    "Name": "G-02",
-    "Planets": 1,
-    "hidden": true,
-    "gate_type": "intact"
-  },
-  "G-03": {
-    "Faction": "Neutral",
-    "Region": "Uncharted",
-    "Sector": "Gate",
-    "SecurityLevel": "Wild",
-    "SpectralClass": "N",
-    "Spice": "None",
-    "Connections": [
-      "Arpirom"
-    ],
-    "Name": "G-03",
-    "Planets": 1,
-    "hidden": true,
-    "gate_type": "intact"
-  },
-  "G-04": {
-    "Faction": "Neutral",
-    "Region": "Uncharted",
-    "Sector": "Gate",
-    "SecurityLevel": "Wild",
-    "SpectralClass": "N",
-    "Spice": "None",
-    "Connections": [
-      "Toracas"
-    ],
-    "Name": "G-04",
-    "Planets": 1,
-    "hidden": true,
-    "gate_type": "intact"
-  },
-  "G-05": {
-    "Faction": "Neutral",
-    "Region": "Uncharted",
-    "Sector": "Gate",
-    "SecurityLevel": "Wild",
-    "SpectralClass": "N",
-    "Spice": "None",
-    "Connections": [
-      "Lisaer"
-    ],
-    "Name": "G-05",
-    "Planets": 1,
-    "hidden": true,
-    "gate_type": "intact"
-  },
-  "G-06": {
-    "Faction": "Neutral",
-    "Region": "Uncharted",
-    "Sector": "Gate",
-    "SecurityLevel": "Wild",
-    "SpectralClass": "N",
-    "Spice": "None",
-    "Connections": [
-      "Arosiah"
-    ],
-    "Name": "G-06",
-    "Planets": 1,
-    "hidden": true,
-    "gate_type": "intact"
-  },
-  "G-07": {
-    "Faction": "Neutral",
-    "Region": "Uncharted",
-    "Sector": "Gate",
-    "SecurityLevel": "Wild",
-    "SpectralClass": "N",
-    "Spice": "None",
-    "Connections": [
-      "Io Zadkia"
-    ],
-    "Name": "G-07",
-    "Planets": 1,
-    "hidden": true,
-    "gate_type": "intact"
-  },
-  "G-08": {
-    "Faction": "Neutral",
-    "Region": "Uncharted",
-    "Sector": "Gate",
-    "SecurityLevel": "Wild",
-    "SpectralClass": "N",
-    "Spice": "None",
-    "Connections": [
-      "Droku"
-    ],
-    "Name": "G-08",
-    "Planets": 1,
-    "hidden": true,
-    "gate_type": "intact"
-  },
-  "G-09": {
-    "Faction": "Neutral",
-    "Region": "Uncharted",
-    "Sector": "Gate",
-    "SecurityLevel": "Wild",
-    "SpectralClass": "N",
-    "Spice": "None",
-    "Connections": [
-      "Delta Anca"
-    ],
-    "Name": "G-09",
-    "Planets": 1,
-    "hidden": true,
-    "gate_type": "destroyed"
-  }
+    "G-01": {
+        "Faction": "Neutral",
+        "Region": "Uncharted",
+        "Sector": "Gate",
+        "SecurityLevel": "Wild",
+        "SpectralClass": "N",
+        "Spice": "None",
+        "Connections": [
+            "Hualt"
+        ],
+        "Name": "G-01",
+        "Planets": 1,
+        "hidden": true,
+        "gate_type": "intact"
+    },
+    "G-02": {
+        "Faction": "Neutral",
+        "Region": "Uncharted",
+        "Sector": "Gate",
+        "SecurityLevel": "Wild",
+        "SpectralClass": "N",
+        "Spice": "None",
+        "Connections": [
+            "Vesma"
+        ],
+        "Name": "G-02",
+        "Planets": 1,
+        "hidden": true,
+        "gate_type": "intact"
+    },
+    "G-03": {
+        "Faction": "Neutral",
+        "Region": "Uncharted",
+        "Sector": "Gate",
+        "SecurityLevel": "Wild",
+        "SpectralClass": "N",
+        "Spice": "None",
+        "Connections": [
+            "Arpirom"
+        ],
+        "Name": "G-03",
+        "Planets": 1,
+        "hidden": true,
+        "gate_type": "intact"
+    },
+    "G-04": {
+        "Faction": "Neutral",
+        "Region": "Uncharted",
+        "Sector": "Gate",
+        "SecurityLevel": "Wild",
+        "SpectralClass": "N",
+        "Spice": "None",
+        "Connections": [
+            "Toracas"
+        ],
+        "Name": "G-04",
+        "Planets": 1,
+        "hidden": true,
+        "gate_type": "intact"
+    },
+    "G-05": {
+        "Faction": "Neutral",
+        "Region": "Uncharted",
+        "Sector": "Gate",
+        "SecurityLevel": "Wild",
+        "SpectralClass": "N",
+        "Spice": "None",
+        "Connections": [
+            "Lisaer"
+        ],
+        "Name": "G-05",
+        "Planets": 1,
+        "hidden": true,
+        "gate_type": "intact"
+    },
+    "G-06": {
+        "Faction": "Neutral",
+        "Region": "Uncharted",
+        "Sector": "Gate",
+        "SecurityLevel": "Wild",
+        "SpectralClass": "N",
+        "Spice": "None",
+        "Connections": [
+            "Arosiah"
+        ],
+        "Name": "G-06",
+        "Planets": 1,
+        "hidden": true,
+        "gate_type": "intact"
+    },
+    "G-07": {
+        "Faction": "Neutral",
+        "Region": "Uncharted",
+        "Sector": "Gate",
+        "SecurityLevel": "Wild",
+        "SpectralClass": "N",
+        "Spice": "None",
+        "Connections": [
+            "Io Zadkia"
+        ],
+        "Name": "G-07",
+        "Planets": 1,
+        "hidden": true,
+        "gate_type": "intact"
+    },
+    "G-08": {
+        "Faction": "Neutral",
+        "Region": "Uncharted",
+        "Sector": "Gate",
+        "SecurityLevel": "Wild",
+        "SpectralClass": "N",
+        "Spice": "None",
+        "Connections": [
+            "Droku"
+        ],
+        "Name": "G-08",
+        "Planets": 1,
+        "hidden": true,
+        "gate_type": "intact"
+    },
+    "G-09": {
+        "Faction": "Neutral",
+        "Region": "Uncharted",
+        "Sector": "Gate",
+        "SecurityLevel": "Wild",
+        "SpectralClass": "N",
+        "Spice": "None",
+        "Connections": [
+            "Delta Anca"
+        ],
+        "Name": "G-09",
+        "Planets": 1,
+        "hidden": true,
+        "gate_type": "destroyed"
+    }
 }

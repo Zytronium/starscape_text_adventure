@@ -132,7 +132,9 @@ b) Field offices are objects instead of strings - they will look like:
 ```json
 "Facilities": [
     "Ship Vendor",
-    "CoreSec Field Office": {
+    {
+        "Name": "CoreSec Field Office",
+        "Faction": "CoreSec",
         "Agents": [0, 2]
   }
 ]

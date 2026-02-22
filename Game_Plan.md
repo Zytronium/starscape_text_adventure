@@ -174,7 +174,7 @@ others depending on system security status, anomaly type, or ore type.
     causing more of the asteroid's ore to be lost and potentially damaging 
     your ship. When gas pockets are exposed, they instantly vent the gas,
     reducing the asteroid's stability by a random amount.
-  - This event is more likely with gellium ore and red narcor ore
+  - This event is more likely with gellium ore, red narcor ore, and water ice
 - Dense Mineral Formation Uncovered
   - As the name suggests, a dense formation of the ore is uncovered, giving you
     a sudden burst of extra ore.
@@ -223,3 +223,19 @@ enemies in high volume. However, defeating these enemies may yield great rewards
 
 If you venture out far enough into the wild, you may stumble across some of the
 galaxy's most hidden, ancient secrets.
+
+## Missions
+Every faction Field Office should have 2 mission agents, each of a random tier
+between 0 and 5. When you visit a field office, you can choose between the 1st
+mission agent, the 2nd mission agent, and the faction terminal.
+
+### Mission Agents
+Mission agents are NPCs that, when visited, generate 3 random missions. You can
+pick one to accept and carry out. You'll be directed to a specific system and 
+given instructions depending on what the mission is. When you complete the mission,
+you can come back to this mission agent to receive your reward: some credits and
+faction standing. 
+
+### Faction Terminal
+When you open the faction terminal, you can either turn in tems for standing or 
+buy faction items that you've unlocked via high standing.
