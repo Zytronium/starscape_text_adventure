@@ -33,6 +33,9 @@ Each mission will have:
 - a credits reward based on the mission tier
 - a standing reward based on the mission tier
 - a target system (or multiple destinations sometimes)
+  - The only exception is Destroy: {Faction}
+- A origin system where you return to after the mission is complete
+  - And which station & facility the mission originated from
 
 The player can only do missions of the tier they are on in terms of faction standing.
 
@@ -118,3 +121,60 @@ When visiting a mission agency, the player can view their standing tier.
 In future versions of the game, standing will also grant perks, such as
 discount on warp relay usage or a way to purchase blueprints for faction
 ships.
+
+### Mission Agencies
+I need to change "Visit Mission Agent" to "Visit {agency name}". To do this, I
+need to figure out how to get the name of the mission agency from system_data.json.
+Here's an example system from the json:
+```json
+    "Eltikum": {
+        "Faction": "Neutral",
+        "Region": "Core",
+        "Sector": "InnerCore",
+        "SecurityLevel": "Secure",
+        "SpectralClass": "B",
+        "Spice": "Orange",
+        "Connections": [
+            "Hiredzo",
+            "Viax Terjit",
+            "Iolc-go"
+        ],
+        "Name": "Eltikum",
+        "Planets": 12,
+        "Stations": [
+            {
+                "Name": "Eltikum Military Station",
+                "Type": "Military",
+                "Facilities": [
+                    "CoreSec Mission Agency (Tier 1)",
+                    "CoreSec Mission Agency (Tier 0)",
+                    "CoreSec Mission Agency (Tier 1)"
+                ]
+            },
+            {
+                "Name": "Eltikum Industrial Station 2",
+                "Type": "Industrial",
+                "Facilities": [
+                    "Refinery",
+                    "Manufacturing",
+                    "Observatory",
+                    "Repair Bay"
+                ]
+            }
+        ]
+    },
+```
+(Ordinarily, a station shouldn't have this many mission agencies and nothing else,
+but this is an outlier, and I picked this outlier for a reason.)
+This system has 2 stations, and the first station has 3 mission agencies.
+The mission agencies are stored in the Facilities array, which is in the station
+object in the Stations array. When saving mission information, we need to save
+the name of the station (those are unique) and the index of the mission agency
+in the station's facilities list. We can't just rely on the name of the agency,
+since mission agencies can have duplicate names.
+
+We also need to manually edit some systems so that they have specific stations 
+with specific facilities, including mission agencies, so that it matches the
+original game. For example, Lycentia has at least 3 stations and at least one
+mission agency in the original game. At the time of writing this, Lycentia only 
+has a single military space station in this game.
