@@ -67,7 +67,7 @@ in_combat = False
 
 
 def _sigint_combat_handler(sig, frame):
-    """SIGINT handler active only during combat — ignores Ctrl+C with a taunt."""
+    """SIGINT handler active only during combat - ignores Ctrl+C with a taunt."""
     clear_screen()
     print("\nNice try ;)", flush=True)
     sleep(0.5)
@@ -4503,7 +4503,7 @@ def mine_anomaly(save_name, data, anomaly):
                 asteroid["anomaly_type"] = anomaly_type
 
     # Check for crystalline entities at VX anomalies.
-    # They appear exactly once per anomaly — on the very first mining attempt —
+    # They appear exactly once per anomaly - on the very first mining attempt -
     # then the flag is cleared and they never return.
     vexnium_guarded = anomaly_type == "VX" and not anomaly.get("crystalline_cleared", False)
     if vexnium_guarded:
@@ -4682,7 +4682,7 @@ def mine_asteroid_with_turrets(save_name, data, asteroid, player_ship, ship_clas
         print("=" * 60 + "\033[K")
         print("\033[K")
         if selected_turret is not None:
-            print(f"  Turret {selected_turret + 1} selected — press [1-5] to set power, [0] to idle.\033[K")
+            print(f"  Turret {selected_turret + 1} selected - press [1-5] to set power, [0] to idle.\033[K")
         else:
             print("  Press [a-z] to select a turret, then [1-5] to set its power.\033[K")
         print("\033[K")
@@ -4723,7 +4723,7 @@ def mine_asteroid_with_turrets(save_name, data, asteroid, player_ship, ship_clas
             turret_power[selected_turret] = key
             selected_turret = None
 
-        # Fire cycle — every FIRE_INTERVAL seconds
+        # Fire cycle - every FIRE_INTERVAL seconds
         now = time()
         if now - last_fire_time >= FIRE_INTERVAL and active_turrets:
             last_fire_time = now
@@ -9462,7 +9462,7 @@ def jukebox_screen():
         return None
 
     # ── Non-blocking raw key reader ────────────────────────────────────────────
-    # IMPORTANT: must use os.read(fd, 1) — NOT sys.stdin.read(1) — because
+    # IMPORTANT: must use os.read(fd, 1) - NOT sys.stdin.read(1) - because
     # Python's TextIOWrapper may buffer the full escape sequence (\x1b[A) on the
     # first read, leaving the subsequent select() seeing an empty OS buffer and
     # incorrectly timing out, causing arrow keys to be mis-read as ESC.
@@ -9497,7 +9497,7 @@ def jukebox_screen():
                 r, _, _ = _sel.select([fd], [], [], timeout)
                 if not r:
                     return None
-                ch = os.read(fd, 1)      # raw read — bypasses Python's buffer
+                ch = os.read(fd, 1)      # raw read - bypasses Python's buffer
                 if ch == b'\x1b':
                     # ── Try to read the rest of the escape sequence ────────────
                     r2, _, _ = _sel.select([fd], [], [], 0.05)

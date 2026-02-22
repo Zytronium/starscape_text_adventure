@@ -123,8 +123,41 @@ discount on warp relay usage or a way to purchase blueprints for faction
 ships.
 
 ### Mission Agencies
-I need to change "Visit Mission Agent" to "Visit {agency name}". To do this, I
-need to figure out how to get the name of the mission agency from system_data.json.
+I need to change "Visit Mission Agent" to "Visit {Faction} Field Office". I also
+need to change the name of the facilities in the data from "{Faction} Mission Agency (Tier {x})"
+to "{Faction} Field Office". That should be easy with a simple script. Then I need to 
+change it so that:
+a) Only one field office per faction per station can exist  
+b) Field offices are objects instead of strings - they will look like:
+```json
+"Facilities": [
+    "Ship Vendor",
+    "CoreSec Field Office": {
+        "Agents": [0, 2]
+  }
+]
+```
+
+instead of:
+```json
+"Facilities": [
+    "Ship Vendor",
+    "CoreSec Field Office (Tier 0)",
+    "CoreSec Field Office (Tier 2)"
+]
+```
+When writing the script to make this adjustment, it should be taken into 
+consideration that each field office will always have 2 agents, and they
+can be the same tier. When saving mission information to the player save
+file, the index of the agent in the Agents array, the name of the field office,
+the name of the station, the system, and of course the mission itself should
+all be saved. This works like an address. We need to know the system to find the
+station (though technically we could extrapolate from the station name), we need
+to know the station name or index to find the field office, the name of the field
+office to differentiate between multiple field offices at The Citadel, and the
+index of the agent to find the mission tier and remember which agent to come
+back to to complete the mission.
+
 Here's an example system from the json:
 ```json
     "Eltikum": {
@@ -167,14 +200,20 @@ Here's an example system from the json:
 (Ordinarily, a station shouldn't have this many mission agencies and nothing else,
 but this is an outlier, and I picked this outlier for a reason.)
 This system has 2 stations, and the first station has 3 mission agencies.
-The mission agencies are stored in the Facilities array, which is in the station
-object in the Stations array. When saving mission information, we need to save
-the name of the station (those are unique) and the index of the mission agency
-in the station's facilities list. We can't just rely on the name of the agency,
-since mission agencies can have duplicate names.
+This will need to change. After running the script, this system should still
+have 2 stations, but the first station should have 1 field office with 2 agents,
+a tier 0 and a tier 1. The 3rd agent, aka the 3rd mission agency from before
+the migration, will be dropped. 
+
+Now lets say there's a station with one mission agency. This field office will
+still have 2 agents after the migration, but we'll have to generate a new agent
+for it. In other words, take the first 2 mission agencies, drop the rest, take
+those 2 mission agents and put them into one single field office, delete the mission
+agencies, and if there was only 1 mission agency, generate a second agent for the
+field office.
 
 We also need to manually edit some systems so that they have specific stations 
-with specific facilities, including mission agencies, so that it matches the
+with specific facilities, including field offices, so that it matches the
 original game. For example, Lycentia has at least 3 stations and at least one
 mission agency in the original game. At the time of writing this, Lycentia only 
 has a single military space station in this game.

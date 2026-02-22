@@ -41010,7 +41010,7 @@
                     "Ship Vendor",
                     "Manufacturing",
                     "Lycentian Mission Agency (Tier 1)",
-                    "Lycentian Mission Agency (Tier 3)"
+                    "Lycentian Mission Agency (Tier 0)"
                 ]
             }
         ]
@@ -64533,13 +64533,13 @@
                     "General Marketplace",
                     "Observatory",
                     "Repair Bay",
-                    "CoreSec Mission Agency (Tier 3)",
-                    "Syndicate Mission Agency (Tier 3)",
-                    "Trade Union Mission Agency (Tier 5)",
-                    "Mining Guild Mission Agency (Tier 1)",
-                    "Lycentia Mission Agency (Tier 1)",
-                    "Forakus Mission Agency (Tier 1)",
-                    "Kavani Mission Agency (Tier 3)"
+                    "CoreSec Mission Agency (Tier 0)",
+                    "Syndicate Mission Agency (Tier 0)",
+                    "Trade Union Mission Agency (Tier 0)",
+                    "Mining Guild Mission Agency (Tier 0)",
+                    "Lycentia Mission Agency (Tier 0)",
+                    "Forakus Mission Agency (Tier 0)",
+                    "Kavani Mission Agency (Tier 0)"
                 ]
             }
         ]
