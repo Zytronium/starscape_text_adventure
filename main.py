@@ -6436,9 +6436,16 @@ def show_job_details(job_info):
 
 
 def visit_field_office(office_name, save_name, data):
+    content_buffer = StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = content_buffer
+
     clear_screen()
-    title(f"{office_name.upper()} FIELD OFFICE")
-    print()
+    title(office_name.upper())
+
+    previous_content = content_buffer.getvalue()
+    sys.stdout = old_stdout
+
     system = system_data(data["current_system"])
     station_name = data["docked_at"]
     station = ""
@@ -6476,20 +6483,28 @@ def visit_field_office(office_name, save_name, data):
         "Back"
     ]
 
-    choice = arrow_menu("Select Action", options)  # todo: get previous output
+    while True:
+        choice = arrow_menu("Select Action", options, previous_content)
 
-    if choice in [0, 1]:
-        visit_agent(choice, agent_a_tier if choice == 0 else agent_b_tier, faction, office_name, save_name, data)
-    elif choice == 2:
-        view_faction_terminal(faction, save_name, data)
-    else:
-        return
+        if choice in [0, 1]:
+            visit_agent(choice, agent_a_tier if choice == 0 else agent_b_tier, faction, office_name, save_name, data)
+        elif choice == 2:
+            view_faction_terminal(faction, save_name, data)
+        else:
+            return
 
 
 def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
     clear_screen()
+
+    # Capture the screen content before showing menus
+    content_buffer = StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = content_buffer
+
     title(f"MISSION AGENT {"A" if agent_idx == 0 else "B"}")
     faction_dis = "Lycentian" if faction == "Lycentia" else "Foralkan" if faction == "Foralkus" else faction
+    faction_full = f"The {faction}" if faction in ["Trade Union", "Mining Guild", "Syndicate"] else faction
     all_missions = [
         {
             "name": "Law Enforcement",
@@ -6503,12 +6518,12 @@ def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
         },
         {
             "name": "Intel Recovery",
-            "quote": f"{faction} employs a number of covert ops ships which procure intelligence on pirate, drone, and other unlawful operations. Your task is to rendezvous with these covert ships, retrieve their reports, and return them to the field office",
+            "quote": f"{faction_full} employs a number of covert ops ships which procure intelligence on pirate, drone, and other unlawful operations. Your task is to rendezvous with these covert ships, retrieve their reports, and return them to the field office",
             "implemented": False
         },
         {
             "name": "Rescue Operation",
-            "quote": f"A technician was servicing a {faction_dis} outpost when hostile ships assaulted it, overrunning its defenses and stranding the technician. {faction} is sending a transport to retrieve the technician, but it needs you to protect it from the hostiles in the area.",
+            "quote": f"A technician was servicing a {faction_dis} outpost when hostile ships assaulted it, overrunning its defenses and stranding the technician. {faction_full} is sending a transport to retrieve the technician, but it needs you to protect it from the hostiles in the area.",
             "implemented": False
         }
     ]
@@ -6523,14 +6538,44 @@ def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
 
     options.append("Back")
 
-    choice = arrow_menu("Choose a mission", options)  # todo: get previous output
-    # todo: display mission details when selected.
-    if choice != 3:
+    previous_content = content_buffer.getvalue()
+    sys.stdout = old_stdout
+
+    agent_previous_content = previous_content
+
+    while True:
+        choice = arrow_menu("Choose a mission", options, agent_previous_content)
+
+        if choice == 3:
+            return
+
         clear_screen()
-        title("MISSION DETAILS")
+
+        # capture content
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        mission = missions[choice]
+        rewards = mission["rewards"]
+        title(f"{mission["name"]} - Tier {mission["tier"]}".upper())
+        print(f"REWARD: {rewards["credits"]} Credits  |  {rewards["standing"]} Standing")
+        print("=" * 60)
         print()
-        print("Not implemented yet\033[K")
-        input("Press Enter to go back...")
+        print(wrap_text(mission["quote"], 60))
+        print()
+
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        confirm = arrow_menu("Accept this mission?", ["Yes", "No"], previous_content) == 0
+
+        if confirm:
+            clear_screen()
+            title(f"{mission["name"]} - Tier {mission["tier"]}".upper())
+            print("Not implemented yet\033[K")
+            input("Press Enter to go back...")
+            break
 
 
 def weighted_rand(tier):
@@ -6543,7 +6588,7 @@ def generate_mission(missions, tier, faction):
     mission = random.choice(missions)
     credit_reward, standing_reward = get_mission_reward(mission["name"], tier, faction)
     location = "Concord"  # todo: find a system 2-4 warp jumps away
-    mission["reward"] = {
+    mission["rewards"] = {
         "credits": credit_reward,
         "standing": standing_reward
     }
@@ -6585,7 +6630,7 @@ def get_mission_reward(name, tier, faction):
         credits *= 1.5  # Wiki doesn't specify how much credit reward increases. We'll assume 50%
         standing *= 2   # Wiki does specify this
 
-    return (credits, standing)
+    return round(credits), standing
 
 
 
