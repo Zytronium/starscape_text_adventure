@@ -6476,22 +6476,117 @@ def visit_field_office(office_name, save_name, data):
         "Back"
     ]
 
-    choice = arrow_menu("Select Action", options)
+    choice = arrow_menu("Select Action", options)  # todo: get previous output
 
     if choice in [0, 1]:
-        visit_agent(choice, office_name, save_name, data)
+        visit_agent(choice, agent_a_tier if choice == 0 else agent_b_tier, faction, office_name, save_name, data)
     elif choice == 2:
         view_faction_terminal(faction, save_name, data)
     else:
         return
 
 
-def visit_agent(agent_idx, office_name, save_name, data):
+def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
     clear_screen()
     title(f"MISSION AGENT {"A" if agent_idx == 0 else "B"}")
+    faction_dis = "Lycentian" if faction == "Lycentia" else "Foralkan" if faction == "Foralkus" else faction
+    all_missions = [
+        {
+            "name": "Law Enforcement",
+            "quote": "A nearby asteroid field which was designated an excavation site is being illegally mined by a group of pirates. Go to the asteroid field, drive off the pirates, and reactivate the proximity alert systems the pirates disabled.",
+            "implemented": False
+        },
+        {
+            "name": "Defend the Transport",
+            "quote": "A transport took engine damage and is currently stranded in a potentially hostile region of space. Travel to its location and ensure it is able to complete its repairs safely.",
+            "implemented": False
+        },
+        {
+            "name": "Intel Recovery",
+            "quote": f"{faction} employs a number of covert ops ships which procure intelligence on pirate, drone, and other unlawful operations. Your task is to rendezvous with these covert ships, retrieve their reports, and return them to the field office",
+            "implemented": False
+        },
+        {
+            "name": "Rescue Operation",
+            "quote": f"A technician was servicing a {faction_dis} outpost when hostile ships assaulted it, overrunning its defenses and stranding the technician. {faction} is sending a transport to retrieve the technician, but it needs you to protect it from the hostiles in the area.",
+            "implemented": False
+        }
+    ]
+    missions = []
+    for i in range(0, 3):
+        mission_tier = weighted_rand(tier)  # randomly pick a tier at or below `tier` but weighted heavily towards higher tiers
+        missions.append(generate_mission(all_missions, mission_tier, faction))
     print()
-    print("Not implemented yet\033[K")
-    input("Press Enter to go back...")
+    options = []
+    for mission in missions:
+        options.append(f"{mission["name"]} (Tier {mission["tier"]})")
+
+    options.append("Back")
+
+    choice = arrow_menu("Choose a mission", options)  # todo: get previous output
+    # todo: display mission details when selected.
+    if choice != 3:
+        clear_screen()
+        title("MISSION DETAILS")
+        print()
+        print("Not implemented yet\033[K")
+        input("Press Enter to go back...")
+
+
+def weighted_rand(tier):
+    exponent = 0.3 / (1 + tier * 0.15)
+    return max(0, min(round(random.random() ** exponent * (tier + 2) - 1), tier))
+    # generally about 80% likely to return `tier` and exponentially less likely for other tiers as you go down
+
+
+def generate_mission(missions, tier, faction):
+    mission = random.choice(missions)
+    credit_reward, standing_reward = get_mission_reward(mission["name"], tier, faction)
+    location = "Concord"  # todo: find a system 2-4 warp jumps away
+    mission["reward"] = {
+        "credits": credit_reward,
+        "standing": standing_reward
+    }
+    mission["location"] = location
+    mission["tier"] = tier
+
+    return mission
+
+
+def get_mission_reward(name, tier, faction):
+    base_credits = {
+        0: 500,
+        1: 750,
+        2: 1250,
+        3: 1500,
+        4: 2500,
+        5: 3750
+    }
+    base_standing = {
+        0: 20,
+        1: 30,
+        2: 40,
+        3: 50,
+        4: 75,
+        5: 100
+    }
+
+    credits = base_credits[tier]
+    standing = base_standing[tier]
+
+    # multiply credits and/or standing based on mission or faction
+    if faction in ["Trade Union", "Mining Guild", "TradeUnion", "MiningGuild"]:
+        credits *= 1.25
+
+    elif faction == "Syndicate":
+        credits *= 1.5
+
+    if name.startswith("Destroy:"):
+        credits *= 1.5  # Wiki doesn't specify how much credit reward increases. We'll assume 50%
+        standing *= 2   # Wiki does specify this
+
+    return (credits, standing)
+
 
 
 def view_faction_terminal(faction, save_name, data):

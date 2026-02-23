@@ -77,6 +77,7 @@ These missions teach new players how to play the game. They include:
     - The covert ship is destroyed, the first part requires you to find the {Faction} black box. Then the 2nd part requires you to fight pirates or faction ships to get the intel. Difficulty of this scenario is parallel to the Law Enforcement mission.
     - The covert ship is under attack, it has the same difficulty as the 2nd scenario.
     - The covert ship's pilot thinks you've betrayed him, and goes insane. Difficulty does not raise. *incomprehensible screaming*
+  - "{Faction} employs a number of covert ops ships which procure intelligence on pirate, drone, and other unlawful operations. Your task is to rendezvous with these covert ships, retrieve their reports, and return them to the field office"
 - Assault the Base
   - Destroy a base (type of base and ships that appear vary between which faction you are doing the mission for), often comprising of 2 factories and a outpost. The user have to counter 3 waves of ships comprising of fighters, corvettes and interceptors.
   - No more ships will spawn after the waves of ships are destroyed. It is not necessary to destroy the factories beside the bases -- no new ships will spawn after the 3 waves of ships are destroyed. It is however necessary to destroy all 3 waves before the base can take damage.
