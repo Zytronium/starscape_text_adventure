@@ -958,6 +958,7 @@ def default_data():
         "anomalies": {},  # Discovered anomalies per system: {system_name: [anomaly1, anomaly2, ...]}
         "scanned_systems": [],  # List of systems that have been scanned for anomalies
         "manufacturing_jobs": {},  # Active manufacturing jobs per station: {station_name: [job1, job2, ...]}
+        "missions": [],  # Active missions and their respective mission agents # NEW
     }
 
 
@@ -1018,7 +1019,6 @@ def wrap_text(text, max_width=60):
         lines.append(' '.join(current_line))
 
     return '\n'.join(lines)
-
 
 
 def get_ship_stats(ship_name):
@@ -1106,7 +1106,6 @@ def display_xp_gain(skill_name, xp_gained, levels_gained, current_level, current
 
     xp_needed = xp_required_for_level(current_level)
     print(f"  +{xp_gained} {skill_name.title()} XP ({current_xp}/{xp_needed})\033[K")
-
 
 
 def generate_enemy_fleet(security_level, data):
@@ -3477,7 +3476,6 @@ def draw_unified_combat_ui(player_ship, player_pos, alive_enemies, projectiles,
     print("╚" + "═" * 76 + "╝" + "\033[K")
     # Clear any remaining lines
     print("\033[J", end="", flush=True)
-
 
 
 def create_health_bar(current, maximum, width, color="green"):
@@ -6573,8 +6571,20 @@ def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
         if confirm:
             clear_screen()
             title(f"{mission["name"]} - Tier {mission["tier"]}".upper())
-            print("Not implemented yet\033[K")
-            input("Press Enter to go back...")
+            if not mission["implemented"]:
+                print("This mission is not implemented yet\033[K")
+                input("Press Enter to go back...")
+            else:
+                mission_entry = {
+                    "system": data["current_system"],
+                    "station": data["docked_at"],
+                    "office": office_name,
+                    "agent_idx": agent_idx,
+                    "mission": mission
+                }
+                data["missions"].append(mission_entry)
+                save_data(save_name, data)
+                print(f"Mission accepted! Go to {mission["location"]} to complete it.")  # note: for missions with multiple locations, we should check if location is a str or list
             break
 
 

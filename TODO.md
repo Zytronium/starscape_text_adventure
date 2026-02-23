@@ -153,7 +153,7 @@ When writing the script to make this adjustment, it should be taken into
 consideration that each field office will always have 2 agents, and they
 can be the same tier. When saving mission information to the player save
 file, the index of the agent in the Agents array, the name of the field office,
-the name of the station, the system, and of course the mission itself should
+the name of the station, the system name, and of course, the mission itself should
 all be saved. This works like an address. We need to know the system to find the
 station (though technically we could extrapolate from the station name), we need
 to know the station name or index to find the field office, the name of the field
