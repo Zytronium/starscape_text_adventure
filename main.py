@@ -6602,6 +6602,7 @@ def generate_mission(missions, tier, faction, data):
     system = system_data(system_name)
     connections = system["Connections"]
 
+    # Generate mission location 2-4 jumps away
     valid_locations = []
     visited = set(connections + [system_name])  # seed with 1-jump neighbors so we never loop back
 
@@ -6629,6 +6630,13 @@ def generate_mission(missions, tier, faction, data):
     }
     mission["location"] = location
     mission["tier"] = tier
+
+    if mission["name"] == "Intel Recovery":
+        mission["scenario"] = random.choice([
+            "destroyed",
+            "under attack",
+            "insanity"
+        ])
 
     return mission
 
