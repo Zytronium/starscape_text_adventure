@@ -11,6 +11,7 @@ import os
 import platform
 import subprocess
 import threading
+from collections import deque
 from pathlib import Path
 from io import StringIO
 from time import sleep, time
@@ -6517,7 +6518,7 @@ def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
         {
             "name": "Intel Recovery",
             "quote": f"{faction_full} employs a number of covert ops ships which procure intelligence on pirate, drone, and other unlawful operations. Your task is to rendezvous with these covert ships, retrieve their reports, and return them to the field office",
-            "implemented": False
+            "implemented": True
         },
         {
             "name": "Rescue Operation",
@@ -6528,7 +6529,7 @@ def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
     missions = []
     for i in range(0, 3):
         mission_tier = weighted_rand(tier)  # randomly pick a tier at or below `tier` but weighted heavily towards higher tiers
-        missions.append(generate_mission(all_missions, mission_tier, faction))
+        missions.append(generate_mission(all_missions, mission_tier, faction, data))
     print()
     options = []
     for mission in missions:
@@ -6594,10 +6595,34 @@ def weighted_rand(tier):
     # generally about 80% likely to return `tier` and exponentially less likely for other tiers as you go down
 
 
-def generate_mission(missions, tier, faction):
+def generate_mission(missions, tier, faction, data):
     mission = random.choice(missions)
     credit_reward, standing_reward = get_mission_reward(mission["name"], tier, faction)
-    location = "Concord"  # todo: find a system 2-4 warp jumps away
+    system_name = data["current_location"]
+    system = system_data(system_name)
+    connections = system["Connections"]
+
+    valid_locations = []
+    visited = set(connections + [system_name])  # seed with 1-jump neighbors so we never loop back
+
+    # connections are already 1 jump away, so start at depth 1
+    queue = deque((c, 1) for c in connections)
+
+    while queue:
+        current, depth = queue.popleft()
+
+        # only collect systems 2+ jumps away (skip direct neighbors)
+        if depth >= 2:
+            valid_locations.append(current)
+
+        # stop expanding past 4 jumps
+        if depth < 4:
+            for neighbor in system_data(current)["Connections"]:
+                if neighbor not in visited:
+                    visited.add(neighbor)  # mark on enqueue, not on process
+                    queue.append((neighbor, depth + 1))
+
+    location = random.choice(valid_locations)
     mission["rewards"] = {
         "credits": credit_reward,
         "standing": standing_reward
