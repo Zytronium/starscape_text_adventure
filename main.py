@@ -47,7 +47,7 @@ if not DISCORD_AVAILABLE or not MUSIC_AVAILABLE:
 
 # Version codes
 APP_VERSION_CODE = "0.1.3.4"  # 0.1.x = alpha; 0.2.x = beta; 1.x = release
-SAVE_VERSION_CODE = 2         # Save format version code
+SAVE_VERSION_CODE = 3         # Save format version code
 
 # Color codes
 CORE_COLOR = "\033[1;32m"     # lime
@@ -959,7 +959,7 @@ def default_data():
         "anomalies": {},  # Discovered anomalies per system: {system_name: [anomaly1, anomaly2, ...]}
         "scanned_systems": [],  # List of systems that have been scanned for anomalies
         "manufacturing_jobs": {},  # Active manufacturing jobs per station: {station_name: [job1, job2, ...]}
-        "missions": [],  # Active missions and their respective mission agents # NEW
+        "missions": [],  # Active missions and their respective mission agents
     }
 
 
@@ -6495,13 +6495,8 @@ def visit_field_office(office_name, save_name, data):
 
 def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
     clear_screen()
-
-    # Capture the screen content before showing menus
-    content_buffer = StringIO()
-    old_stdout = sys.stdout
-    sys.stdout = content_buffer
-
     title(f"MISSION AGENT {"A" if agent_idx == 0 else "B"}")
+    print()
     faction_dis = "Lycentian" if faction == "Lycentia" else "Foralkan" if faction == "Foralkus" else faction
     faction_full = f"The {faction}" if faction in ["Trade Union", "Mining Guild", "Syndicate"] else faction
     all_missions = [
@@ -6527,10 +6522,21 @@ def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
         }
     ]
     missions = []
+
+    print(wrap_text(f"Let's see what {faction_full} has to offer you. Please standby while I check the database...", 60))
+
     for i in range(0, 3):
         mission_tier = weighted_rand(tier)  # randomly pick a tier at or below `tier` but weighted heavily towards higher tiers
         missions.append(generate_mission(all_missions, mission_tier, faction, data))
-    print()
+
+    clear_screen()
+
+    # Capture the screen content before showing menus
+    content_buffer = StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = content_buffer
+
+    title(f"MISSION AGENT {"A" if agent_idx == 0 else "B"}")
     options = []
     for mission in missions:
         options.append(f"{mission["name"]} (Tier {mission["tier"]})")
@@ -6586,6 +6592,8 @@ def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
                 data["missions"].append(mission_entry)
                 save_data(save_name, data)
                 print(f"Mission accepted! Go to {mission["location"]} to complete it.")  # note: for missions with multiple locations, we should check if location is a str or list
+                print()
+                input("Press Enter to continue...")
             break
 
 
@@ -6598,7 +6606,7 @@ def weighted_rand(tier):
 def generate_mission(missions, tier, faction, data):
     mission = random.choice(missions)
     credit_reward, standing_reward = get_mission_reward(mission["name"], tier, faction)
-    system_name = data["current_location"]
+    system_name = data["current_system"]
     system = system_data(system_name)
     connections = system["Connections"]
 
@@ -6680,22 +6688,62 @@ def get_mission_reward(name, tier, faction):
 def view_faction_terminal(faction, save_name, data):
     clear_screen()
     title(f"{faction.upper()} TERMINAL")
-    print()
     print("Not implemented yet\033[K")
     input("Press Enter to go back...")
+
+
+def visit_mission_location(system, save_name, data):
+    clear_screen()
+    title("MISSION")
+    print("Not implemented yet\033[K")
+    input("Press Enter to go back...")
+
+
+def migrate_save_2_3(save_name, data):
+    data["missions"] = []
+    data["v"] = SAVE_VERSION_CODE
+    save_data(save_name, data)
 
 
 def game_loop(save_name, data):
     clear_screen()
     if data["v"] < SAVE_VERSION_CODE:
         title("CONTINUE GAME")
-        print()
-        print("ERROR: Save file is of an older data format.\033[K")
-        print("       No migration method has been programmed.\033[K")
-        print("       This save file can therefore not be loaded.\033[K")
-        print()
-        input("Press Enter to return to main menu")
-        return
+        match data["v"]:
+            case 1:
+                print("ERROR: Save file is of an older data format.\033[K")
+                print("       No migration method has been programmed.\033[K")
+                print("       This save file can therefore not be loaded.\033[K")
+                print()
+                input("Press Enter to return to main menu")
+                return
+            case 2:
+                print("NOTICE: The save format has been updated since you last\033[K")
+                print("        played this save file. Migrating your data...\033[K")
+                try:
+                    migrate_save_2_3(save_name, data)
+                    print()
+                    print("Done!\033[K")
+                    print()
+                    input("Press Enter to continue...")
+                except:
+                    print("ERROR: An error occurred while migrating your data.\033[K")
+                    print("       If this happens again on your next attempt, please\033[K")
+                    print("       report the issue to the game's developer, Zytronium.\033[K")
+                    print("       Contact on Discord @zytronium or join the Discord\033[K")
+                    print("       server: https://discord.gg/PBtFmv2x69 \033[K")
+                    print()
+                    input("Press Enter to return to main menu")
+                    return
+            case _:
+                print("ERROR: Save file is of an unknown data format.\033[K")
+                print("       No migration method has been programmed.\033[K")
+                print("       This save file can therefore not be loaded.\033[K")
+                print()
+                input("Press Enter to return to main menu")
+                return
+
+
 
     # Set initial presence based on whether player is docked
     if data.get("docked_at"):
@@ -6882,26 +6930,37 @@ def main_screen(save_name, data):
     previous_content = content_buffer.getvalue()
     sys.stdout = old_stdout
 
-    options = ["View status", "Warp to another system", "View inventory",
-               "Dock at station", "Scan for anomalies", "Visit anomalies", "Map", "Save and quit"]
+    # Check if current system is a mission location
+    mission_here = any(m["mission"]["location"] == system_name for m in data["missions"])
+
+    options = ["View status", "Warp to another system"]
+    if mission_here:
+        options.append("Visit mission location")
+    options += ["View inventory", "Dock at station", "Scan for anomalies", "Visit anomalies", "Map", "Save and quit"]
+
     choice = arrow_menu("Select action:", options, previous_content)
+
+    # Offset cases 2+ by 1 if the mission option was inserted
+    o = 1 if mission_here else 0
 
     match choice:
         case 0:
             view_status_screen(data)
         case 1:
             warp_menu(system, save_name, data)
-        case 2:
+        case 2 if mission_here:
+            visit_mission_location(system, save_name, data)
+        case c if c == 2 + o:
             view_inventory(data)
-        case 3:
+        case c if c == 3 + o:
             select_station_menu(system, save_name, data)
-        case 4:
+        case c if c == 4 + o:
             scan_for_anomalies(save_name, data)
-        case 5:
+        case c if c == 5 + o:
             visit_anomalies_menu(save_name, data)
-        case 6:
+        case c if c == 6 + o:
             galaxy_map(save_name, data)
-        case 7:
+        case c if c == 7 + o:
             clear_screen()
             title("SAVE & QUIT")
             print("Saving...\033[K")
