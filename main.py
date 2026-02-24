@@ -6537,6 +6537,8 @@ def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
     sys.stdout = content_buffer
 
     title(f"MISSION AGENT {"A" if agent_idx == 0 else "B"}")
+    print()
+    print(wrap_text(f"Here's what I found for you.", 60))
     options = []
     for mission in missions:
         options.append(f"{mission["name"]} (Tier {mission["tier"]})")
@@ -6587,6 +6589,7 @@ def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
                     "station": data["docked_at"],
                     "office": office_name,
                     "agent_idx": agent_idx,
+                    "faction": faction,
                     "mission": mission
                 }
                 data["missions"].append(mission_entry)
@@ -6971,70 +6974,242 @@ def main_screen(save_name, data):
             exit_game(False)
 
 
-def view_status_screen(data):
-    """Display player status including ship and skills"""
-    clear_screen()
-    title("STATUS")
-    print()
-
+def _status_summary_content(data):
+    """Print the summary content block shown at the top of the status screen."""
     player_ship = get_active_ship(data)
     max_shield = get_max_shield(player_ship)
     max_hull = get_max_hull(player_ship)
+    shield_percent = int((player_ship['shield_hp'] / max_shield) * 100) if max_shield > 0 else 0
+    hull_percent = int((player_ship['hull_hp'] / max_hull) * 100) if max_hull > 0 else 0
 
-    # Regenerate shields slightly when checking status (shield_regen * 1)
-    shield_regen = int(get_shield_regen(player_ship) * 1)
+    print(" PILOT INFO:\033[K")
+    print(f"  Pilot Name: {data['player_name']}\033[K")
+    print(f"  Credits Balance: ¢{data['credits']:,}\033[K")
+    print()
+    print(" SHIP INFO:\033[K")
+    print(f"  Ship Name: {player_ship.get('nickname', 'Unknown')} ({player_ship.get('name', 'Unknown').title()})\033[K")
+    print(f"  Shields: [{create_health_bar(player_ship['shield_hp'], max_shield, 20, 'cyan')}] {shield_percent}%\033[K")
+    print(f"  Hull:    [{create_health_bar(player_ship['hull_hp'], max_hull, 20, 'red')}] {hull_percent}%\033[K")
+
+
+def view_status_screen(data):
+    """Display player status with sub-menus for pilot, ship, missions, and standing."""
+
+    # Regenerate shields slightly when opening status
+    player_ship = get_active_ship(data)
+    max_shield = get_max_shield(player_ship)
+    shield_regen = int(get_shield_regen(player_ship))
     if player_ship["shield_hp"] < max_shield:
         player_ship["shield_hp"] = min(player_ship["shield_hp"] + shield_regen, max_shield)
 
-    print("PILOT INFORMATION:\033[K")
-    print(f"  Name: {data['player_name']}\033[K")
-    print(f"  Credits: ¢{data['credits']}\033[K")
+    while True:
+        # Build previous_content for the summary block above the menu
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+        clear_screen()
+        title("STATUS - SUMMARY")
+        print()
+        _status_summary_content(data)
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        choice = arrow_menu("Select an option for more details:", ["Pilot", "Ship", "Missions", "Standing", "Back"], previous_content)
+
+        if choice == 0:
+            _status_pilot(data)
+        elif choice == 1:
+            _status_ship(data)
+        elif choice == 2:
+            _status_missions(data)
+        elif choice == 3:
+            _status_standing(data)
+        else:
+            return
+
+
+def _status_pilot(data):
+    """STATUS - PILOT sub-screen."""
+    clear_screen()
+    title("STATUS - PILOT")
     print()
 
-    print("ACTIVE SHIP:\033[K")
-    print(f"  Name: {player_ship.get('nickname', 'Unknown')}\033[K")
-    print(f"  Type: {player_ship.get('name', 'Unknown').title()}\033[K")
-    print(f"  Shield HP: {player_ship['shield_hp']}/{max_shield}\033[K")
-    shield_percent = int((player_ship['shield_hp'] / max_shield) * 100)
-    print(f"  Shield: [{create_health_bar(player_ship['shield_hp'], max_shield, 30, 'cyan')}] {shield_percent}%\033[K")
-    print(f"  Hull HP: {player_ship['hull_hp']}/{max_hull}\033[K")
-    hull_percent = int((player_ship['hull_hp'] / max_hull) * 100)
-    print(f"  Hull:   [{create_health_bar(player_ship['hull_hp'], max_hull, 30, 'red')}] {hull_percent}%\033[K")
+    print(" PILOT INFO:\033[K")
+    print(f"  Pilot Name: {data['player_name']}\033[K")
+    print(f"  Credits Balance: ¢{data['credits']:,}\033[K")
     print()
 
-    print("SKILLS:\033[K")
     combat_level = data['skills']['combat']
     combat_xp = data['skills'].get('combat_xp', 0)
     combat_xp_needed = xp_required_for_level(combat_level)
+
+    piloting_level = data['skills']['piloting']
+    piloting_xp = data['skills'].get('piloting_xp', 0)
+    piloting_xp_needed = xp_required_for_level(piloting_level)
+
+    print(" SKILLS:\033[K")
     print(f"  Combat: Level {combat_level} ({combat_xp}/{combat_xp_needed} XP)\033[K")
     print(f"    - Increases damage dealt\033[K")
     print(f"    - Reduces damage taken\033[K")
     print(f"    - Current damage bonus: +{combat_level * 2}\033[K")
     print()
-
-    piloting_level = data['skills']['piloting']
-    piloting_xp = data['skills'].get('piloting_xp', 0)
-    piloting_xp_needed = xp_required_for_level(piloting_level)
     print(f"  Piloting: Level {piloting_level} ({piloting_xp}/{piloting_xp_needed} XP)\033[K")
     print(f"    - Increases evasion chance in combat\033[K")
     print(f"    - Improves escape success rate\033[K")
     print(f"    - Current evasion chance: {min(piloting_level * 2, 25)}%\033[K")
     print()
 
-    # Ship status warnings
-    if player_ship['hull_hp'] < max_hull * 0.3:
-        set_color("red")
-        print("⚠ WARNING: Hull damage detected! Visit a repair bay soon.\033[K")
-        reset_color()
+    input("Press Enter to go back.")
+
+
+def _status_ship(data):
+    """STATUS - SHIP sub-screen."""
+    clear_screen()
+    title("STATUS - SHIP")
+    print()
+
+    player_ship = get_active_ship(data)
+    ship_name = player_ship.get('name', 'unknown')
+    max_shield = get_max_shield(player_ship)
+    max_hull = get_max_hull(player_ship)
+    shield_percent = int((player_ship['shield_hp'] / max_shield) * 100) if max_shield > 0 else 0
+    hull_percent = int((player_ship['hull_hp'] / max_hull) * 100) if max_hull > 0 else 0
+    ship_class = get_ship_class(ship_name)
+    stats = get_ship_stats(ship_name)
+
+    print(" SHIP INFO:\033[K")
+    print(f"  Ship Name: {player_ship.get('nickname', 'Unknown')}\033[K")
+    print(f"  Ship Model: {ship_name.title()}\033[K")
+    print(f"  Ship Class: {ship_class}\033[K")
+    print(f"  Shields HP: [{create_health_bar(player_ship['shield_hp'], max_shield, 20, 'cyan')}] {player_ship['shield_hp']}/{max_shield} ({shield_percent}%)\033[K")
+    print(f"  Hull HP:    [{create_health_bar(player_ship['hull_hp'], max_hull, 20, 'red')}] {player_ship['hull_hp']}/{max_hull} ({hull_percent}%)\033[K")
+    print()
+
+    # Turrets
+    print("  Turrets:\033[K")
+    if is_warship(ship_name):
+        turrets = get_equipped_turrets_list(player_ship)
+        slot_count = get_turret_count(ship_name)
+        equipped = [t for t in turrets if t is not None]
+        if equipped:
+            for turret in equipped:
+                turret_name = turret if isinstance(turret, str) else turret.get('name', str(turret))
+                print(f"    - {turret_name}\033[K")
+        else:
+            print(f"    No turrets installed. (0/{slot_count} slots filled)\033[K")
+    else:
+        print(f"    The {ship_name.title()} does not support turrets.\033[K")
+    print()
+
+    print("  Ship Stats:\033[K")
+    stat_labels = [
+        ("DPS", "Base DPS"),
+        ("Shield", "Shield"),
+        ("Hull", "Hull"),
+        ("Shield Regen", "Shield Regen"),
+        ("Energy", "Energy"),
+        ("Speed", "Speed"),
+        ("Agility", "Agility"),
+        ("Warp Speed", "Warp Speed"),
+    ]
+    for key, label in stat_labels:
+        value = stats.get(key, "N/A")
+        print(f"    {label}: {value}\033[K")
+    print()
+
+    input("Press Enter to go back.")
+
+
+def _status_missions(data):
+    """STATUS - MISSIONS sub-screen with per-mission detail."""
+    missions = data.get("missions", [])
+
+    while True:
+        missions = data.get("missions", [])  # re-read each loop in case one was abandoned
+
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        clear_screen()
+        title("STATUS - MISSIONS")
         print()
 
-    if player_ship['shield_hp'] < max_shield * 0.5:
-        set_color("yellow")
-        print("⚠ NOTICE: Shields need recharging.\033[K")
-        reset_color()
+        if not missions:
+            print(" MISSIONS:\033[K")
+            print("  No active missions.\033[K")
+            previous_content = content_buffer.getvalue()
+            sys.stdout = old_stdout
+            input("Press Enter to go back.")
+            return
+
+        print(" MISSIONS:\033[K")
+        for entry in missions:
+            m = entry["mission"]
+            print(f"  - {m['name']} (Next Location: {m['location']})\033[K")
         print()
 
-    input("Press Enter to continue...")
+        previous_content = content_buffer.getvalue()
+        sys.stdout = old_stdout
+
+        options = [f"{e['mission']['name']} ({e['mission']['location']})" for e in missions]
+        options.append("Back")
+
+        choice = arrow_menu("Select a mission for more details:", options, previous_content)
+
+        if choice == len(missions):
+            return
+
+        _status_mission_detail(data, missions[choice])
+
+
+def _status_mission_detail(data, mission_entry):
+    """Detail screen for a single mission with abandon option."""
+    m = mission_entry["mission"]
+    faction = mission_entry.get("faction", mission_entry.get("office", "Unknown"))
+    origin = mission_entry.get("system", "Unknown")
+    rewards = m.get("rewards", {})
+
+    content_buffer = StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = content_buffer
+
+    clear_screen()
+    title(f"MISSION - {m['name']} ({m['location']})".upper())
+    print()
+    print(f"  Faction:       {faction}\033[K")
+    print(f"  Origin System: {origin}\033[K")
+    print(f"  Destination:   {m['location']}\033[K")
+    print(f"  Tier:          {m.get('tier', '?')}\033[K")
+    print(f"  Reward:        ¢{rewards.get('credits', 0):,} Credits  |  {rewards.get('standing', 0)} Standing\033[K")
+    print()
+    print(wrap_text(f"  \"{m.get('quote', '')}\"\033[K", 60))
+    print()
+
+    previous_content = content_buffer.getvalue()
+    sys.stdout = old_stdout
+
+    choice = arrow_menu("Select an option:", ["Abandon Mission", "Back"], previous_content)
+
+    if choice == 0:
+        confirm = arrow_menu(f"Abandon {m['name']}? This cannot be undone.", ["Yes, abandon", "No, keep it"], previous_content)
+        if confirm == 0:
+            data["missions"].remove(mission_entry)
+
+
+def _status_standing(data):
+    """STATUS - FACTION STANDING sub-screen."""
+    clear_screen()
+    title("STATUS - FACTION STANDING")
+    print()
+
+    standing = data.get("standing", {})
+    print(" FACTION STANDING:\033[K")
+    for faction, value in standing.items():
+        print(f"  - {faction}: {value}\033[K")
+    print()
+
+    input("Press Enter to go back.")
 
 
 def type_lines(lines):

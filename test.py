@@ -1,96 +1,132 @@
-import json
-from collections import deque
+import os
 
-def system_data(system_name):
-    with open('system_data.json', 'r') as f:
-        data = json.load(f)
-    return data.get(system_name)
-
-# --- Setup ---
-system_name = "Concord"
-connections = system_data(system_name)["Connections"]  # 1-jump neighbors
-
-# ORIGINAL METHOD (nested loops)
-def original_method(system_name, connections):
-    valid_locations = set()  # use a set to avoid duplicates
-
-    for connection in connections:
-        # within 1 jump
-        s = system_data(connection)
-        for c in s["Connections"]:
-            # within 2 jumps
-            valid_locations.add(c)
-            s2 = system_data(c)
-            for c2 in s2["Connections"]:
-                # within 3 jumps
-                s3 = system_data(c2)
-                valid_locations.add(c2)
-                for c3 in s3["Connections"]:
-                    # within 4 jumps
-                    valid_locations.add(c3)
-
-    # remove all locations within 1 jump from current location
-    # discard() is safe even if the item isn't present
-    for connection in connections:
-        valid_locations.discard(connection)
-    # remove current location
-    valid_locations.discard(system_name)
-
-    return list(valid_locations)
-
-# BFS METHOD
-def bfs_method(system_name, connections):
-    valid_locations = []
-    visited = set(connections + [system_name])  # seed with 1-jump neighbors so we never loop back
-
-    # connections are already 1 jump away, so start at depth 1
-    queue = deque((c, 1) for c in connections)
-
-    while queue:
-        current, depth = queue.popleft()
-
-        # only collect systems 2+ jumps away (skip direct neighbors)
-        if depth >= 2:
-            valid_locations.append(current)
-
-        # stop expanding past 4 jumps
-        if depth < 4:
-            for neighbor in system_data(current)["Connections"]:
-                if neighbor not in visited:
-                    visited.add(neighbor)  # mark on enqueue, not on process
-                    queue.append((neighbor, depth + 1))
-
-    return valid_locations
-
-# -------------------------------------------------------
-# Run both and compare
-# -------------------------------------------------------
-print("Running original method...")
-original = original_method(system_name, connections)
-print("Running BFS method...")
-bfs = bfs_method(system_name, connections)
-print("Done.")
+print("=" * 60)
+print("  STATUS - SUMMARY")
+print("=" * 60)
 print()
-
-print(f"Starting system: {system_name}")
-print(f"Direct connections (1 jump): {connections}\n")
-
-print(f"Original method ({len(original)} results): {sorted(original)}")
-print(f"BFS method      ({len(bfs)} results): {sorted(bfs)}\n")
-
-# Compare as sets (order doesn't matter, only membership)
-orig_set = set(original)
-bfs_set = set(bfs)
-
-if orig_set == bfs_set:
-    print("✅ Results match!")
-else:
-    print("❌ Results differ!")
-    print(f"  In original but not BFS: {orig_set - bfs_set}")
-    print(f"  In BFS but not original: {bfs_set - orig_set}")
-
-# Check for duplicates
-orig_dupes = len(original) != len(set(original))
-bfs_dupes  = len(bfs) != len(set(bfs))
-print(f"\nDuplicates in original: {orig_dupes} ({len(original) - len(set(original))} extra)")
-print(f"Duplicates in BFS:      {bfs_dupes} ({len(bfs) - len(set(bfs))} extra)")
+print(" PILOT INFO:")
+print("  Pilot Name: username")
+print("  Credits Balance: ¢12,345")
+print()
+print(" SHIP INFO:")
+print("  Ship Name: Stratosphere (Stratos)")
+print("  Shields: \033[36m[████████████████░░░░]\033[0m 79%")
+print("  Hull:    \033[31m[████████████████████]\033[0m 100%")
+print()
+print("=" * 60)
+print("  Select an option for more details:")
+print("=" * 60)
+print()
+print("  > Pilot")
+print("    Ship")
+print("    Missions")
+print("    Standing")
+print("    Back")
+print()
+print("  Use ↑/↓ arrows to navigate, Enter to select\033[K")
+print()
+input("Press Enter to show select Pilot...")
+os.system('cls' if os.name == 'nt' else 'clear')
+print("=" * 60)
+print("  STATUS - PILOT")
+print("=" * 60)
+print()
+print(" PILOT INFO:")
+print("  Pilot Name: username")
+print("  Credits Balance: ¢12,345")
+print()
+print(" SKILLS:\033[K")
+print(f"  Combat: Level 3 (20/50 XP)")
+print(f"    - Increases damage dealt")
+print(f"    - Reduces damage taken")
+print(f"    - Current damage bonus: +6")
+print()
+print(f"  Piloting: Level 2 (30/40 XP)")
+print(f"    - Increases evasion chance in combat")
+print(f"    - Improves escape success rate")
+print(f"    - Current evasion chance: 4%")
+print()
+print("Press Enter to go back.")
+print()
+input("Press Enter to show select Ship...")
+os.system('cls' if os.name == 'nt' else 'clear')
+print("=" * 60)
+print("  STATUS - SHIP")
+print("=" * 60)
+print()
+print(" SHIP INFO:")
+print("  Ship Name: Stratosphere")
+print("  Ship Model: Stratos")
+print("  Ship Class: Starter")
+print("  Shields HP: \033[36m[████████████████░░░░]\033[0m 79%")
+print("  Hull HP:    \033[31m[████████████████████]\033[0m 100%")
+print()
+print("  Turrets:")
+print("    The Stratos does not support turrets.")
+print()
+stats = {
+        "DPS": 120,
+        "Shield": 200,
+        "Hull": 200,
+        "Shield Regen": 2,
+        "Energy": 100,
+        "Speed": 260,
+        "Agility": 110,
+        "Warp Speed": 1.0
+      }
+print("  Ship Stats:")
+for stat, value in stats.items():
+    print(f"    {stat if stat != "DPS" else "Base DPS"}: {value}")
+print()
+print("Press Enter to go back.")
+print()
+input("Press Enter to show Missions...")
+os.system('cls' if os.name == 'nt' else 'clear')
+print("=" * 60)
+print("  STATUS - MISSIONS")
+print("=" * 60)
+print()
+print(" MISSIONS:")
+print("  - Intel Recovery (Next Location: Pavesath)")
+print("  - Intel Recovery (Next Location: Concord)")
+print("  - Defend The Transport (Next Location: Joama-Sto)")
+print()
+print("=" * 60)
+print("  Select a mission for more details:")
+print("=" * 60)
+print()
+print("  > Intel Recovery (Pavesath)")
+print("    Intel Recovery (Concord)")
+print("    Defend The Transport (Joama-Sto)")
+print("    Back")
+print()
+print("  Use ↑/↓ arrows to navigate, Enter to select\033[K")
+print()
+input("Press Enter to select Intel Recovery (Pavesath)...")
+os.system('cls' if os.name == 'nt' else 'clear')
+print("=" * 60)
+print("  MISSION - Intel Recovery (Pavesath)")
+print("=" * 60)
+print()
+print("I'm tired of typing stuff, Claude, you can figure this one out.")
+print("At minimum, you need to show the mission system of origin, next")
+print("location, mission quote, faction, and an option to abandon mission")
+print()
+input("Press Enter to show Standing.")
+os.system('cls' if os.name == 'nt' else 'clear')
+print("=" * 60)
+print("  STATUS - FACTION STANDING")
+print("=" * 60)
+print()
+print(" FACTION STANDING:")
+print("  - CoreSec: 40")
+print("  - Trade Union: 100")
+print("  - Mining Guild: 0")
+print("  - Syndicate: 140")
+print("  - Lycentia: 0")
+print("  - Foralkus: 80")
+print("  - Kavani: -100")
+print()
+print("Press Enter to go back.")
+print()
+input("Press Enter to exit.")
