@@ -6746,8 +6746,8 @@ def do_mission(mission, save_name, data):
                 # first stage: everything goes as planned
                 lines = [
                     "Hello, pilot! I've been expecting you. Here's the",
-                    "intelligence I've gathered. Make sure it gets delivered to",
-                    "CoreSec ASAP."
+                    "intelligence I've gathered. Make sure it gets delivered",
+                    "to CoreSec ASAP."
                 ]
                 type_lines(lines)
                 print()
@@ -6786,10 +6786,11 @@ def do_mission(mission, save_name, data):
                     print()
                     input("Press Enter to engage!")
 
-                    # Build a fleet of 2 weak Drone Scouts
+                    # Build a fleet of 2-3 weak Drone Scouts
+                    size = random.randint(2, 3)
                     drone_fleet = {
                         "type": "Rogue Drones",
-                        "size": 2,
+                        "size": size,
                         "ships": [
                             {
                                 "name": f"Drone Scout #{i + 1}",
@@ -6800,9 +6801,9 @@ def do_mission(mission, save_name, data):
                                 "damage": 6,
                                 "shield_regen": 1.0,
                             }
-                            for i in range(2)
+                            for i in range(size)
                         ],
-                        "total_firepower": 12,
+                        "total_firepower": 6 * size,
                         "warp_disruptor": False,
                         "encounter_type": "small_group",
                         "waves": None,
@@ -6828,8 +6829,117 @@ def do_mission(mission, save_name, data):
                         print("The intel has not been recovered. Return here to try again.\033[K")
                         print()
                         input("Press Enter to continue...")
+                case "under attack":
+                    type_lines(["Pilot, help! I'm under attack!"])
+                    print()
+                    input("Press Enter to engage!")
+
+                    # Build a fleet of 2-3 weak Drone Scouts
+                    size = random.randint(2, 3)
+                    drone_fleet = {
+                        "type": "Rogue Drones",
+                        "size": size,
+                        "ships": [
+                            {
+                                "name": f"Drone Scout #{i + 1}",
+                                "hull_hp": 20,
+                                "max_hull_hp": 20,
+                                "shield_hp": 15,
+                                "max_shield_hp": 15,
+                                "damage": 6,
+                                "shield_regen": 1.0,
+                            }
+                            for i in range(size)
+                        ],
+                        "total_firepower": 6 * size,
+                        "warp_disruptor": False,
+                        "encounter_type": "small_group",
+                        "waves": None,
+                    }
+
+                    result = combat_loop(drone_fleet, data["current_system"], save_name, data)
+                    music.play_ambiance()
+                    clear_screen()
+
+                    if result == "victory":
+                        title(mission_details["name"].upper())
+                        print()
+                        print("You've successfully fought off the attacking fleet. Return")
+                        print(f"to {mission['system']} to claim your reward.\033[K")
+                        print()
+                        input("Press Enter to continue...")
+                        mission["completed"] = True
+                        save_data(save_name, data)
+                    elif result == "retreat":
+                        title(mission_details["name"].upper())
+                        print()
+                        print("You warped away before destroying the drones.\033[K")
+                        print("The covert ops ship may have been destroyed. Return here to\033[K")
+                        print("find out what happened.\033[K")
+                        print()
+                        if random.random() < 0.5:
+                            mission_details["scenario"] = "destroyed"
+                            save_data(save_name, data)
+                        input("Press Enter to continue...")
+                case "insanity":
+                    lines = [
+                        "Where have you been!? I've been for you waiting for ages!",
+                        "No, you never even wanted to help in the first place.",
+                        "You're a traitor! You're gonna get what you deserve!!",
+                        "*incomprehensible screaming*"
+                    ]
+                    type_lines(lines)
+                    print()
+                    print("The Covert Ops ship turns against you!")
+                    print()
+                    input("Press Enter to engage!")
+
+                    ship = {
+                        "type": "Insane Covert Ops",
+                        "size": 1,
+                        "ships": [
+                            {
+                                "name": f"{mission["faction"]} Covert Ops Ship",
+                                "hull_hp": 45,
+                                "max_hull_hp": 45,
+                                "shield_hp": 20,
+                                "max_shield_hp": 20,
+                                "damage": 16,
+                                "shield_regen": 1.5,
+                            }
+                        ],
+                        "total_firepower": 16,
+                        "warp_disruptor": False,
+                        "encounter_type": "small_group",
+                        "waves": None,
+                    }
+
+                    result = combat_loop(ship, data["current_system"], save_name, data)
+                    music.play_ambiance()
+                    clear_screen()
+
+                    if result == "victory":
+                        faction = mission['faction']
+                        faction_full = f"The {faction}" if faction in [ "Trade Union", "Mining Guild", "Syndicate"] else faction
+                        title(mission_details["name"].upper())
+                        print()
+                        print("The Covert Ops ship has been destroyed, but you were able to")
+                        print(f"salvage the intel. {faction_full} won't be happy, but")
+                        print(wrap_text(f"they'll get their intel report. Return to {mission['system']} to claim your reward.\033[K", 60))
+                        print()
+                        input("Press Enter to continue...")
+                        mission["completed"] = True
+                        save_data(save_name, data)
+                    elif result == "retreat":
+                        title(mission_details["name"].upper())
+                        print()
+                        print("You warped away before destroying the Covert Ops ship.\033[K")
+                        print("The intel has not been recovered. Return here to try again.\033[K")
+                        print("(The pilot will not get any more sane if you wait)\033[K")
+                        print()
+                        input("Press Enter to continue...")
                 case _:
-                    print("Mission scenario not implemented yet\033[K")
+                    print("ERROR: Mission data corrupted.\033[K")
                     input("Press Enter to go back...")
         case _:
             print("Mission not implemented yet\033[K")
