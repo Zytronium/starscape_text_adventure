@@ -18,6 +18,7 @@ from time import sleep, time
 from uuid import uuid4
 from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
+from functools import lru_cache
 from colors import set_color, set_background_color, reset_color, get_color, get_background_color
 
 # Discord Rich Presence support
@@ -6611,31 +6612,8 @@ def generate_mission(missions, tier, faction, data):
     mission = random.choice(missions)
     credit_reward, standing_reward = get_mission_reward(mission["name"], tier, faction)
     system_name = data["current_system"]
-    system = system_data(system_name)
-    connections = system["Connections"]
 
-    # Generate mission location 2-4 jumps away
-    valid_locations = []
-    visited = set(connections + [system_name])  # seed with 1-jump neighbors so we never loop back
-
-    # connections are already 1 jump away, so start at depth 1
-    queue = deque((c, 1) for c in connections)
-
-    while queue:
-        current, depth = queue.popleft()
-
-        # only collect systems 2+ jumps away (skip direct neighbors)
-        if depth >= 2:
-            valid_locations.append(current)
-
-        # stop expanding past 4 jumps
-        if depth < 4:
-            for neighbor in system_data(current)["Connections"]:
-                if neighbor not in visited:
-                    visited.add(neighbor)  # mark on enqueue, not on process
-                    queue.append((neighbor, depth + 1))
-
-    location = random.choice(valid_locations)
+    location = get_random_system_location(system_name, 2, 4)
     mission["rewards"] = {
         "credits": credit_reward,
         "standing": standing_reward
@@ -6649,8 +6627,32 @@ def generate_mission(missions, tier, faction, data):
             "under attack",
             "insanity"
         ])
+        mission["stage"] = 1
 
     return mission
+
+
+def get_random_system_location(origin_system, start_depth=2, max_depth=4):
+    system = system_data(origin_system)
+    connections = system["Connections"]
+
+    valid_locations = []
+    visited = set(connections + [origin_system])
+    queue = deque((c, 1) for c in connections)
+
+    while queue:
+        current, depth = queue.popleft()
+
+        if depth >= start_depth:
+            valid_locations.append(current)
+
+        if depth < max_depth:
+            for neighbor in system_data(current)["Connections"]:
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append((neighbor, depth + 1))
+
+    return random.choice(valid_locations)
 
 
 def get_mission_reward(name, tier, faction):
@@ -6740,6 +6742,28 @@ def do_mission(mission, save_name, data):
     print()
     match mission_details["name"]:
         case "Intel Recovery":
+            if mission_details["stage"] == 1:
+                # first stage: everything goes as planned
+                lines = [
+                    "Hello, pilot! I've been expecting you. Here's the",
+                    "intelligence I've gathered. Make sure it gets delivered to",
+                    "CoreSec ASAP."
+                ]
+                type_lines(lines)
+                print()
+                input("Press Enter to continue...")
+                print()
+                next_location = get_random_system_location(mission_details["location"], 1, 4)
+                mission_details["location"] = next_location
+                mission_details["stage"] = 2
+                save_data(save_name, data)
+
+                print(f"That's one intelligence report down. One stop left. Go")
+                print(f"to {next_location} to continue the mission.")
+                print()
+                input("Press Enter to continue...")
+                return
+
             match mission_details["scenario"]:
                 case "destroyed":
                     lines = [
@@ -9584,6 +9608,7 @@ def title(text, centered=False):
     print("=" * 60)
 
 
+@lru_cache(maxsize=None)
 def system_data(system_name):
     with open(resource_path('system_data.json'), 'r') as f:
         data = json.load(f)
