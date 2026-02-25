@@ -6713,11 +6713,22 @@ def visit_mission_location(system, save_name, data):
         return
 
     clear_screen()
+
+
+    # Capture the screen content
+    content_buffer = StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = content_buffer
+
     title("MISSIONS")
+
+    previous_content = content_buffer.getvalue()
+    sys.stdout = old_stdout
+
     options = []
     for entry in missions_here:
         options.append(f"{entry["mission"]['name']} ({entry['faction']})\033[K")
-    choice = arrow_menu("Please select a mission", options)
+    choice = arrow_menu("Please select a mission", options, previous_content)
 
     do_mission(missions_here[choice], save_name, data)
 
@@ -6758,10 +6769,10 @@ def do_mission(mission, save_name, data):
                         "ships": [
                             {
                                 "name": f"Drone Scout #{i + 1}",
-                                "hull_hp": 40,
+                                "hull_hp": 20,
                                 "max_hull_hp": 20,
-                                "shield_hp": 30,
-                                "max_shield_hp": 30,
+                                "shield_hp": 15,
+                                "max_shield_hp": 15,
                                 "damage": 6,
                                 "shield_regen": 1.0,
                             }
