@@ -6696,8 +6696,35 @@ def view_faction_terminal(faction, save_name, data):
 
 
 def visit_mission_location(system, save_name, data):
+    missions_here = []
+    for m in data["missions"]:
+        if m["mission"]["location"] == system["Name"]:
+            missions_here.append(m)
+    if len(missions_here) == 0:
+        title(f"{get_color("red")}ERROR{get_color("reset")}")
+        print()
+        print("There are no missions here!")
+        input("Press Enter to go back...")
+        return
+
+    if len(missions_here) == 1:
+        do_mission(missions_here[0], save_name, data)
+        return
+
     clear_screen()
-    title("MISSION")
+    title("MISSIONS")
+    options = []
+    for entry in missions_here:
+        options.append(f"{entry["mission"]['name']} ({entry['faction']})\033[K")
+    choice = arrow_menu("Please select a mission", options)
+
+    do_mission(missions_here[choice], save_name, data)
+
+
+def do_mission(mission, save_name, data):
+    clear_screen()
+    title(mission["mission"]["name"].upper())
+    print()
     print("Not implemented yet\033[K")
     input("Press Enter to go back...")
 
