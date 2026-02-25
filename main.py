@@ -6498,7 +6498,7 @@ def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
     clear_screen()
     title(f"MISSION AGENT {"A" if agent_idx == 0 else "B"}")
     print()
-    # todo: check if this agent has a pending or completed mission
+    # Check if this agent has a pending or completed mission
     missions = data["missions"]
     active_mission = None
     for mission in missions:
