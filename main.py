@@ -6590,7 +6590,8 @@ def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
                     "office": office_name,
                     "agent_idx": agent_idx,
                     "faction": faction,
-                    "mission": mission
+                    "mission": mission,
+                    "completed": False
                 }
                 data["missions"].append(mission_entry)
                 save_data(save_name, data)
@@ -6698,7 +6699,7 @@ def view_faction_terminal(faction, save_name, data):
 def visit_mission_location(system, save_name, data):
     missions_here = []
     for m in data["missions"]:
-        if m["mission"]["location"] == system["Name"]:
+        if m["mission"]["location"] == system["Name"] and not m["completed"]:
             missions_here.append(m)
     if len(missions_here) == 0:
         title(f"{get_color("red")}ERROR{get_color("reset")}")
@@ -6722,11 +6723,82 @@ def visit_mission_location(system, save_name, data):
 
 
 def do_mission(mission, save_name, data):
+    mission_details = mission["mission"]
     clear_screen()
-    title(mission["mission"]["name"].upper())
+    title(mission_details["name"].upper())
     print()
-    print("Not implemented yet\033[K")
-    input("Press Enter to go back...")
+    match mission_details["name"]:
+        case "Intel Recovery":
+            match mission_details["scenario"]:
+                case "destroyed":
+                    lines = [
+                        "You come across a debris field, no covert ops ship in sight.",
+                        "You notice a black box next to a destroyed ship in the",
+                        "debris. You interface with it. You hear the final words",
+                        "of the pilot. This was the covert ops ship alright. The",
+                        "data also contains scanner readings of the ships that did",
+                        "this.",
+                    ]
+                    type_lines(lines)
+                    print()
+                    input("Press Enter to continue...")
+                    print()
+                    lines2 = [
+                        "A pair of drones are approaching! These ships match the",
+                        "scans from the black box. Destroy them to recover the intel!"
+                    ]
+                    type_lines(lines2)
+                    print()
+                    input("Press Enter to engage!")
+
+                    # Build a fleet of 2 weak Drone Scouts
+                    drone_fleet = {
+                        "type": "Rogue Drones",
+                        "size": 2,
+                        "ships": [
+                            {
+                                "name": f"Drone Scout #{i + 1}",
+                                "hull_hp": 40,
+                                "max_hull_hp": 20,
+                                "shield_hp": 30,
+                                "max_shield_hp": 30,
+                                "damage": 6,
+                                "shield_regen": 1.0,
+                            }
+                            for i in range(2)
+                        ],
+                        "total_firepower": 12,
+                        "warp_disruptor": False,
+                        "encounter_type": "small_group",
+                        "waves": None,
+                    }
+
+                    result = combat_loop(drone_fleet, data["current_system"], save_name, data)
+                    music.play_ambiance()
+                    clear_screen()
+
+                    if result == "victory":
+                        title(mission_details["name"].upper())
+                        print()
+                        print("You've successfully recovered the intel. Return to")
+                        print(f"{mission['system']} to claim your reward.\033[K")
+                        print()
+                        input("Press Enter to continue...")
+                        mission["completed"] = True
+                        save_data(save_name, data)
+                    elif result == "retreat":
+                        title(mission_details["name"].upper())
+                        print()
+                        print("You warped away before destroying the drones.\033[K")
+                        print("The intel has not been recovered. Return here to try again.\033[K")
+                        print()
+                        input("Press Enter to continue...")
+                case _:
+                    print("Mission scenario not implemented yet\033[K")
+                    input("Press Enter to go back...")
+        case _:
+            print("Mission not implemented yet\033[K")
+            input("Press Enter to go back...")
 
 
 def migrate_save_2_3(save_name, data):
@@ -6961,7 +7033,7 @@ def main_screen(save_name, data):
     sys.stdout = old_stdout
 
     # Check if current system is a mission location
-    mission_here = any(m["mission"]["location"] == system_name for m in data["missions"])
+    mission_here = any(m["mission"]["location"] == system_name and not m["completed"] for m in data["missions"])
 
     options = ["View status", "Warp to another system"]
     if mission_here:
