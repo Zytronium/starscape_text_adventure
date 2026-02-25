@@ -945,7 +945,7 @@ def default_data():
             "mining_xp": 0,   # XP towards next mining level
         },
         "standing": {
-            "Core Sec": 0,
+            "CoreSec": 0,
             "Syndicate": 0,
             "Trade Union": 0,
             "Mining Guild": 0,
@@ -6498,6 +6498,35 @@ def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
     clear_screen()
     title(f"MISSION AGENT {"A" if agent_idx == 0 else "B"}")
     print()
+    # todo: check if this agent has a pending or completed mission
+    missions = data["missions"]
+    active_mission = None
+    for mission in missions:
+        if mission["station"] == data["docked_at"] and mission["office"] == office_name and mission["agent_idx"] == agent_idx:
+            active_mission = mission
+            break
+    if active_mission:
+        if active_mission["completed"]:
+            # Grant rewards
+            rewards = active_mission["mission"]["rewards"]
+            data["credits"] += rewards["credits"]
+            data["standing"][active_mission["faction"]] += rewards["standing"]
+            data["missions"].remove(active_mission)
+            save_data(save_name, data)
+            print("Thank you for completing your mission! Your reward has")
+            print("been recieved.")
+            print()
+            print("  You have been rewarded:")
+            print(f"    - {rewards["credits"]} Credits")
+            print(f"    - {rewards["standing"]} Standing")
+            print()
+            input("Press Enter to continue...")
+            return
+        else:
+            print("Come back when you've completed your mission.")
+            print()
+            input("Press Enter to continue...")
+            return
     faction_dis = "Lycentian" if faction == "Lycentia" else "Foralkan" if faction == "Foralkus" else faction
     faction_full = f"The {faction}" if faction in ["Trade Union", "Mining Guild", "Syndicate"] else faction
     all_missions = [
@@ -6819,9 +6848,11 @@ def do_mission(mission, save_name, data):
                         print("You've successfully recovered the intel. Return to")
                         print(f"{mission['system']} to claim your reward.\033[K")
                         print()
-                        input("Press Enter to continue...")
+
                         mission["completed"] = True
                         save_data(save_name, data)
+
+                        input("Press Enter to continue...")
                     elif result == "retreat":
                         title(mission_details["name"].upper())
                         print()
@@ -6867,9 +6898,11 @@ def do_mission(mission, save_name, data):
                         print("You've successfully fought off the attacking fleet. Return")
                         print(f"to {mission['system']} to claim your reward.\033[K")
                         print()
-                        input("Press Enter to continue...")
+
                         mission["completed"] = True
                         save_data(save_name, data)
+
+                        input("Press Enter to continue...")
                     elif result == "retreat":
                         title(mission_details["name"].upper())
                         print()
@@ -6927,9 +6960,11 @@ def do_mission(mission, save_name, data):
                         print(f"salvage the intel. {faction_full} won't be happy, but")
                         print(wrap_text(f"they'll get their intel report. Return to {mission['system']} to claim your reward.\033[K", 60))
                         print()
-                        input("Press Enter to continue...")
+
                         mission["completed"] = True
                         save_data(save_name, data)
+
+                        input("Press Enter to continue...")
                     elif result == "retreat":
                         title(mission_details["name"].upper())
                         print()
@@ -6947,8 +6982,11 @@ def do_mission(mission, save_name, data):
 
 
 def migrate_save_2_3(save_name, data):
-    data["missions"] = []
+    if "missions" not in data:
+        data["missions"] = []
     data["v"] = SAVE_VERSION_CODE
+    if "Core Sec" in data["standing"]:
+        data["standing"]["CoreSec"] = data["standing"].pop("Core Sec")
     save_data(save_name, data)
 
 
