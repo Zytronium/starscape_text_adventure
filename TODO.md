@@ -14,6 +14,7 @@
 - track player statistics
   - i.e., systems visited, number of deaths, enemy ships destroyed, etc.
 - add spice hauling
+- Fix combat system\*
 
 When all of the above are done, the game can go from alpha to beta.
 When all of Starscape's features (minus player market and PvP) are implemented
@@ -21,6 +22,13 @@ in some way (from Loyalty Points and PDT Turrets to Faction Warfare and player
 stations), it can go from beta to release. After that, minor improvements, bug
 fixes, QOL updates, and maybe the occasional new feature not in the original
 Starscape may be added.
+
+\*: The current realtime combat system is too easy. Furthermore, random encounters
+every time you do something in a system is annoying. We need to save a boolean
+for whether there are hostiles in the system/planet, then when the player warps
+in, random chance to warp into the hostile zone or to a safe distance. Then, they
+can choose to ignore or engage if they're a safe distance away, else, they
+still have a good chance at escaping if they don't want to engage.
 
 ## Missions
 When the player visits a mission agency, generate 3 random missions for the given tier.
