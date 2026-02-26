@@ -6677,6 +6677,8 @@ def generate_mission(missions, tier, faction, data):
     if mission["name"] == "Intel Recovery":
         mission["scenario"] = random.choice([
             "destroyed",
+            "destroyed",
+            "under attack",
             "under attack",
             "insanity"
         ])
