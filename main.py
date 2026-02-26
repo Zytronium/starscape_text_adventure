@@ -12,6 +12,7 @@ import platform
 import subprocess
 import threading
 from collections import deque
+from numbers import Number
 from pathlib import Path
 from io import StringIO
 from time import sleep, time
@@ -6498,6 +6499,7 @@ def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
     clear_screen()
     title(f"MISSION AGENT {"A" if agent_idx == 0 else "B"}")
     print()
+
     # Check if this agent has a pending or completed mission
     missions = data["missions"]
     active_mission = None
@@ -6527,6 +6529,19 @@ def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
             print()
             input("Press Enter to continue...")
             return
+
+    # Ensure the user has enough standing for a mission of this tier
+    player_tier = get_tier(data["standing"][faction])
+    if data["standing"][faction] <= -500:
+        player_tier = -1  # effectively bars player from even tier 0 missions
+
+    if player_tier < tier:
+        print("Sorry, you're not ready for these missions yet. Go do lower")
+        print("tier missions to prove yourself first.")
+        print()
+        input("Press Enter to continue...")
+        return
+
     faction_dis = "Lycentian" if faction == "Lycentia" else "Foralkan" if faction == "Foralkus" else faction
     faction_full = f"The {faction}" if faction in ["Trade Union", "Mining Guild", "Syndicate"] else faction
     all_missions = [
@@ -6718,6 +6733,23 @@ def get_mission_reward(name, tier, faction):
 
     return round(credits), standing
 
+
+def get_tier(standing):
+    if not isinstance(standing, Number):
+        return 0
+
+    if standing < 500:
+        return 0
+    if standing < 1500:
+        return 1
+    if standing < 2500:
+        return 2
+    if standing < 3500:
+        return 3
+    if standing < 4500:
+         return 4
+    else:
+        return 5
 
 
 def view_faction_terminal(faction, save_name, data):
