@@ -6656,6 +6656,15 @@ def generate_mission(missions, tier, faction, data):
     mission = random.choice(missions)
     credit_reward, standing_reward = get_mission_reward(mission["name"], tier, faction)
     system_name = data["current_system"]
+    enemies = {
+        "Kavani": ["Lycentia", "Foralkus"],
+        "Foralkus": ["Lycentia", "Kavani"],
+        "Lycentia": ["Kavani", "Foralkus"],
+        "CoreSec": ["Drones"],
+        "Trade Union": ["Pirates"],
+        "Mining Guild": ["Pirates"],
+        "Syndicate": ["Drones", "Pirates"]
+    }
 
     location = get_random_system_location(system_name, 2, 4)
     mission["rewards"] = {
@@ -6672,6 +6681,10 @@ def generate_mission(missions, tier, faction, data):
             "insanity"
         ])
         mission["stage"] = 1
+        mission["enemy"] = random.choice(list(set(enemies[faction] + ["Pirates"])))
+
+    if mission["name"] == "Defend The Transport":
+        mission["enemy"] = random.choice(enemies[faction])
 
     return mission
 
@@ -6801,6 +6814,13 @@ def do_mission(mission, save_name, data):
     clear_screen()
     title(mission_details["name"].upper())
     print()
+    enemy = mission_details["enemy"]
+    faction = mission["faction"]
+    enemy_dis = "Lycentian" if enemy == "Lycentia" else "Foralkan" if enemy == "Foralkus" else "Drone" if enemy == "Drones" else "Pirate" if enemy == "Pirates" else enemy
+    enemy_dis_plural = f"{enemy_dis} ships" if enemy not in ["Drones", "Pirates"] else enemy.lower()  # i.e. "Lycentian ships", "Trade Union Ships", "Pirates"
+    enemy_full = f"The {enemy}" if enemy in ["Trade Union", "Mining Guild", "Syndicate", "Drones", "Pirates"] else enemy
+    faction_dis = "Lycentian" if faction == "Lycentia" else "Foralkan" if faction == "Foralkus" else faction
+    faction_full = f"The {faction}" if faction in ["Trade Union", "Mining Guild", "Syndicate"] else faction
     match mission_details["name"]:
         case "Intel Recovery":
             if mission_details["stage"] == 1:
@@ -6808,13 +6828,13 @@ def do_mission(mission, save_name, data):
                 lines = [
                     "Hello, pilot! I've been expecting you. Here's the",
                     "intelligence I've gathered. Make sure it gets delivered",
-                    "to CoreSec ASAP."
+                    f"to {faction_full} ASAP."
                 ]
                 type_lines(lines)
                 print()
                 input("Press Enter to continue...")
                 print()
-                next_location = get_random_system_location(mission_details["location"], 1, 4)
+                next_location = get_random_system_location(mission["system"], 2, 3)
                 mission_details["location"] = next_location
                 mission_details["stage"] = 2
                 save_data(save_name, data)
@@ -6839,22 +6859,32 @@ def do_mission(mission, save_name, data):
                     print()
                     input("Press Enter to continue...")
                     print()
-                    lines2 = [
-                        "A pair of drones are approaching! These ships match the",
-                        "scans from the black box. Destroy them to recover the intel!"
-                    ]
+                    size = random.randint(2, 3)
+                    lines2 = wrap_text(f"A {"pair" if size == 2 else "group"} of {enemy_dis_plural} are approaching! These ships match the scans from the black box. Destroy them to recover the intel!", 60).split("\n")
                     type_lines(lines2)
                     print()
                     input("Press Enter to engage!")
 
-                    # Build a fleet of 2-3 weak Drone Scouts
-                    size = random.randint(2, 3)
+                    # Build a fleet of 2-3 weak ships
+                    match enemy:
+                        case "Drones":
+                            ship_name = "Drone Scout"
+                        case "Pirates":
+                            ship_name = "Pirate Raider"
+                        case "Lycentia":
+                            ship_name = "Lycentian Interceptor"
+                        case "Foralkus":
+                            ship_name = "Foralkan Interceptor"
+                        case "Kavani":
+                            ship_name = "Kavani Interceptor"
+                        case _:  # Fallback: shouldn't happen but just being safe
+                            ship_name = "Hostile Ship"
                     drone_fleet = {
-                        "type": "Rogue Drones",
+                        "type": f"Rogue {enemy_dis_plural}",
                         "size": size,
                         "ships": [
                             {
-                                "name": f"Drone Scout #{i + 1}",
+                                "name": f"{ship_name} #{i + 1}",
                                 "hull_hp": 20,
                                 "max_hull_hp": 20,
                                 "shield_hp": 15,
@@ -6888,7 +6918,7 @@ def do_mission(mission, save_name, data):
                     elif result == "retreat":
                         title(mission_details["name"].upper())
                         print()
-                        print("You warped away before destroying the drones.\033[K")
+                        print(f"You warped away before destroying the {enemy_dis_plural}.\033[K")
                         print("The intel has not been recovered. Return here to try again.\033[K")
                         print()
                         input("Press Enter to continue...")
@@ -6964,7 +6994,7 @@ def do_mission(mission, save_name, data):
                         "size": 1,
                         "ships": [
                             {
-                                "name": f"{mission["faction"]} Covert Ops Ship",
+                                "name": f"{faction} Covert Ops Ship",
                                 "hull_hp": 45,
                                 "max_hull_hp": 45,
                                 "shield_hp": 20,
@@ -6984,8 +7014,6 @@ def do_mission(mission, save_name, data):
                     clear_screen()
 
                     if result == "victory":
-                        faction = mission['faction']
-                        faction_full = f"The {faction}" if faction in [ "Trade Union", "Mining Guild", "Syndicate"] else faction
                         title(mission_details["name"].upper())
                         print()
                         print("The Covert Ops ship has been destroyed, but you were able to")
