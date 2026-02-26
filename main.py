@@ -1714,61 +1714,6 @@ def ignore_enemies(enemy_fleet, system, save_name, data):
     return "continue"
 
 
-def perform_evasive_maneuvers_turn(player_ship, piloting_skill, data):
-    """Perform evasive maneuvers during a combat turn - recharge shields, skip attack"""
-    clear_screen()
-    title("MAKING EVASIVE MANEUVERS")
-    print()
-
-    print("  You make evasive maneuvers to avoid enemy fire, giving\033[K")
-    print("  your shields time to recharge.\033[K")
-    print()
-    sleep(1)
-
-    # Get ship stats
-    ship_stats = get_ship_stats(player_ship['name'])
-    ship_agility = ship_stats.get('Agility', 100)  # Default to 100 if not present
-    max_shield = get_max_shield(player_ship)
-    shield_regen_stat = get_shield_regen(player_ship)
-
-    # Calculate shield recharge - base is shield_regen * 3
-    base_recharge = shield_regen_stat * 3
-
-    # Add bonus from agility (higher agility = better recharge)
-    agility_bonus = (ship_agility / 100) * 10  # +10% per 100 agility
-
-    # Add bonus from piloting skill
-    piloting_bonus = piloting_skill * 2  # +2% per level
-
-    # Add random factor (±20%)
-    random_factor = random.uniform(0.8, 1.2)
-
-    total_recharge = int(base_recharge * (1 + (agility_bonus + piloting_bonus) / 100) * random_factor)
-
-    # Apply shield recharge
-    old_shield = player_ship["shield_hp"]
-    player_ship["shield_hp"] = min(player_ship["shield_hp"] + total_recharge, max_shield)
-    actual_recharge = player_ship["shield_hp"] - old_shield
-
-    if actual_recharge > 0:
-        set_color("cyan")
-        print(f"  Shields recharged: +{actual_recharge} HP\033[K")
-        reset_color()
-        print(f"  Shield HP: {player_ship['shield_hp']}/{max_shield}\033[K")
-    else:
-        print("  Shields already at maximum capacity.\033[K")
-
-    print()
-    print("  You maintain evasive flight patterns to avoid incoming fire...\033[K")
-    print()
-    sleep(1)
-
-    # Small piloting XP for using evasive maneuvers
-    add_skill_xp(data, "piloting", 3)
-
-    input("Press Enter to continue...")
-
-
 def get_numpad_key(timeout=0.05):
     """Get numpad key press (1-9) with timeout
 
