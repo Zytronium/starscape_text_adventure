@@ -7016,9 +7016,10 @@ def do_mission(mission, save_name, data):
 def migrate_save_2_3(save_name, data):
     if "missions" not in data:
         data["missions"] = []
-    data["v"] = SAVE_VERSION_CODE
     if "Core Sec" in data["standing"]:
         data["standing"]["CoreSec"] = data["standing"].pop("Core Sec")
+
+    data["v"] = SAVE_VERSION_CODE
     save_data(save_name, data)
 
 
@@ -7436,26 +7437,25 @@ def _status_ship(data):
 
 def _status_missions(data):
     """STATUS - MISSIONS sub-screen with per-mission detail."""
-    missions = data.get("missions", [])
-
     while True:
+        clear_screen()
         missions = data.get("missions", [])  # re-read each loop in case one was abandoned
+
+        if len(missions) == 0:
+            title("STATUS - MISSIONS")
+            print()
+            print(" MISSIONS:\033[K")
+            print("  No active missions.\033[K")
+            print()
+            input("Press Enter to go back.")
+            return
 
         content_buffer = StringIO()
         old_stdout = sys.stdout
         sys.stdout = content_buffer
 
-        clear_screen()
         title("STATUS - MISSIONS")
         print()
-
-        if not missions:
-            print(" MISSIONS:\033[K")
-            print("  No active missions.\033[K")
-            previous_content = content_buffer.getvalue()
-            sys.stdout = old_stdout
-            input("Press Enter to go back.")
-            return
 
         print(" MISSIONS:\033[K")
         for entry in missions:
@@ -7520,7 +7520,7 @@ def _status_standing(data):
     standing = data.get("standing", {})
     print(" FACTION STANDING:\033[K")
     for faction, value in standing.items():
-        print(f"  - {faction}: {value}\033[K")
+        print(f"  - {faction}: {value} (Tier {get_tier(value)})\033[K")
     print()
 
     input("Press Enter to go back.")
