@@ -2032,6 +2032,7 @@ class Projectile:
         self.target_position = target_position
         self.speed = speed
         self.progress = 0.0
+        self.source = source
 
     def update(self, delta_time):
         """Update projectile position"""
@@ -2805,10 +2806,10 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
 
     # Fire rate limiting
     last_shot_time = 0
-    shot_cooldown = 0.7  # Increased to 0.7 seconds between shots
+    shot_cooldown = 0.7  # 0.7 seconds between shots
     weapon_heat = 0.0  # Weapon heat system (0.0 to 1.0)
-    heat_per_shot = 0.3  # Heat added per shot
-    heat_decay_rate = 0.4  # Heat lost per second when not firing
+    heat_per_shot = 0.4  # Heat added per shot
+    heat_decay_rate = 0.35  # Heat lost per second when not firing
 
     # Energy regen
     energy_regen_rate = 5.0  # per second
@@ -2872,13 +2873,15 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
                 # Normal: spawn 1 projectile
                 projectiles_to_spawn = 1 if len(projectiles) < scaled_max_projectiles else 0
 
-            for _ in range(projectiles_to_spawn):
+            for i in range(projectiles_to_spawn):
                 if len(projectiles) >= scaled_max_projectiles:
                     break
 
-                # 2/3 of projectiles should target the player's current position
-                # 1/3 should be random
-                if random.random() < 0.67:  # 67% chance to target player
+                # assign a shooter
+                shooter = alive_enemies[i % len(alive_enemies)]
+                # 4/5 of projectiles should target the player's current position
+                # 1/5 should be random
+                if random.random() < 0.8:  # 80% chance to target player
                     target_pos = player_pos
                 else:
                     target_pos = random.randint(1, 9)
@@ -2891,7 +2894,7 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
                     base_speed = 0.4 if fleet_size <= 3 else 0.5 if fleet_size <= 7 else 0.6
                     speed = random.uniform(base_speed, base_speed + 0.3)
 
-                projectiles.append(Projectile(target_pos, speed))
+                projectiles.append(Projectile(target_pos, speed, source=shooter))
                 projectiles_spawned += 1
 
             next_projectile_spawn = current_time + projectile_spawn_interval
@@ -2911,19 +2914,21 @@ def unified_combat_round(player_ship, alive_enemies, combo, firing_mode, player_
         # Check hits
         for proj in completed_projectiles:
             if proj.target_position == player_pos:
-                # Hit! Apply damage based on fleet power
-                # Use average enemy damage but scale with fleet size and power
-                avg_damage = sum(enemy['damage'] for enemy in alive_enemies) / len(alive_enemies)
+                # Hit! Apply damage based on ship that fired
+                if proj.source and proj.source in alive_enemies:
+                    base_damage = proj.source['damage']
+                else:
+                    base_damage = avg_enemy_damage  # fallback if the shooter is now dead
 
                 # Scale damage based on fleet size (more enemies = slightly more damage per hit)
                 fleet_multiplier = 1.0 + (len(alive_enemies) - 1) * 0.1  # +10% per additional enemy
-                fleet_multiplier = min(fleet_multiplier, 2.0)  # Cap at 2x
+                fleet_multiplier = min(fleet_multiplier, 3.0)  # Cap at 3x
 
                 # Crystalline entities do more damage
                 if is_crystalline:
                     fleet_multiplier *= 1.5
 
-                damage_taken = int(avg_damage * fleet_multiplier)
+                damage_taken = int(base_damage * fleet_multiplier)
                 apply_damage_to_ship(player_ship, damage_taken)
                 hits_taken += 1
 
