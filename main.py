@@ -6769,6 +6769,7 @@ def do_mission(mission, save_name, data):
     player_ship = get_active_ship(data)
     max_shield = get_max_shield(player_ship)
     shield_regen = get_shield_regen(player_ship)
+    tier = mission["mission"]["tier"]
 
     match mission_details["name"]:
         case "Intel Recovery":
@@ -6809,13 +6810,17 @@ def do_mission(mission, save_name, data):
                     print()
                     input("Press Enter to continue...")
                     print()
-                    size = random.randint(2, 3)
+                    size = random.randint(2, 3) if tier <= 1 else 3  # not actually 3, just setting it to 3 so the below text says group instead of pair
                     lines2 = wrap_text(f"A {"pair" if size == 2 else "group"} of {enemy_dis_plural} are approaching! These ships match the scans from the black box. Destroy them to recover the intel!", 60).split("\n")
                     type_lines(lines2)
                     print()
                     input("Press Enter to engage!")
 
-                    enemy_fleet = generate_mission_fleet(enemy, mission["mission"]["tier"], override_size=size)
+                    # there are no actual waves but for the sake of increasing
+                    # difficulty, we'll pretend it's a higher wave for higher
+                    # tier missions
+                    wave = 1 if tier in [0, 1] else 2 if tier in [2, 3] else 3 if tier in [4, 5] else 4  # 4 can't happen but needs to be there for syntax
+                    enemy_fleet = generate_mission_fleet(enemy, tier, wave=wave, override_size=size if tier <= 1 else None)
 
                     result = combat_loop(enemy_fleet, data["current_system"], save_name, data)
                     music.play_ambiance()
