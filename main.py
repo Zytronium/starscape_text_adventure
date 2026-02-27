@@ -7674,6 +7674,10 @@ def _status_pilot(data):
     piloting_xp = data['skills'].get('piloting_xp', 0)
     piloting_xp_needed = xp_required_for_level(piloting_level)
 
+    mining_level = data['skills'].get('mining', 0)
+    mining_xp = data['skills'].get('mining_xp', 0)
+    mining_xp_needed = xp_required_for_level(mining_level)
+
     print(" SKILLS:\033[K")
     print(f"  Combat: Level {combat_level} ({combat_xp}/{combat_xp_needed} XP)\033[K")
     print(f"    - Increases damage dealt\033[K")
@@ -7684,6 +7688,11 @@ def _status_pilot(data):
     print(f"    - Increases evasion chance in combat\033[K")
     print(f"    - Improves escape success rate\033[K")
     print(f"    - Current evasion chance: {min(piloting_level * 2, 25)}%\033[K")
+    print()
+    print(f"  Mining: Level {mining_level} ({mining_xp}/{mining_xp_needed} XP)\033[K")
+    print(f"    - Increases mining efficiency and ore yield\033[K")
+    print(f"    - Reduces asteroid stability drain per blast\033[K")
+    print(f"    - Current efficiency bonus: +{mining_level * 5}%\033[K")
     print()
 
     input("Press Enter to go back.")
