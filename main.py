@@ -6438,7 +6438,7 @@ def visit_field_office(office_name, save_name, data):
         if choice in [0, 1]:
             visit_agent(choice, agent_a_tier if choice == 0 else agent_b_tier, faction, office_name, save_name, data)
         elif choice == 2:
-            view_faction_terminal(faction, save_name, data)
+            view_faction_terminal(faction, faction_display, save_name, data)
         else:
             return
 
@@ -6715,11 +6715,43 @@ def get_tier(standing):
         return 5
 
 
-def view_faction_terminal(faction, save_name, data):
+def view_faction_terminal(faction, faction_display, save_name, data):
+    current_standing = data["standing"][faction]
+
+    content_buffer = StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = content_buffer
+
     clear_screen()
     title(f"{faction.upper()} TERMINAL")
-    print("Not implemented yet\033[K")
-    input("Press Enter to go back...")
+    print()
+    print(f"Current {faction_display} Standing: {current_standing:,}\033[K")
+
+    options = []
+    option_actions = []
+
+    options.append("Turn In Items for Standing  [Not implemented]")
+    option_actions.append("turn_in_items")
+
+    options.append("Purchase Faction Items  [Not implemented]")
+    option_actions.append("turn_in_items")
+
+    options.append("Back")
+    option_actions.append("back")
+
+    sys.stdout = old_stdout
+    previous_content = content_buffer.getvalue()
+
+    choice = arrow_menu(f"Please select an option.", options, previous_content)
+
+    action = option_actions[choice]
+
+    if action != 2:
+        clear_screen()
+        title(f"{faction.upper()} TERMINAL")
+        print()
+        print("Not implemented yet\033[K")
+        input("Press Enter to continue...")
 
 
 def visit_mission_location(system, save_name, data):
