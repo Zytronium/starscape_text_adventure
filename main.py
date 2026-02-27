@@ -6886,9 +6886,10 @@ def do_mission(mission, save_name, data):
                 case "insanity":
                     print(f"  {faction_dis} Covert Ops Ship:")
                     lines = [
-                        "Where have you been!? I've been for you waiting for ages!",
-                        "No, you never even wanted to help in the first place.",
-                        "You're a traitor! You're gonna get what you deserve!!",
+                        "Where have you been!? You abandoned me... You forgot",
+                        "about me... And you think I'll just sit here and take it?",
+                        "No no no, you never even wanted to help in the first place.",
+                        "There must be consequences..."
                         "*incomprehensible screaming*"
                     ]
                     type_lines(lines)
