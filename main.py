@@ -2028,7 +2028,7 @@ def calculate_movement_time(ship_agility, from_pos, to_pos):
 
 class Projectile:
     """Represents an enemy projectile"""
-    def __init__(self, target_position, speed=1.0):
+    def __init__(self, target_position, speed=1.0, source=None):
         self.target_position = target_position
         self.speed = speed
         self.progress = 0.0
