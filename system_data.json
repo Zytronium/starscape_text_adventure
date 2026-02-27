@@ -65223,56 +65223,32 @@
                         "Faction": "CoreSec",
                         "Agents": [
                             0,
-                            3
-                        ]
-                    },
-                    {
-                        "Name": "Syndicate Field Office",
-                        "Faction": "Syndicate",
-                        "Agents": [
-                            0,
                             1
                         ]
                     },
                     {
-                        "Name": "Trade Union Field Office",
-                        "Faction": "Trade Union",
-                        "Agents": [
-                            0,
-                            5
-                        ]
+                        "Name": "Syndicate Representative",
+                        "Faction": "Syndicate"
                     },
                     {
-                        "Name": "Mining Guild Field Office",
-                        "Faction": "Mining Guild",
-                        "Agents": [
-                            0,
-                            2
-                        ]
+                        "Name": "Trade Union Embassy",
+                        "Faction": "Trade Union"
                     },
                     {
-                        "Name": "Lycentian Field Office",
-                        "Faction": "Lycentia",
-                        "Agents": [
-                            0,
-                            2
-                        ]
+                        "Name": "Mining Guild Embassy",
+                        "Faction": "Mining Guild"
                     },
                     {
-                        "Name": "Foralkan Field Office",
-                        "Faction": "Forakus",
-                        "Agents": [
-                            0,
-                            3
-                        ]
+                        "Name": "Lycentian Embassy",
+                        "Faction": "Lycentia"
                     },
                     {
-                        "Name": "Kavani Field Office",
-                        "Faction": "Kavani",
-                        "Agents": [
-                            0,
-                            3
-                        ]
+                        "Name": "Foralkan Embassy",
+                        "Faction": "Forakus"
+                    },
+                    {
+                        "Name": "Kavani Embassy",
+                        "Faction": "Kavani"
                     }
                 ]
             }

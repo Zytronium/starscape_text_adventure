@@ -7331,6 +7331,132 @@ def get_firepower(fleet):
     return total_firepower
 
 
+def visit_embassy(embassy_name, save_name, data):
+    system = system_data(data["current_system"])
+    station_name = data["docked_at"]
+    station = ""
+    facility = ""
+    for s in system['Stations']:
+        if s["Name"] == station_name:
+            station = s
+            for f in station["Facilities"]:
+                if isinstance(f, dict) and f["Name"] == embassy_name:
+                    facility = f
+                    break
+            break
+
+    if station == "":
+        clear_screen()
+        set_color("red")
+        print("Error: station not found! Placing you back in your ship...")
+        reset_color()
+        data["docked_at"] = ""
+        save_data(save_name, data)
+        input("Press Enter to continue...")
+        return
+    if facility == "":
+        clear_screen()
+        set_color("red")
+        print("Error: embassy not found!")
+        reset_color()
+        input("Press Enter to continue...")
+        return
+
+    faction = facility["Faction"]
+    faction_dis = "Lycentian" if faction == "Lycentia" else "Foralkan" if faction == "Foralkus" else faction
+    diplomat_title = "Representative" if faction == "Syndicate" else "Ambassador"
+
+    visit_ambassador(faction, faction_dis, diplomat_title, save_name, data)
+
+
+def visit_ambassador(faction, faction_display, diplomat_title, save_name, data):
+    while True:
+        current_standing = data.get("standings", {}).get(faction, 0)
+        negative_standing = min(current_standing, 0)  # 0 or negative
+        reset_cost = abs(negative_standing) * 5
+
+        content_buffer = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = content_buffer
+
+        clear_screen()
+        title(f"{faction_display.upper()} {diplomat_title.upper()}")
+        print()
+        print(f"Current {faction_display} Standing: {current_standing:+}\033[K")
+        print(f"Credits: {data.get('credits', 0)}\033[K")
+        print()
+
+        options = []
+        option_actions = []
+
+        if negative_standing < 0:
+            options.append(f"Reset Standing to 0  [{reset_cost} credits]")
+            option_actions.append("reset_standing")
+        else:
+            options.append("Reset Standing to 0  [Standing is not negative]")
+            option_actions.append("reset_standing_disabled")
+
+        options.append("Turn In Items for Standing  [Not implemented]")
+        option_actions.append("turn_in_items")
+
+        options.append("Back")
+        option_actions.append("back")
+
+        sys.stdout = old_stdout
+        previous_content = content_buffer.getvalue()
+
+        choice = arrow_menu(f"What would you like to do, pilot?", options, previous_content)
+
+        action = option_actions[choice]
+
+        if action == "reset_standing":
+            credits = data.get("credits", 0)
+            if credits < reset_cost:
+                clear_screen()
+                title("INSUFFICIENT CREDITS")
+                print()
+                print(f"You need {reset_cost} credits to reset your standing, but only have {credits}.\033[K")
+                input("Press Enter to continue...")
+            else:
+                clear_screen()
+                title("CONFIRM STANDING RESET")
+                print()
+                print(f"Resetting your {faction_display} standing from {current_standing:+} to 0")
+                print(f"will cost {reset_cost} credits.\033[K")
+                print()
+                confirm_options = ["Confirm", "Cancel"]
+                confirm = arrow_menu("Proceed?", confirm_options, "")
+                if confirm == 0:
+                    data["credits"] = credits - reset_cost
+                    data.setdefault("standings", {})[faction] = 0
+                    save_data(save_name, data)
+                    clear_screen()
+                    title("STANDING RESET")
+                    print()
+                    set_color("green")
+                    print(f"Your {faction_display} standing has been reset to 0.\033[K")
+                    print(f"{reset_cost} credits deducted.\033[K")
+                    reset_color()
+                    input("Press Enter to continue...")
+
+        elif action == "reset_standing_disabled":
+            clear_screen()
+            title("NOTHING TO RESET")
+            print()
+            print(f"Your {faction_display} standing is not negative.\033[K")
+            input("Press Enter to continue...")
+
+        elif action == "turn_in_items":
+            clear_screen()
+            title("ITEM TURN-IN")
+            print()
+            print("Not implemented yet\033[K")
+            input("Press Enter to continue...")
+
+        else:
+            return
+
+
 def migrate_save_2_3(save_name, data):
     if "missions" not in data:
         data["missions"] = []
@@ -8318,11 +8444,19 @@ def station_screen(system, station_num, save_name, data):
 
         # Check each facility type
         for facility in facilities:
-            # Handle mission agencies
+            # Handle mission agencies and embassies
             if isinstance(facility, dict):
-                if f"Visit {facility["Faction"]} Field Office" not in options:
-                    options.append(f"Visit {facility["Faction"]} Field Office")
-                    option_actions.append(facility["Name"])  # always ends in "Field Office"
+                # Embassy
+                if facility["Name"].endswith("Embassy") or facility["Name"].endswith("Representative"):
+                    option_text = f"Visit {facility['Name']}"
+                    if option_text not in options:
+                        options.append(option_text)
+                        option_actions.append(facility["Name"])
+                else:
+                    # Field office
+                    if f"Visit {facility['Faction']} Field Office" not in options:
+                        options.append(f"Visit {facility['Faction']} Field Office")
+                        option_actions.append(facility["Name"])
             else:
                 # Check standard facilities
                 for facility_key, (option_text, action) in facility_mapping.items():
@@ -8377,6 +8511,10 @@ def station_screen(system, station_num, save_name, data):
 
         if action.endswith("Field Office"):
             visit_field_office(action, save_name, data)
+            continue
+
+        if action.endswith("Embassy") or action.endswith("Representative"):
+            visit_embassy(action, save_name, data)
             continue
 
         if action == "ship_terminal":
