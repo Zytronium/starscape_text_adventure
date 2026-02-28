@@ -6511,7 +6511,7 @@ def visit_agent(agent_idx, tier, faction, office_name, save_name, data):
         {
             "name": "Rescue Operation",
             "quote": f"A technician was servicing a {faction_dis} outpost when hostile ships assaulted it, overrunning its defenses and stranding the technician. {faction_full} is sending a transport to retrieve the technician, but it needs you to protect it from the hostiles in the area.",
-            "implemented": False
+            "implemented": True
         }
     ]
     missions = []
@@ -6633,7 +6633,7 @@ def generate_mission(missions, tier, faction, data):
         mission["stage"] = 1
         mission["enemy"] = random.choice(list(set(enemies[faction] + ["Pirates"])))
 
-    if mission["name"] == "Defend the Transport":
+    if mission["name"] in ["Defend the Transport", "Rescue Operation"]:
         mission["enemy"] = random.choice(enemies[faction])
 
     return mission
@@ -6806,7 +6806,7 @@ def do_mission(mission, save_name, data):
     player_ship = get_active_ship(data)
     max_shield = get_max_shield(player_ship)
     shield_regen = get_shield_regen(player_ship)
-    tier = mission["mission"]["tier"]
+    tier = mission_details["tier"]
 
     match mission_details["name"]:
         case "Intel Recovery":
@@ -6887,7 +6887,7 @@ def do_mission(mission, save_name, data):
                     input("Press Enter to engage!")
 
                     # Build a fleet of 2-3 ships
-                    fleet = generate_mission_fleet(enemy, mission["mission"]["tier"])
+                    fleet = generate_mission_fleet(enemy, mission_details["tier"])
 
                     result = combat_loop(fleet, data["current_system"], save_name, data)
                     music.play_ambiance()
@@ -6921,7 +6921,8 @@ def do_mission(mission, save_name, data):
                         "Where have you been!? You abandoned me... You forgot",
                         "about me... And you think I'll just sit here and take it?",
                         "No no no, you never even wanted to help in the first place.",
-                        "There must be consequences..."
+                        "There must be consequences...",
+                        "",
                         "*incomprehensible screaming*"
                     ]
                     type_lines(lines)
@@ -7012,7 +7013,7 @@ def do_mission(mission, save_name, data):
             type_lines(lines2)
             print()
 
-            fleet = generate_mission_fleet(enemy, mission["mission"]["tier"], 1)
+            fleet = generate_mission_fleet(enemy, mission_details["tier"], 1)
 
             input("Press Enter to engage!")
 
@@ -7065,7 +7066,7 @@ def do_mission(mission, save_name, data):
                 type_lines(lines2)
                 print()
 
-                fleet = generate_mission_fleet(enemy, mission["mission"]["tier"], 2)
+                fleet = generate_mission_fleet(enemy, mission_details["tier"], 2)
 
                 input("Press Enter to engage!")
                 
@@ -7119,7 +7120,7 @@ def do_mission(mission, save_name, data):
 
                     print()
 
-                    fleet = generate_mission_fleet(enemy, mission["mission"]["tier"], 2)
+                    fleet = generate_mission_fleet(enemy, mission_details["tier"], 3)
 
                     input("Press Enter to engage!")
 
@@ -7142,7 +7143,184 @@ def do_mission(mission, save_name, data):
                         print(f"  {faction_dis} Transport:")
                         lines = [
                             "Our engines are back online. Thanks for the help, we're",
-                            "out of here, I suggest you do the same."
+                            "out of here."
+                        ]
+                        type_lines(lines)
+                        input("Press Enter to continue...")
+                        print()
+                        print(f" *The {faction_dis} transport warps away.*")
+                        sleep(0.5)
+                        print(" *So do you*")
+                        print()
+                        sleep(1)
+                        print(wrap_text(f"You've successfully completed the mission! Return to {mission["system"]} to claim your reward."))
+                        print()
+                        input("Press Enter to continue...")
+        case "Rescue Operation":
+            print(f"  {faction_dis} Transport:")
+            lines = [
+                "You arrived just in time, pilot! We need you to distract",
+                "the enemy for us so we can get in close enough to transport",
+                "the technician safely aboard."
+            ]
+            type_lines(lines)
+            print()
+            input('Press Enter to continue...')
+            print()
+
+            # recharge player shields by recharge rate * 15
+            regen_amnt = shield_regen * 15
+            if player_ship["shield_hp"] < max_shield:
+                old_shield = player_ship["shield_hp"]
+                player_ship["shield_hp"] = min(player_ship["shield_hp"] + regen_amnt, max_shield)
+                new_shield = player_ship["shield_hp"]
+                amnt_regenerated = new_shield - old_shield
+                print(f"Your shields have recharged by {amnt_regenerated} HP.")
+                print()
+
+            print(".", end="")
+            sleep(0.5)
+            print(".", end="")
+            sleep(0.5)
+            print(".")
+            print()
+            lines2 = wrap_text(
+                f"A fleet of hostile {enemy_dis_plural} is approaching! Protect the transport ship from enemy fire!"
+            ).split("\n")
+            type_lines(lines2)
+            print()
+
+            fleet = generate_mission_fleet(enemy, mission_details["tier"], 1, size_multiplier=2.5)
+
+            input("Press Enter to engage!")
+
+            result = combat_loop(fleet, data["current_system"], save_name, data)
+            music.play_ambiance()
+            clear_screen()
+            title(mission_details["name"].upper())
+            print()
+
+            if result == "retreat":
+                print(f"You warped away before destroying the {enemy_dis_plural}.\033[K")
+                print("The transport ship is in danger! Warp back ASAP!\033[K")
+                print()
+                input("Press Enter to continue...")
+                return
+            elif result == "victory":
+                # Stage 2/3 (or /4 for tier 2+ missions; /5 for stage 4+ missions)
+                print(f"  {faction_dis} Transport:")
+                lines3 = [
+                    "Thanks for fighting off those ships! Scanners show more",
+                    f"{enemy_dis_plural} on their way, stay alert!"
+                ]
+                type_lines(lines3)
+                print()
+                input('Press Enter to continue...')
+                print()
+
+                # recharge player shields by recharge rate * 30
+                regen_amnt = shield_regen * 30
+                if player_ship["shield_hp"] < max_shield:
+                    old_shield = player_ship["shield_hp"]
+                    player_ship["shield_hp"] = min(
+                        player_ship["shield_hp"] + regen_amnt, max_shield)
+                    new_shield = player_ship["shield_hp"]
+                    amnt_regenerated = new_shield - old_shield
+                    print(
+                        f"Your shields have recharged by {amnt_regenerated} HP.")
+                    print()
+
+                print(".", end="")
+                sleep(0.75)
+                print(".", end="")
+                sleep(0.75)
+                print(".")
+                print()
+
+                lines2 = wrap_text(
+                    f"A fleet of hostile {enemy_dis_plural} is approaching! Protect the transport ship from enemy fire!"
+                ).split("\n")
+                type_lines(lines2)
+                print()
+
+                fleet = generate_mission_fleet(enemy, mission_details["tier"], 2, size_multiplier=2.5)
+
+                input("Press Enter to engage!")
+
+                result = combat_loop(fleet, data["current_system"], save_name, data)
+                music.play_ambiance()
+                clear_screen()
+                title(mission_details["name"].upper())
+                print()
+
+                if result == "retreat":
+                    print(f"You warped away before destroying the {enemy_dis_plural}.\033[K")
+                    print("The transport ship is in danger! Warp back ASAP!\033[K")
+                    print()
+                    input("Press Enter to continue...")
+                    return
+                elif result == "victory":
+                    # stage 3/3
+                    print(f"  {faction_dis} Transport:")
+                    lines3 = [
+                        "We've retrieved the technician; on our way back. Scanners",
+                        f"show even more {enemy_dis_plural} nearby, stay alert!"
+                    ]
+                    type_lines(lines3)
+                    print()
+                    input('Press Enter to continue...')
+                    print()
+
+                    # recharge player shields by recharge rate * 30
+                    regen_amnt = shield_regen * 30
+                    if player_ship["shield_hp"] < max_shield:
+                        old_shield = player_ship["shield_hp"]
+                        player_ship["shield_hp"] = min(
+                            player_ship["shield_hp"] + regen_amnt, max_shield)
+                        new_shield = player_ship["shield_hp"]
+                        amnt_regenerated = new_shield - old_shield
+                        print(
+                            f"Your shields have recharged by {amnt_regenerated} HP.")
+                        print()
+
+                    print(".", end="")
+                    sleep(0.75)
+                    print(".", end="")
+                    sleep(0.75)
+                    print(".")
+                    print()
+
+                    lines2 = wrap_text(
+                        f"A fleet of hostile {enemy_dis_plural} is approaching! Protect the transport ship from enemy fire!",
+                        60).split("\n")
+                    type_lines(lines2)
+
+                    print()
+
+                    fleet = generate_mission_fleet(enemy, mission_details["tier"], 3, size_multiplier=2.5)
+
+                    input("Press Enter to engage!")
+
+                    result = combat_loop(fleet, data["current_system"], save_name, data)
+                    music.play_ambiance()
+                    clear_screen()
+                    title(mission_details["name"].upper())
+                    print()
+
+                    if result == "retreat":
+                        print(f"You warped away before destroying the {enemy_dis_plural}.\033[K")
+                        print("The transport ship is in danger! Warp back ASAP!\033[K")
+                        print()
+                        input("Press Enter to continue...")
+                        return
+                    elif result == "victory":
+                        mission["completed"] = True
+                        save_data(save_name, data)
+
+                        print(f"  {faction_dis} Transport:")
+                        lines = [
+                            "We're at a safe distance now, we're getting out of",
+                            "here. I suggest you do the same."
                         ]
                         type_lines(lines)
                         input("Press Enter to continue...")
@@ -7160,7 +7338,7 @@ def do_mission(mission, save_name, data):
             input("Press Enter to go back...")
 
 
-def generate_mission_fleet(enemy_faction, tier, wave=1, override_size=0):
+def generate_mission_fleet(enemy_faction, tier, wave=1, override_size=0, size_multiplier=1.0):
     enemy_dis = "Lycentian" if enemy_faction == "Lycentia" else "Foralkan" if enemy_faction == "Foralkus" else "Drone" if enemy_faction == "Drones" else "Pirate" if enemy_faction == "Pirates" else enemy_faction
     enemy_dis_plural = f"{enemy_dis} ships" if enemy_faction not in ["Drones", "Pirates"] else enemy_faction.lower()  # i.e. "Lycentian ships", "Trade Union Ships", "Pirates"
 
@@ -7250,6 +7428,7 @@ def generate_mission_fleet(enemy_faction, tier, wave=1, override_size=0):
         case _:  # fallback to 1
             size = override_size if override_size > 0 else random.randint(w1_min_size, w1_max_size)
 
+    size = int(size * size_multiplier)
 
     # Build the fleet of enemy ships
     ships = [ _random_ship(i) for i in range(size) ]
